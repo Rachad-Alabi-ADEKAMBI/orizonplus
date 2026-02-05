@@ -5,6 +5,18 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type');
+// Autoriser les méthodes spécifiques
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+
+// Autoriser certains headers
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+// Répondre aux requêtes OPTIONS (préflight)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 
 require_once __DIR__ . '/functions.php';
 
@@ -60,6 +72,14 @@ switch ($action) {
 
     case 'updateBudgetLine':
         updateBudgetLine();
+        break;
+
+    case 'getBudgetLines':
+        getBudgetLines();
+        break;
+
+    case 'getProjectDetails':
+        getProjectDetails();
         break;
 
     case 'deleteBudgetLine':

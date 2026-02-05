@@ -3,14 +3,15 @@
 /* =======================
    CONFIG & DB
 ======================= */
+require_once __DIR__ . '/config.php';
 
-include 'config.php';
 /* =======================
    HELPERS
 ======================= */
 
 function jsonResponse($data = null, $message = "OK", $warning = false)
 {
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         "success" => true,
         "warning" => $warning,
@@ -23,6 +24,7 @@ function jsonResponse($data = null, $message = "OK", $warning = false)
 function jsonError($message, $code = 400)
 {
     http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         "success" => false,
         "message" => $message
@@ -32,7 +34,9 @@ function jsonError($message, $code = 400)
 
 function getInput()
 {
-    $data = json_decode(file_get_contents("php://input"), true);
+    $raw = file_get_contents("php://input");
+    $data = json_decode($raw, true);
+
     if (!is_array($data)) {
         jsonError("Format JSON invalide");
     }
@@ -42,18 +46,13 @@ function getInput()
 function requireField($data, $field)
 {
     if (!isset($data[$field]) || trim($data[$field]) === '') {
-        jsonError("Champ manquant ou vide : $field");
+        jsonError("Champ manquant : $field");
     }
 }
 
 function isPositiveNumber($value)
 {
     return is_numeric($value) && $value >= 0;
-}
-
-function isLoggedIn()
-{
-    return isset($_SESSION['user_id']);
 }
 
 /* =======================
@@ -68,7 +67,7 @@ function login()
 
     $stmt = db()->prepare("SELECT * FROM users WHERE name = ?");
     $stmt->execute([$data['name']]);
-    $user = $stmt->fetch();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user || !password_verify($data['password'], $user['password'])) {
         jsonError("Identifiants incorrects", 401);
@@ -76,12 +75,10 @@ function login()
 
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user_name'] = $user['name'];
-    $_SESSION['role'] = $user['role'];
 
     jsonResponse([
         "id" => $user['id'],
-        "name" => $user['name'],
-        "role" => $user['role']
+        "name" => $user['name']
     ], "Connexion réussie");
 }
 
@@ -92,47 +89,112 @@ function logout()
 }
 
 /* =======================
-   PROJETS
+   BUDGET LINES (CATALOGUE)
+======================= */
+
+function getBudgetLines()
+{
+    $stmt = db()->query("
+        SELECT id, name
+        FROM budget_lines
+        ORDER BY name ASC
+    ");
+
+    jsonResponse($stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+
+function createBudgetLine()
+{
+    $data = getInput();
+    requireField($data, 'name');
+
+    db()->prepare("
+        INSERT INTO budget_lines (name)
+        VALUES (?)
+    ")->execute([$data['name']]);
+
+    jsonResponse(null, "Ligne budgétaire créée");
+}
+
+function updateBudgetLine()
+{
+    $data = getInput();
+    requireField($data, 'id');
+    requireField($data, 'name');
+
+    db()->prepare("
+        UPDATE budget_lines
+        SET name = ?
+        WHERE id = ?
+    ")->execute([$data['name'], $data['id']]);
+
+    jsonResponse(null, "Ligne budgétaire mise à jour");
+}
+
+function deleteBudgetLine()
+{
+    $id = $_GET['id'] ?? null;
+    if (!$id || !is_numeric($id)) jsonError("ID invalide");
+
+    db()->prepare("DELETE FROM budget_lines WHERE id = ?")->execute([$id]);
+    jsonResponse(null, "Ligne budgétaire supprimée");
+}
+
+/* =======================
+   PROJECTS
 ======================= */
 
 function getProjects()
 {
     $sql = "
-        SELECT p.id, p.name,
-        COALESCE(SUM(bl.planned_amount),0) AS total_budget,
-        COALESCE(SUM(e.amount),0) AS total_spent,
-        COALESCE(SUM(bl.planned_amount),0) - COALESCE(SUM(e.amount),0) AS remaining
+        SELECT 
+            p.id,
+            p.name,
+            p.total_budget,
+            COALESCE(SUM(e.amount),0) AS total_spent,
+            p.total_budget - COALESCE(SUM(e.amount),0) AS remaining
         FROM projects p
-        LEFT JOIN budget_lines bl ON bl.project_id = p.id
         LEFT JOIN expenses e ON e.project_id = p.id
         GROUP BY p.id
+        ORDER BY p.created_at DESC
     ";
-    jsonResponse(db()->query($sql)->fetchAll());
+    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
 }
 
 function createProject()
 {
     $data = getInput();
     requireField($data, 'name');
+    requireField($data, 'total_budget');
 
-    db()->prepare("INSERT INTO projects (name, description) VALUES (?, ?)")
-        ->execute([$data['name'], $data['description'] ?? null]);
+    if (!isPositiveNumber($data['total_budget'])) {
+        jsonError("Budget total invalide");
+    }
+
+    db()->prepare("
+        INSERT INTO projects (name, description, total_budget)
+        VALUES (?, ?, ?)
+    ")->execute([
+        $data['name'],
+        $data['description'] ?? null,
+        $data['total_budget']
+    ]);
 
     $projectId = db()->lastInsertId();
 
-    if (!empty($data['budget_lines']) && is_array($data['budget_lines'])) {
-        foreach ($data['budget_lines'] as $line) {
-            requireField($line, 'name');
-            requireField($line, 'planned_amount');
-
-            if (!isPositiveNumber($line['planned_amount'])) {
-                jsonError("Montant invalide pour la ligne : {$line['name']}");
-            }
+    if (!empty($data['lines'])) {
+        foreach ($data['lines'] as $line) {
+            requireField($line, 'budget_line_id');
+            requireField($line, 'allocated_amount');
 
             db()->prepare("
-                INSERT INTO budget_lines (project_id, name, planned_amount)
+                INSERT INTO project_budget_lines (project_id, budget_line_id, allocated_amount)
                 VALUES (?, ?, ?)
-            ")->execute([$projectId, $line['name'], $line['planned_amount']]);
+            ")->execute([
+                $projectId,
+                $line['budget_line_id'],
+                $line['allocated_amount']
+            ]);
         }
     }
 
@@ -146,35 +208,88 @@ function getProject()
 
     $project = db()->prepare("SELECT * FROM projects WHERE id = ?");
     $project->execute([$id]);
-    $project = $project->fetch();
+    $project = $project->fetch(PDO::FETCH_ASSOC);
 
     if (!$project) jsonError("Projet introuvable");
 
     $lines = db()->prepare("
-        SELECT bl.*, 
-        COALESCE(SUM(e.amount),0) AS spent,
-        bl.planned_amount - COALESCE(SUM(e.amount),0) AS remaining
-        FROM budget_lines bl
-        LEFT JOIN expenses e ON e.budget_line_id = bl.id
-        WHERE bl.project_id = ?
-        GROUP BY bl.id
+        SELECT 
+            pbl.id,
+            bl.name,
+            pbl.allocated_amount,
+            COALESCE(SUM(e.amount),0) AS spent,
+            pbl.allocated_amount - COALESCE(SUM(e.amount),0) AS remaining
+        FROM project_budget_lines pbl
+        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+        LEFT JOIN expenses e ON e.project_budget_line_id = pbl.id
+        WHERE pbl.project_id = ?
+        GROUP BY pbl.id
     ");
     $lines->execute([$id]);
 
     jsonResponse([
         "project" => $project,
-        "budget_lines" => $lines->fetchAll()
+        "budget_lines" => $lines->fetchAll(PDO::FETCH_ASSOC)
     ]);
 }
 
+function updateProject()
+{
+    $data = getInput();
+    requireField($data, 'id');
+    requireField($data, 'name');
+    requireField($data, 'total_budget');
+
+    db()->prepare("
+        UPDATE projects
+        SET name = ?, description = ?, total_budget = ?
+        WHERE id = ?
+    ")->execute([
+        $data['name'],
+        $data['description'] ?? null,
+        $data['total_budget'],
+        $data['id']
+    ]);
+
+    jsonResponse(null, "Projet mis à jour");
+}
+
+function deleteProject()
+{
+    $id = $_GET['id'] ?? null;
+    if (!$id || !is_numeric($id)) jsonError("ID invalide");
+
+    db()->prepare("DELETE FROM projects WHERE id = ?")->execute([$id]);
+    jsonResponse(null, "Projet supprimé");
+}
+
 /* =======================
-   DÉPENSES
+   EXPENSES
 ======================= */
+
+function getExpenses()
+{
+    $sql = "
+        SELECT 
+            e.id,
+            p.name AS project_name,
+            bl.name AS line_name,
+            e.amount,
+            e.expense_date,
+            e.description
+        FROM expenses e
+        JOIN projects p ON p.id = e.project_id
+        JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
+        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+        ORDER BY e.expense_date DESC
+    ";
+    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+}
 
 function createExpense()
 {
     $data = getInput();
-    foreach (['project_id', 'budget_line_id', 'expense_date', 'amount'] as $f) {
+    foreach (['project_id', 'project_budget_line_id', 'expense_date', 'amount'] as $f) {
         requireField($data, $f);
     }
 
@@ -183,30 +298,125 @@ function createExpense()
     }
 
     db()->prepare("
-        INSERT INTO expenses (project_id, budget_line_id, expense_date, amount, description)
+        INSERT INTO expenses (project_id, project_budget_line_id, amount, expense_date, description)
         VALUES (?, ?, ?, ?, ?)
     ")->execute([
         $data['project_id'],
-        $data['budget_line_id'],
-        $data['expense_date'],
+        $data['project_budget_line_id'],
         $data['amount'],
+        $data['expense_date'],
         $data['description'] ?? null
     ]);
 
-    // Vérifier dépassement
-    $check = db()->prepare("
-        SELECT bl.planned_amount - COALESCE(SUM(e.amount),0) AS remaining
-        FROM budget_lines bl
-        LEFT JOIN expenses e ON e.budget_line_id = bl.id
-        WHERE bl.id = ?
-        GROUP BY bl.id
-    ");
-    $check->execute([$data['budget_line_id']]);
-    $remaining = $check->fetchColumn();
+    jsonResponse(null, "Dépense enregistrée");
+}
 
-    jsonResponse(
-        null,
-        $remaining < 0 ? "Dépense enregistrée — budget dépassé" : "Dépense enregistrée",
-        $remaining < 0
-    );
+function updateExpense()
+{
+    $data = getInput();
+    requireField($data, 'id');
+
+    db()->prepare("
+        UPDATE expenses
+        SET amount = ?, expense_date = ?, description = ?
+        WHERE id = ?
+    ")->execute([
+        $data['amount'],
+        $data['expense_date'],
+        $data['description'] ?? null,
+        $data['id']
+    ]);
+
+    jsonResponse(null, "Dépense mise à jour");
+}
+
+function deleteExpense()
+{
+    $id = $_GET['id'] ?? null;
+    if (!$id || !is_numeric($id)) jsonError("ID invalide");
+
+    db()->prepare("DELETE FROM expenses WHERE id = ?")->execute([$id]);
+    jsonResponse(null, "Dépense supprimée");
+}
+
+/* =======================
+   SUMMARY
+======================= */
+
+function getGlobalSummary()
+{
+    $sql = "
+        SELECT 
+            SUM(total_budget) AS total_budget,
+            (SELECT SUM(amount) FROM expenses) AS total_spent
+        FROM projects
+    ";
+    jsonResponse(db()->query($sql)->fetch(PDO::FETCH_ASSOC));
+}
+
+function getProjectsSummary()
+{
+    $sql = "
+        SELECT 
+            p.id,
+            p.name,
+            p.total_budget,
+            COALESCE(SUM(e.amount),0) AS spent,
+            p.total_budget - COALESCE(SUM(e.amount),0) AS remaining
+        FROM projects p
+        LEFT JOIN expenses e ON e.project_id = p.id
+        GROUP BY p.id
+    ";
+    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+}
+
+function getProjectDetails()
+{
+    // Récupérer l'ID du projet depuis l'URL
+    $id = $_GET['id'] ?? null;
+    if (!$id || !is_numeric($id)) {
+        jsonError("ID projet invalide");
+    }
+
+    // Récupérer les informations principales du projet
+    $stmt = db()->prepare("SELECT * FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    $project = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$project) {
+        jsonError("Projet introuvable");
+    }
+
+    // Récupérer les lignes budgétaires associées au projet avec leur nom et montant alloué
+    $stmt2 = db()->prepare("
+        SELECT 
+            pbl.id AS budget_line_id,
+            pbl.allocated_amount,
+            bl.name
+        FROM project_budget_lines pbl
+        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+        WHERE pbl.project_id = ?
+    ");
+    $stmt2->execute([$id]);
+    $lines = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+    // Calculer le total dépensé pour le projet
+    $stmt3 = db()->prepare("SELECT COALESCE(SUM(amount),0) AS total_spent FROM expenses WHERE project_id = ?");
+    $stmt3->execute([$id]);
+    $totalSpent = $stmt3->fetch(PDO::FETCH_ASSOC)['total_spent'] ?? 0;
+
+    // Ajouter total dépensé et reste dans les données du projet
+    $project['total_spent'] = $totalSpent;
+    $project['remaining'] = $project['total_budget'] - $totalSpent;
+
+    // Renvoyer la réponse JSON complète
+    jsonResponse([
+        "id" => $project['id'],
+        "name" => $project['name'],
+        "description" => $project['description'],
+        "total_budget" => $project['total_budget'],
+        "total_spent" => $project['total_spent'],
+        "remaining" => $project['remaining'],
+        "lines" => $lines
+    ]);
 }

@@ -1,5 +1,7 @@
 <?php
 
+
+
 function db()
 {
     static $pdo;
