@@ -11,6 +11,10 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 // Autoriser certains headers
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
+ini_set('display_errors', 0); // n'affiche plus les erreurs à l'écran
+ini_set('log_errors', 1);     // les log dans le fichier error_log
+error_reporting(E_ALL);
+
 // Répondre aux requêtes OPTIONS (préflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -63,6 +67,10 @@ switch ($action) {
 
     case 'deleteProject':
         deleteProject();
+        break;
+
+    case 'getProjectBudgetLines':
+        getProjectBudgetLines();
         break;
 
     // 💼 LIGNES BUDGÉTAIRES

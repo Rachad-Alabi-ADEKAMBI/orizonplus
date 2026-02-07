@@ -1,422 +1,417 @@
 <?php
 
-/* =======================
-   CONFIG & DB
-======================= */
-require_once __DIR__ . '/config.php';
-
-/* =======================
-   HELPERS
-======================= */
-
-function jsonResponse($data = null, $message = "OK", $warning = false)
+/**
+ * Connexion à la base de données
+ */
+function getPDO(): PDO
 {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        "success" => true,
-        "warning" => $warning,
-        "message" => $message,
-        "data" => $data
-    ]);
+    $host = 'localhost';
+    $db   = 'orizonplus';
+    $user = 'root';
+    $pass = '';
+    $charset = 'utf8mb4';
+
+    $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ];
+
+    return new PDO($dsn, $user, $pass, $options);
+}
+
+/**
+ * Helpers JSON
+ */
+function jsonSuccess($data = [], $message = '')
+{
+    echo json_encode(['success' => true, 'message' => $message, 'data' => $data]);
     exit;
 }
 
-function jsonError($message, $code = 400)
+function jsonError($message = '', $code = 400)
 {
     http_response_code($code);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        "success" => false,
-        "message" => $message
-    ]);
+    echo json_encode(['success' => false, 'message' => $message]);
     exit;
 }
 
-function getInput()
-{
-    $raw = file_get_contents("php://input");
-    $data = json_decode($raw, true);
-
-    if (!is_array($data)) {
-        jsonError("Format JSON invalide");
-    }
-    return $data;
-}
-
-function requireField($data, $field)
-{
-    if (!isset($data[$field]) || trim($data[$field]) === '') {
-        jsonError("Champ manquant : $field");
-    }
-}
-
-function isPositiveNumber($value)
-{
-    return is_numeric($value) && $value >= 0;
-}
-
-/* =======================
-   AUTH
-======================= */
-
+/**
+ * 🔐 AUTH
+ */
 function login()
 {
-    $data = getInput();
-    requireField($data, 'name');
-    requireField($data, 'password');
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $username = $data['username'] ?? '';
+    $password = $data['password'] ?? '';
 
-    $stmt = db()->prepare("SELECT * FROM users WHERE name = ?");
-    $stmt->execute([$data['name']]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
 
-    if (!$user || !password_verify($data['password'], $user['password'])) {
-        jsonError("Identifiants incorrects", 401);
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'];
+        jsonSuccess(['user' => $user], 'Login réussi');
+    } else {
+        jsonError('Identifiants invalides', 401);
     }
-
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['user_name'] = $user['name'];
-
-    jsonResponse([
-        "id" => $user['id'],
-        "name" => $user['name']
-    ], "Connexion réussie");
 }
 
 function logout()
 {
     session_destroy();
-    jsonResponse(null, "Déconnexion réussie");
+    jsonSuccess([], 'Déconnexion réussie');
 }
 
-/* =======================
-   BUDGET LINES (CATALOGUE)
-======================= */
-
-function getBudgetLines()
+function isLoggedIn(): bool
 {
-    $stmt = db()->query("
-        SELECT id, name
-        FROM budget_lines
-        ORDER BY name ASC
-    ");
-
-    jsonResponse($stmt->fetchAll(PDO::FETCH_ASSOC));
+    return isset($_SESSION['user_id']);
 }
 
-function createBudgetLine()
-{
-    $data = getInput();
-    requireField($data, 'name');
-
-    db()->prepare("
-        INSERT INTO budget_lines (name)
-        VALUES (?)
-    ")->execute([$data['name']]);
-
-    jsonResponse(null, "Ligne budgétaire créée");
-}
-
-function updateBudgetLine()
-{
-    $data = getInput();
-    requireField($data, 'id');
-    requireField($data, 'name');
-
-    db()->prepare("
-        UPDATE budget_lines
-        SET name = ?
-        WHERE id = ?
-    ")->execute([$data['name'], $data['id']]);
-
-    jsonResponse(null, "Ligne budgétaire mise à jour");
-}
-
-function deleteBudgetLine()
-{
-    $id = $_GET['id'] ?? null;
-    if (!$id || !is_numeric($id)) jsonError("ID invalide");
-
-    db()->prepare("DELETE FROM budget_lines WHERE id = ?")->execute([$id]);
-    jsonResponse(null, "Ligne budgétaire supprimée");
-}
-
-/* =======================
-   PROJECTS
-======================= */
-
+/**
+ * 📁 PROJETS
+ */
 function getProjects()
 {
-    $sql = "
-        SELECT 
-            p.id,
-            p.name,
-            p.total_budget,
-            COALESCE(SUM(e.amount),0) AS total_spent,
-            p.total_budget - COALESCE(SUM(e.amount),0) AS remaining
-        FROM projects p
-        LEFT JOIN expenses e ON e.project_id = p.id
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-    ";
-    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+    $pdo = getPDO();
+    jsonSuccess(getProjectsData($pdo));
+}
+
+function getProjectsData(PDO $pdo): array
+{
+    return $pdo->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
 }
 
 function createProject()
 {
-    $data = getInput();
-    requireField($data, 'name');
-    requireField($data, 'total_budget');
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $name = $data['name'] ?? '';
+    if (!$name) jsonError('Nom de projet manquant');
 
-    if (!isPositiveNumber($data['total_budget'])) {
-        jsonError("Budget total invalide");
-    }
+    $stmt = $pdo->prepare("INSERT INTO projects (name) VALUES (?)");
+    $stmt->execute([$name]);
 
-    db()->prepare("
-        INSERT INTO projects (name, description, total_budget)
-        VALUES (?, ?, ?)
-    ")->execute([
-        $data['name'],
-        $data['description'] ?? null,
-        $data['total_budget']
-    ]);
-
-    $projectId = db()->lastInsertId();
-
-    if (!empty($data['lines'])) {
-        foreach ($data['lines'] as $line) {
-            requireField($line, 'budget_line_id');
-            requireField($line, 'allocated_amount');
-
-            db()->prepare("
-                INSERT INTO project_budget_lines (project_id, budget_line_id, allocated_amount)
-                VALUES (?, ?, ?)
-            ")->execute([
-                $projectId,
-                $line['budget_line_id'],
-                $line['allocated_amount']
-            ]);
-        }
-    }
-
-    jsonResponse(["project_id" => $projectId], "Projet créé");
+    jsonSuccess(['id' => $pdo->lastInsertId()], 'Projet créé');
 }
 
 function getProject()
 {
+    $pdo = getPDO();
     $id = $_GET['id'] ?? null;
-    if (!$id || !is_numeric($id)) jsonError("ID projet invalide");
+    if (!$id) jsonError('ID de projet manquant');
 
-    $project = db()->prepare("SELECT * FROM projects WHERE id = ?");
-    $project->execute([$id]);
-    $project = $project->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    $project = $stmt->fetch();
 
-    if (!$project) jsonError("Projet introuvable");
-
-    $lines = db()->prepare("
-        SELECT 
-            pbl.id,
-            bl.name,
-            pbl.allocated_amount,
-            COALESCE(SUM(e.amount),0) AS spent,
-            pbl.allocated_amount - COALESCE(SUM(e.amount),0) AS remaining
-        FROM project_budget_lines pbl
-        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-        LEFT JOIN expenses e ON e.project_budget_line_id = pbl.id
-        WHERE pbl.project_id = ?
-        GROUP BY pbl.id
-    ");
-    $lines->execute([$id]);
-
-    jsonResponse([
-        "project" => $project,
-        "budget_lines" => $lines->fetchAll(PDO::FETCH_ASSOC)
-    ]);
+    if (!$project) jsonError('Projet non trouvé', 404);
+    jsonSuccess($project);
 }
 
 function updateProject()
 {
-    $data = getInput();
-    requireField($data, 'id');
-    requireField($data, 'name');
-    requireField($data, 'total_budget');
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? null;
+    $name = $data['name'] ?? '';
+    if (!$id || !$name) jsonError('Paramètres manquants');
 
-    db()->prepare("
-        UPDATE projects
-        SET name = ?, description = ?, total_budget = ?
-        WHERE id = ?
-    ")->execute([
-        $data['name'],
-        $data['description'] ?? null,
-        $data['total_budget'],
-        $data['id']
-    ]);
-
-    jsonResponse(null, "Projet mis à jour");
+    $stmt = $pdo->prepare("UPDATE projects SET name = ? WHERE id = ?");
+    $stmt->execute([$name, $id]);
+    jsonSuccess([], 'Projet mis à jour');
 }
 
 function deleteProject()
 {
+    $pdo = getPDO();
     $id = $_GET['id'] ?? null;
-    if (!$id || !is_numeric($id)) jsonError("ID invalide");
+    if (!$id) jsonError('ID manquant');
 
-    db()->prepare("DELETE FROM projects WHERE id = ?")->execute([$id]);
-    jsonResponse(null, "Projet supprimé");
+    $stmt = $pdo->prepare("DELETE FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    jsonSuccess([], 'Projet supprimé');
 }
 
-/* =======================
-   EXPENSES
-======================= */
+/**
+ * 💼 LIGNES BUDGÉTAIRES
+ */
+function createBudgetLine()
+{
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $projectId = $data['project_id'] ?? null;
+    $name = $data['name'] ?? '';
+    if (!$projectId || !$name) jsonError('Paramètres manquants');
 
+    $stmt = $pdo->prepare("INSERT INTO budget_lines (project_id, name) VALUES (?, ?)");
+    $stmt->execute([$projectId, $name]);
+    jsonSuccess(['id' => $pdo->lastInsertId()], 'Ligne budgétaire créée');
+}
+
+function updateBudgetLine()
+{
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? null;
+    $name = $data['name'] ?? '';
+    if (!$id || !$name) jsonError('Paramètres manquants');
+
+    $stmt = $pdo->prepare("UPDATE budget_lines SET name = ? WHERE id = ?");
+    $stmt->execute([$name, $id]);
+    jsonSuccess([], 'Ligne budgétaire mise à jour');
+}
+
+function getBudgetLines()
+{
+    $pdo = getPDO();
+
+    $stmt = $pdo->prepare("SELECT * FROM budget_lines");
+    $stmt->execute();
+    $lines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    jsonSuccess($lines);
+}
+
+
+function getProjectDetails()
+{
+    $pdo = getPDO();
+    $id = $_GET['id'] ?? null;
+    if (!$id) jsonError('ID de projet manquant');
+
+    $stmt = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
+    $stmt->execute([$id]);
+    $project = $stmt->fetch();
+    if (!$project) jsonError('Projet non trouvé');
+
+    $project['budget_lines'] = getBudgetLinesByProject($pdo, $id);
+    jsonSuccess($project);
+}
+
+function deleteBudgetLine()
+{
+    $pdo = getPDO();
+    $id = $_GET['id'] ?? null;
+    if (!$id) jsonError('ID manquant');
+
+    $stmt = $pdo->prepare("DELETE FROM budget_lines WHERE id = ?");
+    $stmt->execute([$id]);
+    jsonSuccess([], 'Ligne budgétaire supprimée');
+}
+
+/**
+ * 💰 DÉPENSES
+ */
 function getExpenses()
 {
-    $sql = "
+    $pdo = getPDO();
+
+    $stmt = $pdo->prepare("
         SELECT 
             e.id,
-            p.name AS project_name,
-            bl.name AS line_name,
+            e.project_id,
+            e.project_budget_line_id,
+            bl.name AS budget_line_name,
             e.amount,
             e.expense_date,
-            e.description
+            e.description,
+            e.created_at
         FROM expenses e
-        JOIN projects p ON p.id = e.project_id
-        JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
-        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-        ORDER BY e.expense_date DESC
-    ";
-    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+        JOIN project_budget_lines pbl 
+            ON pbl.id = e.project_budget_line_id
+        JOIN budget_lines bl 
+            ON bl.id = pbl.budget_line_id
+        ORDER BY e.created_at DESC
+    ");
+
+    $stmt->execute();
+    $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    jsonSuccess($expenses);
 }
+
+
 
 function createExpense()
 {
-    $data = getInput();
-    foreach (['project_id', 'project_budget_line_id', 'expense_date', 'amount'] as $f) {
-        requireField($data, $f);
+    $pdo = getPDO();
+
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (!$data) {
+        jsonError('JSON invalide', 400);
     }
 
-    if (!isPositiveNumber($data['amount'])) {
-        jsonError("Montant invalide");
+    $projectId = $data['project_id'] ?? null;
+    $lines = $data['lines'] ?? [];
+
+    if (!$projectId || empty($lines)) {
+        jsonError('Paramètres manquants', 400);
     }
 
-    db()->prepare("
-        INSERT INTO expenses (project_id, project_budget_line_id, amount, expense_date, description)
-        VALUES (?, ?, ?, ?, ?)
-    ")->execute([
-        $data['project_id'],
-        $data['project_budget_line_id'],
-        $data['amount'],
-        $data['expense_date'],
-        $data['description'] ?? null
-    ]);
+    $stmt = $pdo->prepare("
+        INSERT INTO expenses (
+            project_id,
+            project_budget_line_id,
+            amount,
+            description,
+            expense_date,
+            created_at
+        ) VALUES (?, ?, ?, ?, CURDATE(), NOW())
+    ");
 
-    jsonResponse(null, "Dépense enregistrée");
+    foreach ($lines as $line) {
+        if (
+            empty($line['project_budget_line_id']) ||
+            empty($line['amount'])
+        ) {
+            jsonError('Ligne de dépense invalide', 400);
+        }
+
+        $stmt->execute([
+            $projectId,
+            $line['project_budget_line_id'],
+            $line['amount'],
+            $line['description'] ?? null
+        ]);
+    }
+
+    jsonSuccess([], 'Dépense enregistrée avec succès');
 }
+
 
 function updateExpense()
 {
-    $data = getInput();
-    requireField($data, 'id');
+    $pdo = getPDO();
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? null;
+    $amount = $data['amount'] ?? null;
+    if (!$id || $amount === null) jsonError('Paramètres manquants');
 
-    db()->prepare("
-        UPDATE expenses
-        SET amount = ?, expense_date = ?, description = ?
-        WHERE id = ?
-    ")->execute([
-        $data['amount'],
-        $data['expense_date'],
-        $data['description'] ?? null,
-        $data['id']
-    ]);
-
-    jsonResponse(null, "Dépense mise à jour");
+    $stmt = $pdo->prepare("UPDATE expenses SET amount = ? WHERE id = ?");
+    $stmt->execute([$amount, $id]);
+    jsonSuccess([], 'Dépense mise à jour');
 }
 
 function deleteExpense()
 {
+    $pdo = getPDO();
     $id = $_GET['id'] ?? null;
-    if (!$id || !is_numeric($id)) jsonError("ID invalide");
+    if (!$id) jsonError('ID manquant');
 
-    db()->prepare("DELETE FROM expenses WHERE id = ?")->execute([$id]);
-    jsonResponse(null, "Dépense supprimée");
+    $stmt = $pdo->prepare("DELETE FROM expenses WHERE id = ?");
+    $stmt->execute([$id]);
+    jsonSuccess([], 'Dépense supprimée');
 }
 
-/* =======================
-   SUMMARY
-======================= */
 
+function getProjectBudgetLines()
+{
+    $pdo = getPDO();
+    $project_id = $_GET['project_id'] ?? 0;
+
+    if (!$project_id) {
+        jsonError('ID du projet manquant');
+        return;
+    }
+
+    // Récupérer les lignes de budget du projet
+    $stmt = $pdo->prepare("
+        SELECT 
+            bl.id,
+            bl.name,
+            pbl.allocated_amount,
+            IFNULL(SUM(e.amount), 0) AS spent,
+            (pbl.allocated_amount - IFNULL(SUM(e.amount), 0)) AS remaining
+        FROM project_budget_lines pbl
+        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+        LEFT JOIN expenses e ON e.project_budget_line_id = bl.id
+        WHERE pbl.project_id = ?
+        GROUP BY bl.id, bl.name, pbl.allocated_amount
+    ");
+    $stmt->execute([$project_id]);
+    $lines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode(['data' => $lines]);
+}
+
+
+/**
+ * 📊 RÉCAPS
+ */
 function getGlobalSummary()
 {
-    $sql = "
-        SELECT 
-            SUM(total_budget) AS total_budget,
-            (SELECT SUM(amount) FROM expenses) AS total_spent
-        FROM projects
-    ";
-    jsonResponse(db()->query($sql)->fetch(PDO::FETCH_ASSOC));
+    $pdo = getPDO();
+    $total = $pdo->query("SELECT SUM(amount) as total FROM expenses")->fetchColumn();
+    jsonSuccess(['total_expenses' => (float)$total]);
 }
 
 function getProjectsSummary()
 {
-    $sql = "
-        SELECT 
-            p.id,
-            p.name,
-            p.total_budget,
-            COALESCE(SUM(e.amount),0) AS spent,
-            p.total_budget - COALESCE(SUM(e.amount),0) AS remaining
+    $pdo = getPDO();
+    $stmt = $pdo->query("
+        SELECT p.id, p.name, SUM(e.amount) AS total_expenses
         FROM projects p
         LEFT JOIN expenses e ON e.project_id = p.id
         GROUP BY p.id
-    ";
-    jsonResponse(db()->query($sql)->fetchAll(PDO::FETCH_ASSOC));
+    ");
+    $summary = $stmt->fetchAll();
+    jsonSuccess($summary);
 }
 
-function getProjectDetails()
+/**
+ * Fonctions internes déjà présentes
+ */
+function getLastExpenses(PDO $pdo, int $limit = 10): array
 {
-    // Récupérer l'ID du projet depuis l'URL
-    $id = $_GET['id'] ?? null;
-    if (!$id || !is_numeric($id)) {
-        jsonError("ID projet invalide");
-    }
-
-    // Récupérer les informations principales du projet
-    $stmt = db()->prepare("SELECT * FROM projects WHERE id = ?");
-    $stmt->execute([$id]);
-    $project = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$project) {
-        jsonError("Projet introuvable");
-    }
-
-    // Récupérer les lignes budgétaires associées au projet avec leur nom et montant alloué
-    $stmt2 = db()->prepare("
-        SELECT 
-            pbl.id AS budget_line_id,
-            pbl.allocated_amount,
-            bl.name
-        FROM project_budget_lines pbl
-        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-        WHERE pbl.project_id = ?
+    $stmt = $pdo->prepare("
+        SELECT e.*, 
+               p.name AS project_name, 
+               b.name AS budget_name
+        FROM expenses e
+        JOIN projects p ON p.id = e.project_id
+        JOIN budget_lines b ON b.id = e.budget_line_id
+        ORDER BY e.created_at DESC
+        LIMIT :limit
     ");
-    $stmt2->execute([$id]);
-    $lines = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
 
-    // Calculer le total dépensé pour le projet
-    $stmt3 = db()->prepare("SELECT COALESCE(SUM(amount),0) AS total_spent FROM expenses WHERE project_id = ?");
-    $stmt3->execute([$id]);
-    $totalSpent = $stmt3->fetch(PDO::FETCH_ASSOC)['total_spent'] ?? 0;
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
-    // Ajouter total dépensé et reste dans les données du projet
-    $project['total_spent'] = $totalSpent;
-    $project['remaining'] = $project['total_budget'] - $totalSpent;
+function getBudgetLinesByProject(PDO $pdo, int $projectId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT id, name 
+        FROM budget_lines 
+        WHERE project_id = ?
+        ORDER BY name
+    ");
+    $stmt->execute([$projectId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
-    // Renvoyer la réponse JSON complète
-    jsonResponse([
-        "id" => $project['id'],
-        "name" => $project['name'],
-        "description" => $project['description'],
-        "total_budget" => $project['total_budget'],
-        "total_spent" => $project['total_spent'],
-        "remaining" => $project['remaining'],
-        "lines" => $lines
-    ]);
+function storeExpense(PDO $pdo, int $projectId, array $lines): void
+{
+    $stmt = $pdo->prepare("
+        INSERT INTO expenses 
+        (project_id, project_budget_line_id, amount, description, expense_date, created_at)
+        VALUES (?, ?, ?, ?, CURDATE(), NOW())
+    ");
+
+    foreach ($lines as $line) {
+        if (empty($line['project_budget_line_id']) || empty($line['amount'])) {
+            throw new Exception('Ligne de dépense invalide');
+        }
+
+        $stmt->execute([
+            $projectId,
+            $line['project_budget_line_id'],
+            $line['amount'],
+            $line['description'] ?? null
+        ]);
+    }
 }

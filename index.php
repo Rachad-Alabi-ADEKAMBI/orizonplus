@@ -659,7 +659,7 @@
                 </div>
                 <nav>
                     <ul class="nav-menu">
-                        <li><a href="index.html" class="nav-link active"><i class="fas fa-folder-open"></i> Projets</a></li>
+                        <li><a href="index.php" class="nav-link active"><i class="fas fa-folder-open"></i> Projets</a></li>
                         <li><a href="expenses.php" class="nav-link"><i class="fas fa-receipt"></i> Dépenses</a></li>
                         <li><a href="#" class="nav-link" @click="logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
                     </ul>

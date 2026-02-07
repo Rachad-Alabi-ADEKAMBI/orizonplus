@@ -583,6 +583,68 @@
             opacity: 0.5;
         }
 
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Stat Card Gradient Border Animation */
+        .stat-card:hover {
+            background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+                linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) border-box;
+            border-color: transparent;
+        }
+
+        /* Recent Expenses Highlight */
+        .recent-expense {
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Stats Loading State */
+        .stat-card.loading {
+            background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Section Card Improvements */
+        .section-card {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 16px rgba(0, 112, 243, 0.15);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .header-content {
@@ -610,6 +672,11 @@
             .charts-grid {
                 grid-template-columns: 1fr;
             }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -625,7 +692,7 @@
                 </div>
                 <nav>
                     <ul class="nav-menu">
-                        <li><a href="index.html" class="nav-link"><i class="fas fa-folder-open"></i> Projets</a></li>
+                        <li><a href="index.php" class="nav-link"><i class="fas fa-folder-open"></i> Projets</a></li>
                         <li><a href="expenses.html" class="nav-link active"><i class="fas fa-receipt"></i> Dépenses</a></li>
                         <li><a href="#" class="nav-link" @click="logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
                     </ul>
@@ -635,73 +702,90 @@
 
         <!-- Main Container -->
         <div class="container">
+            <!-- Loading Indicator -->
+            <div v-if="isLoading" class="stats-grid">
+                <div class="stat-card loading" v-for="i in 4" :key="i" style="height: 140px;"></div>
+            </div>
+
             <!-- Stats Section -->
-            <div class="stats-grid">
+            <div v-else class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Total Dépenses</span>
-                        <div class="stat-icon" style="background: rgba(255, 59, 59, 0.2); color: var(--accent-red);">
-                            <i class="fas fa-receipt"></i>
+                        <span class="stat-label">🧾 Transactions</span>
+                        <div class="stat-icon" style="background: rgba(0, 112, 243, 0.2); color: var(--accent-blue);">
+                            <i class="fas fa-file-invoice-dollar"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ stats.totalExpenses }}</div>
-                    <div class="stat-change">
-                        <i class="fas fa-calendar"></i>
+                    <div class="stat-change" style="color: var(--accent-blue);">
+                        <i class="fas fa-check-circle"></i>
                         Enregistrées
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Montant Total</span>
-                        <div class="stat-icon" style="background: rgba(124, 58, 237, 0.2); color: var(--accent-purple);">
-                            <i class="fas fa-coins"></i>
+                        <span class="stat-label">💰 Montant Total</span>
+                        <div class="stat-icon" style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
+                            <i class="fas fa-money-bill-wave"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.totalAmount) }}</div>
-                    <div class="stat-change">
+                    <div class="stat-change" style="color: var(--accent-green);">
                         Dépensé au total
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Ce Mois</span>
+                        <span class="stat-label">📅 Ce Mois</span>
                         <div class="stat-icon" style="background: rgba(0, 212, 255, 0.2); color: var(--accent-cyan);">
-                            <i class="fas fa-calendar-check"></i>
+                            <i class="fas fa-calendar-alt"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.thisMonth) }}</div>
-                    <div class="stat-change">
+                    <div class="stat-change" style="color: var(--accent-cyan);">
                         Dépenses mensuelles
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Budgets Dépassés</span>
+                        <span class="stat-label">⚠️ Alertes</span>
                         <div class="stat-icon" style="background: rgba(255, 184, 0, 0.2); color: var(--accent-yellow);">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-exclamation-circle"></i>
                         </div>
                     </div>
-                    <div class="stat-value">{{ stats.overBudget }}</div>
-                    <div class="stat-change">
-                        <i class="fas fa-alert-triangle"></i>
+                    <div class="stat-value" style="color: var(--accent-yellow);">{{ stats.overBudget }}</div>
+                    <div class="stat-change" style="color: var(--accent-yellow);">
+                        <i class="fas fa-bell"></i>
                         Lignes en alerte
                     </div>
                 </div>
             </div>
 
             <!-- Charts Section -->
-            <div class="charts-grid">
+            <div v-if="!isLoading" class="charts-grid">
                 <div class="chart-card">
-                    <h3 class="chart-title"><i class="fas fa-chart-pie"></i> Dépenses par Projet</h3>
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-pie" style="color: var(--accent-cyan); margin-right: 0.5rem;"></i>
+                        Dépenses par Projet
+                    </h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <i class="fas fa-info-circle"></i> Répartition des dépenses par projet
+                    </p>
                     <div class="chart-container">
                         <canvas ref="projectsChart"></canvas>
                     </div>
                 </div>
                 <div class="chart-card">
-                    <h3 class="chart-title"><i class="fas fa-chart-line"></i> Évolution des Dépenses</h3>
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-line" style="color: var(--accent-green); margin-right: 0.5rem;"></i>
+                        Évolution des Dépenses
+                    </h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <i class="fas fa-info-circle"></i> Tendance mensuelle
+                    </p>
                     <div class="chart-container">
                         <canvas ref="evolutionChart"></canvas>
                     </div>
@@ -711,12 +795,21 @@
             <!-- Expenses Table Section -->
             <div class="section-card">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-receipt"></i>
-                        Dépenses ({{ filteredExpenses.length }})
-                    </h2>
+                    <div>
+                        <h2 class="section-title">
+                            <i class="fas fa-list" style="color: var(--accent-blue); margin-right: 0.5rem;"></i>
+                            Historique des Dépenses
+                        </h2>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            <i class="fas fa-clock"></i>
+                            {{ filteredExpenses.length }} enregistrement(s)
+                            <span v-if="filteredExpenses.length > 0" style="margin-left: 1rem;">
+                                • Plus récent: {{ formatDate(filteredExpenses[0].expense_date) }}
+                            </span>
+                        </p>
+                    </div>
                     <button class="btn btn-primary" @click="openExpenseModal">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus-circle"></i>
                         Nouvelle Dépense
                     </button>
                 </div>
@@ -725,19 +818,19 @@
                     <div class="filters">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" class="search-input" placeholder="Rechercher une dépense..." v-model="searchQuery" @input="filterExpenses">
+                            <input type="text" class="search-input" placeholder="🔍 Rechercher une dépense, projet ou ligne..." v-model="searchQuery" @input="filterExpenses">
                         </div>
-                        <select class="filter-select" v-model="projectFilter" @change="filterExpenses">
-                            <option value="">Tous les projets</option>
+                        <select class="filter-select" v-model="projectFilter" @change="filterExpenses" title="Filtrer par projet">
+                            <option value="">📁 Tous les projets</option>
                             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
                         </select>
-                        <select class="filter-select" v-model="statusFilter" @change="filterExpenses">
-                            <option value="">Tous les statuts</option>
-                            <option value="ok">Budget OK</option>
-                            <option value="warning">Budget serré</option>
-                            <option value="over">Budget dépassé</option>
+                        <select class="filter-select" v-model="statusFilter" @change="filterExpenses" title="Filtrer par statut">
+                            <option value="">📊 Tous les statuts</option>
+                            <option value="ok">✅ Budget OK</option>
+                            <option value="warning">⚠️ Budget serré</option>
+                            <option value="over">🔴 Budget dépassé</option>
                         </select>
-                        <input type="date" class="filter-input" v-model="dateFilter" @change="filterExpenses">
+                        <input type="date" class="filter-input" v-model="dateFilter" @change="filterExpenses" title="Filtrer par date">
                     </div>
 
                     <!-- Expenses Table -->
@@ -760,15 +853,18 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="expense in filteredExpenses" :key="expense.id"
-                                    :class="{'warning': expense.remaining > 0 && expense.remaining < expense.allocated_amount * 0.2, 'danger': expense.remaining < 0}">
-                                    <td>{{ formatDate(expense.expense_date) }}</td>
-                                    <td><strong>{{ expense.project_name }}</strong></td>
-                                    <td>{{ expense.line_name }}</td>
-                                    <td>{{ expense.description }}</td>
-                                    <td><strong>{{ formatCurrency(expense.amount) }}</strong></td>
-                                    <td>{{ formatCurrency(expense.allocated_amount) }}</td>
-                                    <td>{{ formatCurrency(expense.spent) }}</td>
+                                <tr v-for="(expense, index) in filteredExpenses" :key="expense.id"
+                                    :class="{'warning': expense.remaining > 0 && expense.remaining < expense.allocated_amount * 0.2, 'danger': expense.remaining < 0, 'recent-expense': index < 3}">
+                                    <td style="font-weight: 500; color: var(--accent-blue);">
+                                        <i class="fas fa-calendar-day" style="margin-right: 0.5rem;"></i>
+                                        {{ formatDate(expense.expense_date) }}
+                                    </td>
+                                    <td><strong style="color: var(--text-primary);">📁 {{ expense.project_name }}</strong></td>
+                                    <td><span style="color: var(--accent-cyan);">{{ expense.budget_line_name }}</span></td>
+                                    <td style="color: var(--text-secondary);">{{ expense.description }}</td>
+                                    <td><strong style="color: var(--accent-green); font-size: 1.05rem;">{{ formatCurrency(expense.amount) }}</strong></td>
+                                    <td style="color: var(--accent-yellow);">{{ formatCurrency(expense.allocated_amount) }}</td>
+                                    <td style="color: var(--accent-red);">{{ formatCurrency(expense.spent) }}</td>
                                     <td>
                                         <span class="badge" :class="getBadgeClass(expense.remaining, expense.allocated_amount)">
                                             {{ formatCurrency(expense.remaining) }}
@@ -862,6 +958,7 @@
                     filteredExpenses: [],
                     projects: [],
                     lines: [],
+                    isLoading: true,
                     expense: {
                         project_id: '',
                         project_budget_line_id: '',
@@ -887,10 +984,18 @@
                 };
             },
             mounted() {
-                this.fetchProjects();
-                this.fetchExpenses();
+                this.loadData();
             },
             methods: {
+                // Load data in the correct order: expenses first, then projects
+                async loadData() {
+                    try {
+                        await this.fetchExpenses();
+                        await this.fetchProjects();
+                    } catch (error) {
+                        console.error('[v0] Error loading data:', error);
+                    }
+                },
                 // API Calls with base URL
                 async fetchProjects() {
                     try {
@@ -903,16 +1008,27 @@
                 },
                 async fetchExpenses() {
                     try {
+                        console.log('[v0] Loading expenses...');
                         const response = await fetch(`${API_BASE_URL}?action=getExpenses`);
                         const data = await response.json();
-                        this.expenses = data.data || [];
+
+                        // Sort by date (most recent first)
+                        this.expenses = (data.data || []).sort((a, b) => {
+                            return new Date(b.expense_date) - new Date(a.expense_date);
+                        });
+
                         this.filteredExpenses = this.expenses;
                         this.calculateStats();
+
+                        console.log('[v0] Expenses loaded successfully:', this.expenses.length, 'records');
+
                         this.$nextTick(() => {
                             this.renderCharts();
                         });
                     } catch (error) {
                         console.error('[v0] Error fetching expenses:', error);
+                    } finally {
+                        this.isLoading = false;
                     }
                 },
                 async fetchLines() {
@@ -931,9 +1047,9 @@
                     const line = this.lines.find(l => l.id == this.expense.project_budget_line_id);
                     if (line) {
                         this.selectedLine = {
-                            allocated_amount: line.allocated_amount,
-                            spent: line.spent,
-                            remaining: line.remaining
+                            allocated_amount: parseFloat(line.allocated_amount), // conversion string → number
+                            spent: parseFloat(line.spent),
+                            remaining: parseFloat(line.remaining)
                         };
                     } else {
                         this.selectedLine = null;
@@ -944,28 +1060,59 @@
                         alert('Veuillez remplir tous les champs obligatoires');
                         return;
                     }
+
                     try {
+                        const payload = {
+                            project_id: this.expense.project_id,
+                            lines: [{
+                                project_budget_line_id: this.expense.project_budget_line_id,
+                                amount: this.expense.amount,
+                                description: this.expense.description
+                            }]
+                        };
+
+                        // Debug : afficher le payload et la route
+                        console.log('[DEBUG] Route API:', `${API_BASE_URL}?action=createExpense`);
+                        console.log('[DEBUG] Payload envoyé:', payload);
+
                         const response = await fetch(`${API_BASE_URL}?action=createExpense`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify(this.expense)
+                            body: JSON.stringify(payload)
                         });
-                        const data = await response.json();
-                        alert(data.message);
+
+                        // Debug : afficher le status et le texte brut de la réponse
+                        console.log('[DEBUG] Status HTTP:', response.status);
+                        const text = await response.text();
+                        console.log('[DEBUG] Réponse brute:', text);
+
+                        // Essayer de parser en JSON seulement si possible
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                            console.log('[DEBUG] Réponse JSON:', data);
+                            alert(data.message);
+                        } catch (parseError) {
+                            console.error('[DEBUG] Erreur parsing JSON:', parseError);
+                            alert('Erreur: impossible de parser la réponse du serveur');
+                        }
+
                         this.closeExpenseModal();
                         this.fetchExpenses();
+
                     } catch (error) {
                         console.error('[v0] Error saving expense:', error);
                     }
                 },
+
                 // Modal Management
                 openExpenseModal() {
                     this.expense = {
                         project_id: '',
                         project_budget_line_id: '',
-                        amount: 0,
+                        amount: '',
                         description: ''
                     };
                     this.selectedLine = null;
