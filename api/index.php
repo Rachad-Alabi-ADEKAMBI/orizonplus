@@ -90,6 +90,11 @@ switch ($action) {
         getProjectDetails();
         break;
 
+    case 'deleteProjectBudgetLine':
+        deleteProjectBudgetLine();
+        break;
+
+
     case 'deleteBudgetLine':
         deleteBudgetLine();
         break;

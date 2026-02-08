@@ -4,15 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrizonPlus • Gestion de Projets</title>
-
-    <!-- Vue 3 -->
+    <title>OrizonPlus - Gestion de Projets</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-
     <style>
         * {
             margin: 0;
@@ -31,22 +26,86 @@
             --accent-cyan: #00d4ff;
             --accent-green: #00e676;
             --accent-red: #ff3b3b;
+            --accent-yellow: #ffb800;
             --accent-purple: #7c3aed;
-            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-2: linear-gradient(135deg, #0070f3 0%, #00d4ff 100%);
             --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
             --radius: 12px;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
-            overflow-x: hidden;
         }
 
-        /* Header */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+
+            body * {
+                visibility: hidden;
+            }
+
+            .print-area,
+            .print-area * {
+                visibility: visible;
+            }
+
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+                color: black;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-footer {
+                display: block !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+                padding: 10px;
+                font-size: 12px;
+                border-top: 1px solid #ccc;
+                background: white;
+            }
+
+            .modal {
+                border: 1px solid #000;
+            }
+
+            table {
+                border: 1px solid #000;
+                margin-bottom: 20px;
+                page-break-inside: avoid;
+            }
+
+            th,
+            td {
+                border: 1px solid #ccc;
+                color: black !important;
+                padding: 8px;
+            }
+
+            h2,
+            h3,
+            h4 {
+                color: black !important;
+                page-break-after: avoid;
+            }
+        }
+
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
@@ -54,8 +113,6 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
         }
 
         .header-content {
@@ -75,7 +132,6 @@
             background: var(--gradient-2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         .nav-menu {
@@ -93,6 +149,10 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
         }
 
         .nav-link:hover,
@@ -101,14 +161,12 @@
             background: var(--bg-tertiary);
         }
 
-        /* Container */
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
 
-        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -193,26 +251,12 @@
             color: var(--accent-red);
         }
 
-        /* Section Card */
         .section-card {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
             margin-bottom: 2rem;
             overflow: hidden;
-            animation: fadeInUp 0.5s ease;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .section-header {
@@ -221,6 +265,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .section-title {
@@ -235,7 +281,6 @@
             padding: 1.5rem;
         }
 
-        /* Filters */
         .filters {
             display: flex;
             gap: 1rem;
@@ -268,13 +313,15 @@
             transition: all 0.3s ease;
         }
 
-        .search-input:focus {
+        .search-input:focus,
+        .filter-select:focus,
+        .filter-input:focus {
             outline: none;
             border-color: var(--accent-blue);
-            background: var(--bg-primary);
         }
 
-        .filter-select {
+        .filter-select,
+        .filter-input {
             padding: 0.75rem 1rem;
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
@@ -285,12 +332,10 @@
             transition: all 0.3s ease;
         }
 
-        .filter-select:focus {
-            outline: none;
-            border-color: var(--accent-blue);
+        .filter-input {
+            min-width: 150px;
         }
 
-        /* Button */
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: var(--radius);
@@ -313,17 +358,27 @@
         .btn-primary:hover {
             background: #0060df;
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 112, 243, 0.3);
         }
 
         .btn-success {
             background: var(--accent-green);
-            color: white;
+            color: #111;
+        }
+
+        .btn-warning {
+            background: var(--accent-yellow);
+            color: #111;
         }
 
         .btn-danger {
             background: var(--accent-red);
             color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
         }
 
         .btn-sm {
@@ -335,12 +390,9 @@
             width: 36px;
             height: 36px;
             padding: 0;
-            display: inline-flex;
-            align-items: center;
             justify-content: center;
         }
 
-        /* Table */
         .table-container {
             overflow-x: auto;
         }
@@ -363,12 +415,10 @@
             border-bottom: 1px solid var(--border-color);
             cursor: pointer;
             user-select: none;
-            transition: all 0.2s ease;
         }
 
         .table th:hover {
             color: var(--text-primary);
-            background: var(--bg-secondary);
         }
 
         .table td {
@@ -382,6 +432,16 @@
 
         .table tbody tr:hover {
             background: var(--bg-tertiary);
+        }
+
+        .table tbody tr.budget-exceeded {
+            background: rgba(255, 59, 59, 0.1);
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .table tbody tr.budget-warning {
+            background: rgba(255, 184, 0, 0.1);
+            border-left: 3px solid var(--accent-yellow);
         }
 
         .badge {
@@ -404,10 +464,14 @@
 
         .badge-warning {
             background: rgba(255, 184, 0, 0.2);
-            color: #ffb800;
+            color: var(--accent-yellow);
         }
 
-        /* Progress Bar */
+        .badge-info {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent-cyan);
+        }
+
         .progress {
             height: 8px;
             background: var(--bg-tertiary);
@@ -420,32 +484,16 @@
             height: 100%;
             background: var(--gradient-2);
             transition: width 0.8s ease;
-            position: relative;
-            overflow: hidden;
         }
 
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: shimmer 2s infinite;
+        .progress-bar.danger {
+            background: linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%);
         }
 
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
+        .progress-bar.warning {
+            background: linear-gradient(135deg, #ffb800 0%, #ffd000 100%);
         }
 
-        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -472,7 +520,7 @@
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
-            max-width: 600px;
+            max-width: 900px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -503,7 +551,6 @@
             color: var(--text-secondary);
             font-size: 1.5rem;
             cursor: pointer;
-            transition: color 0.2s ease;
         }
 
         .modal-close:hover {
@@ -512,6 +559,8 @@
 
         .modal-body {
             padding: 1.5rem;
+            max-height: calc(90vh - 150px);
+            overflow-y: auto;
         }
 
         .modal-footer {
@@ -522,7 +571,6 @@
             gap: 1rem;
         }
 
-        /* Form */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -553,7 +601,11 @@
         .form-select:focus {
             outline: none;
             border-color: var(--accent-blue);
-            background: var(--bg-primary);
+        }
+
+        .form-input:read-only {
+            opacity: 0.7;
+            cursor: default;
         }
 
         .form-textarea {
@@ -561,20 +613,41 @@
             min-height: 100px;
         }
 
-        /* Chart Container */
         .chart-container {
             position: relative;
             height: 300px;
             margin-top: 1rem;
         }
 
-        /* Action Buttons */
         .action-buttons {
             display: flex;
             gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
-        /* Budget Line Input */
+        .budget-line-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .budget-line-row .line-name {
+            flex: 2;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            padding: 0.5rem 0;
+        }
+
+        .budget-line-row .form-input {
+            flex: 1;
+        }
+
         .budget-line-input {
             display: flex;
             gap: 0.5rem;
@@ -587,7 +660,6 @@
             flex: 1;
         }
 
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -600,33 +672,167 @@
             opacity: 0.5;
         }
 
-        /* Loading */
-        .loading {
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--accent-blue);
+        }
+
+        .pagination button.active {
+            background: var(--accent-blue);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-danger {
+            background: rgba(255, 59, 59, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .alert-warning {
+            background: rgba(255, 184, 0, 0.2);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-box {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .info-box-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .expense-detail-table td,
+        .expense-detail-table th {
+            font-size: 0.85rem;
+            padding: 0.75rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .detail-lines-table .progress {
+            height: 6px;
+            margin-top: 0.25rem;
+        }
+
+        .summary-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-item {
             text-align: center;
-            padding: 3rem;
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--accent-blue);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto;
+        .summary-item .label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+        .summary-item .value {
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
                 gap: 1rem;
+            }
+
+            .nav-menu {
+                flex-direction: column;
+                width: 100%;
             }
 
             .stats-grid {
@@ -637,13 +843,107 @@
                 flex-direction: column;
             }
 
-            .table-container {
-                font-size: 0.875rem;
-            }
-
             .action-buttons {
                 flex-direction: column;
             }
+
+            .modal {
+                max-width: 95%;
+                width: 95%;
+            }
+
+            /* Responsive Tables */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .table thead {
+                display: none;
+            }
+
+            .table tbody tr {
+                display: block;
+                margin-bottom: 1.5rem;
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius);
+                padding: 1rem;
+                background: var(--bg-tertiary);
+            }
+
+            .table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem 0;
+                border-bottom: 1px solid var(--border-color);
+                text-align: right;
+            }
+
+            .table tbody td:last-child {
+                border-bottom: none;
+            }
+
+            .table tbody td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--text-secondary);
+                text-align: left;
+                margin-right: 1rem;
+                flex: 1;
+                font-size: 0.85rem;
+            }
+
+            .table tbody td>* {
+                flex-shrink: 0;
+            }
+
+            /* Progress column on mobile */
+            .table tbody td .progress {
+                width: 100px;
+                margin-top: 0;
+            }
+
+            /* Action buttons column */
+            .table tbody td .action-buttons {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .budget-line-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .budget-line-row .line-name {
+                padding: 0.5rem 0;
+            }
+
+            .budget-line-input {
+                flex-direction: column;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        .print-footer {
+            display: none;
         }
     </style>
 </head>
@@ -651,7 +951,7 @@
 <body>
     <div id="app">
         <!-- Header -->
-        <header class="header">
+        <header class="header no-print">
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-chart-line"></i>
@@ -659,157 +959,175 @@
                 </div>
                 <nav>
                     <ul class="nav-menu">
-                        <li><a href="index.php" class="nav-link active"><i class="fas fa-folder-open"></i> Projets</a></li>
-                        <li><a href="expenses.php" class="nav-link"><i class="fas fa-receipt"></i> Dépenses</a></li>
-                        <li><a href="#" class="nav-link" @click="logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
+                        <li><a href="index.php" class="nav-link active"><i class="fas fa-folder-open"></i>
+                                Projets</a></li>
+                        <li><a href="#" class="nav-link" @click.prevent="logout"><i
+                                    class="fas fa-sign-out-alt"></i> Deconnexion</a></li>
                     </ul>
                 </nav>
             </div>
         </header>
 
-        <!-- Main Container -->
         <div class="container">
+            <!-- Alertes Budgets Depasses -->
+            <div v-if="budgetAlerts.length > 0" class="no-print">
+                <div v-for="alert in budgetAlerts" :key="alert.id"
+                    :class="alert.type === 'exceeded' ? 'alert alert-danger' : 'alert alert-warning'">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>{{ alert.name }}</strong> -
+                    {{ alert.type === 'exceeded' ? 'Budget depasse' : 'Budget critique (>80%)' }} :
+                    {{ formatCurrency(alert.remaining) }} restant sur {{ formatCurrency(alert.allocated) }}
+                </div>
+            </div>
+
             <!-- Stats Section -->
-            <div class="stats-grid">
+            <div v-if="!showBudgetLines" class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Total Projets</span>
-                        <div class="stat-icon" style="background: rgba(0, 112, 243, 0.2); color: var(--accent-blue);">
+                        <div class="stat-icon"
+                            style="background: rgba(0, 112, 243, 0.2); color: var(--accent-blue);">
                             <i class="fas fa-folder"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ stats.totalProjects }}</div>
                     <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        {{ stats.projectGrowth }}% ce mois
+                        <i class="fas fa-check-circle"></i>
+                        Projets actifs
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Budget Total</span>
-                        <div class="stat-icon" style="background: rgba(124, 58, 237, 0.2); color: var(--accent-purple);">
+                        <div class="stat-icon"
+                            style="background: rgba(124, 58, 237, 0.2); color: var(--accent-purple);">
                             <i class="fas fa-wallet"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.totalBudget) }}</div>
                     <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i>
-                        Budget alloué
+                        <i class="fas fa-dollar-sign"></i>
+                        Budget alloue
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Total Dépensé</span>
-                        <div class="stat-icon" style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
+                        <span class="stat-label">Total Depense</span>
+                        <div class="stat-icon"
+                            style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
                             <i class="fas fa-chart-pie"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.totalSpent) }}</div>
                     <div class="stat-change" :class="stats.spentPercentage > 80 ? 'negative' : 'positive'">
-                        {{ stats.spentPercentage }}% utilisé
+                        {{ stats.spentPercentage.toFixed(1) }}% utilise
                     </div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Restant</span>
-                        <div class="stat-icon" style="background: rgba(0, 212, 255, 0.2); color: var(--accent-cyan);">
+                        <div class="stat-icon"
+                            style="background: rgba(0, 212, 255, 0.2); color: var(--accent-cyan);">
                             <i class="fas fa-piggy-bank"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.totalRemaining) }}</div>
                     <div class="stat-change" :class="stats.totalRemaining < 0 ? 'negative' : 'positive'">
-                        <i :class="stats.totalRemaining < 0 ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'"></i>
-                        {{ stats.totalRemaining < 0 ? 'Budget dépassé' : 'Dans le budget' }}
+                        <i
+                            :class="stats.totalRemaining < 0 ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'"></i>
+                        {{ stats.totalRemaining < 0 ? 'Budget depasse' : 'Dans le budget' }}
                     </div>
                 </div>
             </div>
 
-            <!-- Budget Lines Section -->
-            <div class="section-card">
+            <!-- Graphiques Globaux -->
+            <div v-if="!showBudgetLines" class="section-card no-print">
                 <div class="section-header">
                     <h2 class="section-title">
-                        <i class="fas fa-list"></i>
-                        Lignes Budgétaires
+                        <i class="fas fa-chart-bar"></i>
+                        Visualisations
                     </h2>
-                    <button class="btn btn-primary btn-sm" @click="openLineModal">
-                        <i class="fas fa-plus"></i>
-                        Ajouter
+                    <button class="btn btn-primary btn-sm" @click="printChartsPage">
+                        <i class="fas fa-print"></i>
+                        Imprimer Graphiques
                     </button>
                 </div>
                 <div class="section-content">
-                    <div v-if="availableLines.length === 0" class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>Aucune ligne budgétaire</p>
-                    </div>
-                    <div v-else class="table-container">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Nom</th>
-                                    <th style="width: 200px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="line in availableLines" :key="line.id">
-                                    <td>
-                                        <input v-model="line.name" class="form-input" @blur="updateLine(line)" />
-                                    </td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <button class="btn btn-success btn-sm" @click="updateLine(line)">
-                                                <i class="fas fa-save"></i> Enregistrer
-                                            </button>
-                                            <button class="btn btn-danger btn-sm" @click="deleteLine(line.id)">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+                        <div>
+                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">Repartition des Budgets
+                            </h3>
+                            <div class="chart-container">
+                                <canvas ref="budgetPieChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">Budget vs Depenses par
+                                Projet</h3>
+                            <div class="chart-container">
+                                <canvas ref="progressBarChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Projects Section -->
-            <div class="section-card">
+            <!-- Projets Section -->
+            <div v-if="!showBudgetLines" class="section-card">
                 <div class="section-header">
                     <h2 class="section-title">
                         <i class="fas fa-folder"></i>
                         Projets ({{ filteredProjects.length }})
                     </h2>
-                    <button class="btn btn-primary" @click="openProjectModal">
-                        <i class="fas fa-plus"></i>
-                        Nouveau Projet
-                    </button>
+                    <div class="action-buttons no-print">
+                        <button class="btn btn-warning btn-sm" @click="toggleBudgetLines">
+                            <i class="fas fa-list"></i>
+                            Gerer Lignes Budgetaires
+                        </button>
+                        <button class="btn btn-success btn-sm" @click="printProjectsPage">
+                            <i class="fas fa-print"></i>
+                            Imprimer
+                        </button>
+                        <button class="btn btn-primary" @click="openProjectModal">
+                            <i class="fas fa-plus"></i>
+                            Nouveau Projet
+                        </button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <!-- Filters -->
-                    <div class="filters">
+                    <div class="filters no-print">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" class="search-input" placeholder="Rechercher un projet..." v-model="searchQuery" @input="filterProjects">
+                            <input type="text" class="search-input" placeholder="Rechercher un projet..."
+                                v-model="searchQuery" @input="filterProjects">
                         </div>
                         <select class="filter-select" v-model="budgetFilter" @change="filterProjects">
                             <option value="">Tous les projets</option>
                             <option value="remaining">Budget restant</option>
-                            <option value="over">Budget dépassé</option>
+                            <option value="over">Budget depasse</option>
+                            <option value="warning">Budget critique (>80%)</option>
                         </select>
                         <select class="filter-select" v-model="sortBy" @change="sortProjects">
                             <option value="name">Trier par nom</option>
-                            <option value="total_budget">Trier par budget</option>
-                            <option value="total_spent">Trier par dépensé</option>
+                            <option value="allocated_amount">Trier par budget</option>
+                            <option value="spent">Trier par depense</option>
                             <option value="remaining">Trier par restant</option>
                         </select>
+                        <input type="date" class="filter-input" v-model="dateFrom" placeholder="Du"
+                            @change="filterProjects">
+                        <input type="date" class="filter-input" v-model="dateTo" placeholder="Au"
+                            @change="filterProjects">
                     </div>
 
                     <!-- Projects Table -->
-                    <div v-if="filteredProjects.length === 0" class="empty-state">
+                    <div v-if="paginatedProjects.length === 0" class="empty-state">
                         <i class="fas fa-folder-open"></i>
-                        <p>Aucun projet trouvé</p>
+                        <p>Aucun projet trouve</p>
                     </div>
                     <div v-else class="table-container">
                         <table class="table">
@@ -817,50 +1135,147 @@
                                 <tr>
                                     <th @click="setSortBy('name')">
                                         Projet
-                                        <i v-if="sortBy === 'name'" :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                                        <i v-if="sortBy === 'name'"
+                                            :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
-                                    <th @click="setSortBy('total_budget')">
-                                        Budget
-                                        <i v-if="sortBy === 'total_budget'" :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                                    <th @click="setSortBy('allocated_amount')">
+                                        Budget Alloue
+                                        <i v-if="sortBy === 'allocated_amount'"
+                                            :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
-                                    <th @click="setSortBy('total_spent')">
-                                        Dépensé
-                                        <i v-if="sortBy === 'total_spent'" :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                                    <th @click="setSortBy('spent')">
+                                        Depense
+                                        <i v-if="sortBy === 'spent'"
+                                            :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
+                                    <th>% Depense</th>
                                     <th @click="setSortBy('remaining')">
                                         Restant
-                                        <i v-if="sortBy === 'remaining'" :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                                        <i v-if="sortBy === 'remaining'"
+                                            :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
+                                    <th>% Restant</th>
                                     <th>Progression</th>
-                                    <th style="width: 250px;">Actions</th>
+                                    <th class="no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="project in filteredProjects" :key="project.id">
-                                    <td><strong>{{ project.name }}</strong></td>
-                                    <td>{{ formatCurrency(project.total_budget) }}</td>
-                                    <td>{{ formatCurrency(project.total_spent) }}</td>
-                                    <td>
-                                        <span class="badge" :class="project.remaining < 0 ? 'badge-danger' : 'badge-success'">
-                                            {{ formatCurrency(project.remaining) }}
+                                <tr v-for="project in paginatedProjects" :key="project.id"
+                                    :class="getProjectRowClass(project)">
+                                    <td data-label="Projet"><strong>{{ project.name }}</strong></td>
+                                    <td data-label="Budget Alloué">{{ formatCurrency(getProjectAllocatedFromLines(project)) }}</td>
+                                    <td data-label="Dépensé">{{ formatCurrency(project.spent) }}</td>
+                                    <td data-label="% Dépensé">
+                                        <span class="badge" :class="getSpentPercentage(project) > 100 ? 'badge-danger' : getSpentPercentage(project) > 80 ? 'badge-warning' : 'badge-info'">
+                                            {{ getSpentPercentage(project).toFixed(1) }}%
                                         </span>
                                     </td>
-                                    <td>
-                                        <div>{{ getProgress(project) }}%</div>
+                                    <td data-label="Restant">
+                                        <span class="badge" :class="getBadgeClass(getProjectRemaining(project))">
+                                            {{ formatCurrency(getProjectRemaining(project)) }}
+                                        </span>
+                                    </td>
+                                    <td data-label="% Restant">
+                                        <span class="badge" :class="getRemainingPercentage(project) < 20 && getRemainingPercentage(project) >= 0 ? 'badge-warning' : getRemainingPercentage(project) < 0 ? 'badge-danger' : 'badge-success'">
+                                            {{ getRemainingPercentage(project).toFixed(1) }}%
+                                        </span>
+                                    </td>
+                                    <td data-label="Progression">
+                                        <div>{{ getSpentPercentage(project).toFixed(1) }}%</div>
                                         <div class="progress">
-                                            <div class="progress-bar" :style="{width: getProgress(project) + '%'}"></div>
+                                            <div class="progress-bar"
+                                                :class="getSpentPercentage(project) > 100 ? 'danger' : getSpentPercentage(project) > 80 ? 'warning' : ''"
+                                                :style="{width: Math.min(getSpentPercentage(project), 100) + '%'}">
+                                            </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="no-print" data-label="Actions">
                                         <div class="action-buttons">
-                                            <button class="btn btn-primary btn-sm btn-icon" @click="viewProject(project)" title="Voir">
+                                            <button class="btn btn-primary btn-sm btn-icon"
+                                                @click="viewProject(project)" title="Voir">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-primary btn-sm btn-icon" @click="editProject(project)" title="Modifier">
+                                            <button class="btn btn-warning btn-sm btn-icon"
+                                                @click="printProjectDetails(project)" title="Imprimer details">
+                                                <i class="fas fa-print"></i>
+                                            </button>
+                                            <button class="btn btn-success btn-sm btn-icon"
+                                                @click="editProject(project)" title="Modifier">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-danger btn-sm btn-icon" @click="deleteProject(project.id)" title="Supprimer">
+                                            <button class="btn btn-danger btn-sm btn-icon"
+                                                @click="deleteProject(project.id)" title="Supprimer">
                                                 <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Pagination -->
+                        <div class="pagination no-print">
+                            <button @click="prevPage" :disabled="currentPage === 1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button v-for="page in totalPages" :key="page" @click="currentPage = page"
+                                :class="{active: currentPage === page}">
+                                {{ page }}
+                            </button>
+                            <button @click="nextPage" :disabled="currentPage === totalPages">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Lines Section -->
+            <div v-if="showBudgetLines" class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-list"></i>
+                        Lignes Budgetaires
+                    </h2>
+                    <div class="action-buttons no-print">
+                        <button class="btn btn-primary btn-sm" @click="openLineModal">
+                            <i class="fas fa-plus"></i>
+                            Ajouter
+                        </button>
+                        <button class="btn btn-success btn-sm" @click="printBudgetLinesPage">
+                            <i class="fas fa-print"></i>
+                            Imprimer
+                        </button>
+                        <button class="btn btn-warning btn-sm" @click="toggleBudgetLines">
+                            <i class="fas fa-folder"></i>
+                            Gerer Projets
+                        </button>
+                    </div>
+                </div>
+                <div class="section-content">
+                    <div v-if="availableLines.length === 0" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Aucune ligne budgetaire</p>
+                    </div>
+                    <div v-else class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th class="no-print">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="line in availableLines" :key="line.id">
+                                    <td data-label="Nom">
+                                        <input v-if="editingLine === line.id" v-model="line.name" class="form-input"
+                                            @keyup.enter="updateLine(line)" @blur="editingLine = null" />
+                                        <span v-else @dblclick="editingLine = line.id">{{ line.name }}</span>
+                                    </td>
+                                    <td class="no-print" data-label="Actions">
+                                        <div class="action-buttons">
+                                            <button class="btn btn-success btn-sm" @click="updateLine(line)">
+                                                <i class="fas fa-save"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -878,29 +1293,30 @@
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <i class="fas fa-tag"></i>
-                        Nouvelle Ligne Budgétaire
+                        Nouvelle Ligne Budgetaire
                     </h3>
                     <button class="modal-close" @click="closeLineModal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label">Nom de la ligne</label>
-                        <input type="text" class="form-input" v-model="newLineName" placeholder="Ex: Salaires, Marketing, Infrastructure..." />
+                        <input type="text" class="form-input" v-model="newLineName"
+                            placeholder="Ex: Salaires, Marketing, Infrastructure..." />
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn" @click="closeLineModal">Annuler</button>
+                    <button class="btn btn-secondary" @click="closeLineModal">Annuler</button>
                     <button class="btn btn-primary" @click="createLine">
                         <i class="fas fa-check"></i>
-                        Créer
+                        Creer
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Project Modal -->
+        <!-- Project Modal (Create / Edit) -->
         <div class="modal-overlay" :class="{active: modals.project}" @click.self="closeProjectModal">
-            <div class="modal" style="max-width: 800px;">
+            <div class="modal" style="max-width: 900px;">
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <i class="fas fa-folder-plus"></i>
@@ -911,41 +1327,84 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label">Nom du projet</label>
-                        <input type="text" class="form-input" v-model="newProject.name" placeholder="Ex: Développement Web, Campagne Marketing..." />
+                        <input type="text" class="form-input" v-model="newProject.name"
+                            placeholder="Ex: Developpement Web..." />
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Budget total (FCFA)</label>
-                        <input type="number" class="form-input" v-model.number="newProject.total_budget" placeholder="Ex: 10000000" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Description (optionnel)</label>
-                        <textarea class="form-textarea" v-model="newProject.description" placeholder="Description du projet..."></textarea>
-                    </div>
+
                     <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+
                     <div class="form-group">
-                        <label class="form-label">Lignes budgétaires</label>
-                        <div v-for="(line, index) in projectLines" :key="index" class="budget-line-input">
-                            <select v-if="!line.name" class="form-select" v-model="line.budget_line_id" @change="updateLineName(line)">
-                                <option value="">Sélectionner une ligne</option>
-                                <option v-for="l in availableLinesFiltered(line.budget_line_id)" :key="l.id" :value="l.id">{{ l.name }}</option>
-                            </select>
-                            <input v-else type="text" class="form-input" :value="line.name" readonly />
-                            <input type="number" class="form-input" v-model.number="line.allocated_amount" placeholder="Montant alloué" />
-                            <button class="btn btn-danger btn-icon" @click="removeProjectLine(index)">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <label class="form-label">
+                            <i class="fas fa-list" style="margin-right: 0.5rem;"></i>
+                            Lignes budgetaires
+                            <span v-if="projectLinesTotal > 0"
+                                style="color: var(--accent-blue); margin-left: 1rem; font-weight: 700;">
+                                Total: {{ formatCurrency(projectLinesTotal) }}
+                            </span>
+                        </label>
+
+                        <!-- Lignes existantes (mode edition) : affichage en liste avec nom en texte -->
+                        <div v-if="isEditMode && currentProjectLines.length > 0" style="margin-bottom: 1.5rem;">
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                                <i class="fas fa-layer-group" style="margin-right: 0.5rem;"></i>
+                                Lignes existantes ({{ currentProjectLines.length }})
+                            </h4>
+                            <div v-for="(line, index) in currentProjectLines" :key="'current-' + index"
+                                class="budget-line-row">
+                                <div class="line-name">
+                                    <i class="fas fa-tag" style="color: var(--accent-blue); margin-right: 0.5rem; font-size: 0.8rem;"></i>
+                                    {{ line.line_name || line.name }}
+                                </div>
+                                <input type="number" class="form-input" v-model.number="line.allocated_amount"
+                                    @input="updateProjectLinesTotal" placeholder="Montant"
+                                    style="flex: 1; max-width: 200px;" />
+                                <button class="btn btn-danger btn-sm btn-icon" @click="deleteExistingLine(line)"
+                                    title="Supprimer cette ligne">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                        <button v-if="availableLinesFiltered().length > 0" class="btn btn-primary btn-sm" @click="addProjectLine">
+
+                        <!-- Nouvelles lignes -->
+                        <div v-if="projectLines.length > 0" style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                                <i class="fas fa-plus-circle" style="margin-right: 0.5rem;"></i>
+                                Nouvelles lignes
+                            </h4>
+                            <div v-for="(line, index) in projectLines" :key="'new-' + index"
+                                class="budget-line-input">
+                                <select class="form-select" v-model="line.budget_line_id"
+                                    @change="updateLineName(line)" style="flex: 2;">
+                                    <option value="">Selectionner une ligne</option>
+                                    <option v-for="availLine in availableLinesForNewLine(line.budget_line_id)"
+                                        :key="availLine.id" :value="availLine.id">
+                                        {{ availLine.name }}
+                                    </option>
+                                </select>
+                                <input type="number" class="form-input" v-model.number="line.allocated_amount"
+                                    @input="updateProjectLinesTotal" placeholder="Montant" />
+                                <button class="btn btn-danger btn-sm" @click="removeProjectLine(index)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button v-if="availableLinesForNewLine('').length > 0" class="btn btn-secondary btn-sm"
+                            @click="addProjectLine">
                             <i class="fas fa-plus"></i>
                             Ajouter une ligne
                         </button>
+                        <p v-else style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
+                            <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                            Toutes les lignes budgetaires sont utilisees
+                        </p>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn" @click="closeProjectModal">Annuler</button>
+                    <button class="btn btn-secondary" @click="closeProjectModal">Annuler</button>
                     <button class="btn btn-success" @click="saveProject">
                         <i class="fas fa-check"></i>
-                        {{ isEditMode ? 'Enregistrer' : 'Créer' }}
+                        {{ isEditMode ? 'Enregistrer' : 'Creer' }}
                     </button>
                 </div>
             </div>
@@ -953,71 +1412,410 @@
 
         <!-- Project Detail Modal -->
         <div class="modal-overlay" :class="{active: modals.detail}" @click.self="closeDetailModal">
-            <div class="modal" style="max-width: 900px;">
+            <div class="modal print-area" style="max-width: 1100px;">
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <i class="fas fa-eye"></i>
-                        Détails du Projet
+                        Details du Projet
                     </h3>
-                    <button class="modal-close" @click="closeDetailModal">&times;</button>
+                    <button class="modal-close no-print" @click="closeDetailModal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <h3 style="margin-bottom: 1rem;">{{ selectedProject.name }}</h3>
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">{{ selectedProject.name }}</h3>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-                        <div>
-                            <div class="stat-label">Budget Total</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.5rem;">{{ formatCurrency(selectedProject.total_budget) }}</div>
+                    <!-- Info Cards -->
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-box-label">Budget Global (Alloue)</div>
+                            <div class="info-box-value" style="color: var(--accent-blue);">
+                                {{ formatCurrency(selectedProjectLinesAllocatedTotal) }}
+                            </div>
                         </div>
-                        <div>
-                            <div class="stat-label">Dépensé</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.5rem;">{{ formatCurrency(selectedProject.total_spent) }}</div>
+                        <div class="info-box">
+                            <div class="info-box-label">Montant Depense</div>
+                            <div class="info-box-value" style="color: var(--accent-yellow);">
+                                {{ formatCurrency(selectedProjectLinesSpentTotal) }}
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                                    {{ selectedProjectLinesAllocatedTotal > 0 ? ((selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}% du budget
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="stat-label">Restant</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; margin-top: 0.5rem;" :style="{color: selectedProject.remaining < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">{{ formatCurrency(selectedProject.remaining) }}</div>
+                        <div class="info-box">
+                            <div class="info-box-label">Montant Restant</div>
+                            <div class="info-box-value"
+                                :style="{color: (selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+                                {{ formatCurrency(selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) }}
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                                    {{ selectedProjectLinesAllocatedTotal > 0 ? (((selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}% du budget
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-box-label">Progression</div>
+                            <div class="info-box-value"
+                                :style="{color: (selectedProjectLinesAllocatedTotal > 0 ? (selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal * 100) : 0) > 80 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+                                {{ selectedProjectLinesAllocatedTotal > 0 ? ((selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}%
+                            </div>
                         </div>
                     </div>
 
-                    <div class="stat-label">Progression</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0;">{{ getProgress(selectedProject) }}%</div>
-                    <div class="progress" style="height: 12px;">
-                        <div class="progress-bar" :style="{width: getProgress(selectedProject) + '%'}"></div>
+                    <!-- Progress Bar -->
+                    <div style="margin-bottom: 2rem;">
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar"
+                                :class="(selectedProjectLinesAllocatedTotal > 0 ? (selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal * 100) : 0) > 100 ? 'danger' : (selectedProjectLinesAllocatedTotal > 0 ? (selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal * 100) : 0) > 80 ? 'warning' : ''"
+                                :style="{width: Math.min((selectedProjectLinesAllocatedTotal > 0 ? (selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal * 100) : 0), 100) + '%'}"></div>
+                        </div>
                     </div>
 
-                    <div class="chart-container">
-                        <canvas ref="projectChart"></canvas>
+                    <!-- Tabs -->
+                    <div class="tabs no-print">
+                        <button class="tab-btn" :class="{active: detailTab === 'lines'}"
+                            @click="detailTab = 'lines'">
+                            <i class="fas fa-list"></i> Lignes Budgetaires
+                        </button>
+                        <button class="tab-btn" :class="{active: detailTab === 'expenses'}"
+                            @click="detailTab = 'expenses'">
+                            <i class="fas fa-receipt"></i> Depenses ({{ projectExpenses.length }})
+                        </button>
+                        <button class="tab-btn" :class="{active: detailTab === 'charts'}"
+                            @click="detailTab = 'charts'; $nextTick(() => { renderProjectChart(); renderProjectLinesChart(); renderProjectExpensesByLineChart(); renderProjectTimelineChart(); })">
+                            <i class="fas fa-chart-pie"></i> Graphiques
+                        </button>
+                        <button class="tab-btn" :class="{active: detailTab === 'summary'}"
+                            @click="detailTab = 'summary'">
+                            <i class="fas fa-file-alt"></i> Resume
+                        </button>
                     </div>
 
-                    <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+                    <!-- TAB: Lignes Budgetaires -->
+                    <div v-if="detailTab === 'lines'" class="tab-content active">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                            <button class="btn btn-success btn-sm" @click="printSection('lines')">
+                                <i class="fas fa-print"></i> Imprimer Lignes Budgetaires
+                            </button>
+                        </div>
+                        <div v-if="selectedProjectLines.length > 0">
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                <i class="fas fa-list"></i>
+                                Lignes Budgetaires ({{ selectedProjectLines.length }})
+                            </h4>
+                            <div class="table-container">
+                                <table class="table detail-lines-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ligne</th>
+                                            <th>Montant Alloue</th>
+                                            <th>Montant Depense</th>
+                                            <th>Restant</th>
+                                            <th>% Utilise</th>
+                                            <th>Progression</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="line in selectedProjectLines"
+                                            :key="line.project_budget_line_id">
+                                            <td data-label="Ligne"><strong>{{ line.name || line.line_name }}</strong></td>
+                                            <td data-label="Montant Alloué">{{ formatCurrency(line.allocated_amount) }}</td>
+                                            <td data-label="Montant Dépensé">{{ formatCurrency(getLineSpent(line)) }}</td>
+                                            <td data-label="Restant">
+                                                <span class="badge"
+                                                    :class="getLineRemaining(line) < 0 ? 'badge-danger' : 'badge-success'">
+                                                    {{ formatCurrency(getLineRemaining(line)) }}
+                                                </span>
+                                            </td>
+                                            <td data-label="% Utilisé">
+                                                <span class="badge"
+                                                    :class="getLinePercentage(line) > 80 ? 'badge-danger' : getLinePercentage(line) > 50 ? 'badge-warning' : 'badge-info'">
+                                                    {{ getLinePercentage(line).toFixed(1) }}%
+                                                </span>
+                                            </td>
+                                            <td data-label="Progression" style="min-width: 120px;">
+                                                <div class="progress" style="height: 6px;">
+                                                    <div class="progress-bar"
+                                                        :class="getLinePercentage(line) > 100 ? 'danger' : getLinePercentage(line) > 80 ? 'warning' : ''"
+                                                        :style="{width: Math.min(getLinePercentage(line), 100) + '%'}">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Ligne Total -->
+                                        <tr style="background: var(--bg-tertiary); font-weight: 700;">
+                                            <td data-label="">TOTAL</td>
+                                            <td data-label="Montant Alloué">{{ formatCurrency(selectedProjectLinesAllocatedTotal) }}</td>
+                                            <td data-label="Montant Dépensé">{{ formatCurrency(selectedProjectLinesSpentTotal) }}</td>
+                                            <td data-label="Restant">{{ formatCurrency(selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) }}</td>
+                                            <td data-label="% Utilisé">
+                                                <span class="badge badge-info">
+                                                    {{ selectedProjectLinesAllocatedTotal > 0 ? ((selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}%
+                                                </span>
+                                            </td>
+                                            <td data-label=""></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div v-else class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucune ligne budgetaire definie</p>
+                        </div>
+                    </div>
 
-                    <h4 style="margin-bottom: 1rem;">Lignes budgétaires</h4>
-                    <div class="table-container">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Ligne</th>
-                                    <th>Montant alloué</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="line in selectedProject.lines" :key="line.budget_line_id">
-                                    <td>{{ line.name }}</td>
-                                    <td>{{ formatCurrency(line.allocated_amount) }}</td>
-                                </tr>
-                                <tr v-if="!selectedProject.lines || selectedProject.lines.length === 0">
-                                    <td colspan="2" class="empty-state">Aucune ligne budgétaire</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- TAB: Depenses -->
+                    <div v-if="detailTab === 'expenses'" class="tab-content active">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                            <button class="btn btn-success btn-sm" @click="printSection('expenses')">
+                                <i class="fas fa-print"></i> Imprimer Depenses
+                            </button>
+                        </div>
+                        <div v-if="projectExpenses.length > 0">
+                            <div class="summary-card">
+                                <div class="summary-grid">
+                                    <div class="summary-item">
+                                        <div class="label">Total des depenses</div>
+                                        <div class="value" style="color: var(--accent-yellow);">
+                                            {{ formatCurrency(expensesTotal) }}
+                                        </div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Nombre de depenses</div>
+                                        <div class="value" style="color: var(--accent-blue);">
+                                            {{ projectExpenses.length }}
+                                        </div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Depense moyenne</div>
+                                        <div class="value" style="color: var(--accent-cyan);">
+                                            {{ formatCurrency(projectExpenses.length > 0 ? expensesTotal / projectExpenses.length : 0) }}
+                                        </div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Depense max</div>
+                                        <div class="value" style="color: var(--accent-red);">
+                                            {{ formatCurrency(Math.max(...projectExpenses.map(e => parseFloat(e.amount || 0)), 0)) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="table expense-detail-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Ligne Budgetaire</th>
+                                            <th>Description</th>
+                                            <th>Montant</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(exp, i) in projectExpenses" :key="exp.id">
+                                            <td data-label="#">{{ i + 1 }}</td>
+                                            <td data-label="Ligne Budgétaire"><strong>{{ exp.budget_line_name || 'N/A' }}</strong></td>
+                                            <td data-label="Description">{{ exp.description || '-' }}</td>
+                                            <td data-label="Montant">{{ formatCurrency(exp.amount) }}</td>
+                                            <td data-label="Date">{{ formatDate(exp.expense_date) }}</td>
+                                        </tr>
+                                        <!-- Total Row -->
+                                        <tr style="background: var(--bg-tertiary); font-weight: 700;">
+                                            <td data-label="" colspan="3">TOTAL</td>
+                                            <td data-label="Montant">{{ formatCurrency(expensesTotal) }}</td>
+                                            <td data-label=""></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div v-else class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucune depense enregistree pour ce projet</p>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Graphiques -->
+                    <div v-if="detailTab === 'charts'" class="tab-content active">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                            <button class="btn btn-success btn-sm" @click="printSection('charts')">
+                                <i class="fas fa-print"></i> Imprimer Graphiques
+                            </button>
+                        </div>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                            <div>
+                                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                    <i class="fas fa-chart-pie" style="margin-right: 0.5rem;"></i>
+                                    Budget : Depense vs Restant
+                                </h4>
+                                <div class="chart-container">
+                                    <canvas ref="projectChart"></canvas>
+                                </div>
+                            </div>
+                            <div v-if="selectedProjectLines.length > 0">
+                                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                    <i class="fas fa-chart-bar" style="margin-right: 0.5rem;"></i>
+                                    Repartition par Ligne Budgetaire
+                                </h4>
+                                <div class="chart-container">
+                                    <canvas ref="projectLinesChart"></canvas>
+                                </div>
+                            </div>
+                            <div v-if="selectedProjectLines.length > 0">
+                                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                    <i class="fas fa-balance-scale" style="margin-right: 0.5rem;"></i>
+                                    Alloue vs Depense par Ligne
+                                </h4>
+                                <div class="chart-container">
+                                    <canvas ref="projectExpensesByLineChart"></canvas>
+                                </div>
+                            </div>
+                            <div v-if="projectExpenses.length > 0">
+                                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                    <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>
+                                    Evolution des Depenses
+                                </h4>
+                                <div class="chart-container">
+                                    <canvas ref="projectTimelineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statistiques supplementaires -->
+                        <div style="margin-top: 2rem;">
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                <i class="fas fa-chart-line" style="margin-right: 0.5rem;"></i>
+                                Statistiques detaillees
+                            </h4>
+                            <div class="summary-card">
+                                <div class="summary-grid">
+                                    <div class="summary-item">
+                                        <div class="label">Budget Global (Alloue)</div>
+                                        <div class="value" style="color: var(--accent-blue);">{{ formatCurrency(selectedProjectLinesAllocatedTotal) }}</div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Total depense</div>
+                                        <div class="value" style="color: var(--accent-yellow);">{{ formatCurrency(selectedProjectLinesSpentTotal) }}</div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Restant</div>
+                                        <div class="value" :style="{color: (selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">{{ formatCurrency(selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) }}</div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Nb lignes</div>
+                                        <div class="value" style="color: var(--accent-cyan);">{{ selectedProjectLines.length }}</div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Nb depenses</div>
+                                        <div class="value" style="color: var(--accent-purple);">{{ projectExpenses.length }}</div>
+                                    </div>
+                                    <div class="summary-item">
+                                        <div class="label">Depense moy.</div>
+                                        <div class="value" style="color: var(--accent-cyan);">{{ formatCurrency(projectExpenses.length > 0 ? expensesTotal / projectExpenses.length : 0) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Resume -->
+                    <div v-if="detailTab === 'summary'" class="tab-content active">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                            <button class="btn btn-success btn-sm" @click="printSection('summary')">
+                                <i class="fas fa-print"></i> Imprimer Resume Complet
+                            </button>
+                        </div>
+
+                        <!-- Resume financier -->
+                        <div class="summary-card">
+                            <h4 style="margin-bottom: 1rem; color: var(--accent-blue);">
+                                <i class="fas fa-coins" style="margin-right: 0.5rem;"></i>
+                                Resume Financier
+                            </h4>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <div class="label">Budget Global (100%)</div>
+                                    <div class="value" style="color: var(--accent-blue);">{{ formatCurrency(selectedProjectLinesAllocatedTotal) }}</div>
+                                </div>
+                                <div class="summary-item">
+                                    <div class="label">Total depense ({{ selectedProjectLinesAllocatedTotal > 0 ? ((selectedProjectLinesSpentTotal / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}%)</div>
+                                    <div class="value" style="color: var(--accent-yellow);">{{ formatCurrency(selectedProjectLinesSpentTotal) }}</div>
+                                </div>
+                                <div class="summary-item">
+                                    <div class="label">Restant ({{ selectedProjectLinesAllocatedTotal > 0 ? (((selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) / selectedProjectLinesAllocatedTotal) * 100).toFixed(1) : 0 }}%)</div>
+                                    <div class="value" :style="{color: (selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">{{ formatCurrency(selectedProjectLinesAllocatedTotal - selectedProjectLinesSpentTotal) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resume lignes -->
+                        <div v-if="selectedProjectLines.length > 0" class="summary-card">
+                            <h4 style="margin-bottom: 1rem; color: var(--accent-blue);">
+                                <i class="fas fa-list" style="margin-right: 0.5rem;"></i>
+                                Resume par Ligne Budgetaire
+                            </h4>
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ligne</th>
+                                            <th>Alloue</th>
+                                            <th>Depense</th>
+                                            <th>Restant</th>
+                                            <th>% Utilise</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="line in selectedProjectLines" :key="'sum-'+line.project_budget_line_id">
+                                            <td data-label="Ligne"><strong>{{ line.name || line.line_name }}</strong></td>
+                                            <td data-label="Alloué">{{ formatCurrency(line.allocated_amount) }}</td>
+                                            <td data-label="Dépensé">{{ formatCurrency(getLineSpent(line)) }}</td>
+                                            <td data-label="Restant">
+                                                <span :style="{color: getLineRemaining(line) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
+                                                    {{ formatCurrency(getLineRemaining(line)) }}
+                                                </span>
+                                            </td>
+                                            <td data-label="% Utilisé">
+                                                <span class="badge" :class="getLinePercentage(line) > 80 ? 'badge-danger' : 'badge-info'">
+                                                    {{ getLinePercentage(line).toFixed(1) }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Resume depenses recentes -->
+                        <div v-if="projectExpenses.length > 0" class="summary-card">
+                            <h4 style="margin-bottom: 1rem; color: var(--accent-blue);">
+                                <i class="fas fa-receipt" style="margin-right: 0.5rem;"></i>
+                                Dernieres Depenses
+                            </h4>
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ligne</th>
+                                            <th>Description</th>
+                                            <th>Montant</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="exp in projectExpenses.slice(0, 10)" :key="'sum-exp-'+exp.id">
+                                            <td>{{ exp.budget_line_name }}</td>
+                                            <td>{{ exp.description }}</td>
+                                            <td>{{ formatCurrency(exp.amount) }}</td>
+                                            <td>{{ formatDate(exp.expense_date) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn" @click="closeDetailModal">Fermer</button>
-                    <button class="btn btn-primary" @click="printProjectDetails">
-                        <i class="fas fa-print"></i>
-                        Imprimer
-                    </button>
+                <div class="modal-footer no-print">
+                    <button class="btn btn-secondary" @click="closeDetailModal">Fermer</button>
                 </div>
             </div>
         </div>
@@ -1027,8 +1825,6 @@
         const {
             createApp
         } = Vue;
-
-        // Configuration de l'API
         const API_BASE_URL = 'http://127.0.0.1/orizonplus/api/index.php';
 
         createApp({
@@ -1037,42 +1833,76 @@
                     projects: [],
                     filteredProjects: [],
                     availableLines: [],
+                    allProjectLines: {}, // Cache des lignes budgétaires par projet { projectId: [...lines] }
+                    searchQuery: '',
+                    budgetFilter: '',
+                    sortBy: 'name',
+                    sortAsc: true,
+                    dateFrom: '',
+                    dateTo: '',
+                    showBudgetLines: false,
+                    editingLine: null,
+                    currentPage: 1,
+                    itemsPerPage: 10,
                     newLineName: '',
                     newProject: {
-                        id: null,
                         name: '',
-                        total_budget: 0,
-                        description: ''
                     },
                     projectLines: [],
+                    currentProjectLines: [],
+                    selectedProjectLines: [],
+                    projectLinesTotal: 0,
+                    isEditMode: false,
+                    selectedProject: {},
+                    projectExpenses: [],
+                    expensesTotal: 0,
+                    detailTab: 'lines',
                     modals: {
                         line: false,
                         project: false,
                         detail: false
                     },
-                    isEditMode: false,
-                    selectedProject: {},
-                    searchQuery: '',
-                    budgetFilter: '',
-                    sortBy: 'name',
-                    sortAsc: true,
                     stats: {
                         totalProjects: 0,
                         totalBudget: 0,
                         totalSpent: 0,
                         totalRemaining: 0,
-                        spentPercentage: 0,
-                        projectGrowth: 0
+                        spentPercentage: 0
                     },
-                    chart: null
+                    budgetAlerts: [],
+                    budgetPieChart: null,
+                    progressBarChart: null,
+                    projectDetailChart: null,
+                    projectLinesChart: null,
+                    projectExpensesByLineChart: null,
+                    projectTimelineChart: null
                 };
             },
+            computed: {
+                paginatedProjects() {
+                    const start = (this.currentPage - 1) * this.itemsPerPage;
+                    const end = start + this.itemsPerPage;
+                    return this.filteredProjects.slice(start, end);
+                },
+                totalPages() {
+                    return Math.ceil(this.filteredProjects.length / this.itemsPerPage);
+                },
+                selectedProjectLinesAllocatedTotal() {
+                    return this.selectedProjectLines.reduce((sum, l) => sum + parseFloat(l.allocated_amount || 0), 0);
+                },
+                selectedProjectLinesSpentTotal() {
+                    return this.selectedProjectLines.reduce((sum, l) => sum + this.getLineSpent(l), 0);
+                }
+            },
             mounted() {
-                this.fetchProjects();
-                this.fetchBudgetLines();
+                this.loadData();
             },
             methods: {
-                // API Calls with base URL
+                async loadData() {
+                    await this.fetchProjects();
+                    await this.fetchLines();
+                    await this.fetchAllProjectLines();
+                },
                 async fetchProjects() {
                     try {
                         const response = await fetch(`${API_BASE_URL}?action=getProjects`);
@@ -1080,22 +1910,208 @@
                         this.projects = data.data || [];
                         this.filteredProjects = this.projects;
                         this.calculateStats();
+                        this.checkBudgetAlerts();
+                        this.$nextTick(() => {
+                            this.renderCharts();
+                        });
                     } catch (error) {
-                        console.error('[v0] Error fetching projects:', error);
+                        console.error('Error fetching projects:', error);
                     }
                 },
-                async fetchBudgetLines() {
+                async fetchLines() {
                     try {
                         const response = await fetch(`${API_BASE_URL}?action=getBudgetLines`);
                         const data = await response.json();
                         this.availableLines = data.data || [];
                     } catch (error) {
-                        console.error('[v0] Error fetching budget lines:', error);
+                        console.error('Error fetching lines:', error);
                     }
                 },
+                async fetchProjectLines(projectId) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=getProjectBudgetLines&project_id=${projectId}`);
+                        const data = await response.json();
+                        return data.data || [];
+                    } catch (error) {
+                        console.error('Error fetching project lines:', error);
+                        return [];
+                    }
+                },
+                async fetchAllProjectLines() {
+                    // Charger les lignes budgétaires pour tous les projets
+                    try {
+                        for (const project of this.projects) {
+                            const lines = await this.fetchProjectLines(project.id);
+                            this.allProjectLines[project.id] = lines;
+                        }
+                        // Recalculer les stats après avoir chargé toutes les lignes
+                        this.calculateStats();
+                        this.checkBudgetAlerts();
+                    } catch (error) {
+                        console.error('Error fetching all project lines:', error);
+                    }
+                },
+                async fetchProjectExpenses(projectId) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=getExpenses`);
+                        const data = await response.json();
+                        if (data.success && data.data) {
+                            this.projectExpenses = data.data.filter(exp => exp.project_id == projectId);
+                            this.expensesTotal = this.projectExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching expenses:', error);
+                    }
+                },
+
+                // ==================== CALCUL BUDGET ALLOUE PAR LIGNES ====================
+                getProjectAllocatedFromLines(project) {
+                    // Retourne la somme des montants des lignes budgétaires allouées au projet
+                    const projectLines = this.allProjectLines[project.id] || [];
+                    return projectLines.reduce((sum, line) => sum + parseFloat(line.allocated_amount || 0), 0);
+                },
+
+                // ==================== POURCENTAGES ====================
+                getSpentPercentage(project) {
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const spent = parseFloat(project.spent || 0);
+                    if (allocated === 0) return 0;
+                    return (spent / allocated) * 100;
+                },
+                getRemainingPercentage(project) {
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const remaining = this.getProjectRemaining(project);
+                    if (allocated === 0) return 0;
+                    return (remaining / allocated) * 100;
+                },
+                getProjectRemaining(project) {
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const spent = parseFloat(project.spent || 0);
+                    return allocated - spent;
+                },
+
+                // ==================== LIGNES BUDGETAIRES - Calculs par ligne ====================
+                getLineSpent(line) {
+                    // Utiliser project_budget_line_id pour correspondre correctement à la ligne budgétaire du projet
+                    const projectBudgetLineId = line.project_budget_line_id || line.id;
+                    return this.projectExpenses
+                        .filter(exp => exp.project_budget_line_id == projectBudgetLineId)
+                        .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                },
+                getLineRemaining(line) {
+                    return parseFloat(line.allocated_amount || 0) - this.getLineSpent(line);
+                },
+                getLinePercentage(line) {
+                    const allocated = parseFloat(line.allocated_amount || 0);
+                    const spent = this.getLineSpent(line);
+                    if (allocated === 0) return 0;
+                    return (spent / allocated) * 100;
+                },
+
+                // ==================== STATS ====================
+                calculateStats() {
+                    this.stats.totalProjects = this.projects.length;
+                    this.stats.totalBudget = this.projects.reduce((sum, p) => sum + this.getProjectAllocatedFromLines(p), 0);
+                    this.stats.totalSpent = this.projects.reduce((sum, p) => sum + parseFloat(p.spent || 0), 0);
+                    this.stats.totalRemaining = this.stats.totalBudget - this.stats.totalSpent;
+                    this.stats.spentPercentage = this.stats.totalBudget > 0 ?
+                        (this.stats.totalSpent / this.stats.totalBudget) * 100 : 0;
+                },
+                checkBudgetAlerts() {
+                    this.budgetAlerts = [];
+                    this.projects.forEach(project => {
+                        const allocated = this.getProjectAllocatedFromLines(project);
+                        const spent = parseFloat(project.spent || 0);
+                        const remaining = this.getProjectRemaining(project);
+                        const percentage = this.getSpentPercentage(project);
+
+                        if (remaining < 0) {
+                            this.budgetAlerts.push({
+                                id: project.id,
+                                name: project.name,
+                                type: 'exceeded',
+                                remaining: remaining,
+                                allocated: allocated
+                            });
+                        } else if (percentage > 80 && percentage <= 100) {
+                            this.budgetAlerts.push({
+                                id: project.id,
+                                name: project.name,
+                                type: 'warning',
+                                remaining: remaining,
+                                allocated: allocated
+                            });
+                        }
+                    });
+                },
+                filterProjects() {
+                    let filtered = this.projects;
+
+                    // Filtre par recherche
+                    if (this.searchQuery) {
+                        filtered = filtered.filter(p =>
+                            p.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                        );
+                    }
+
+                    // Filtre par budget
+                    if (this.budgetFilter === 'remaining') {
+                        filtered = filtered.filter(p => this.getProjectRemaining(p) > 0);
+                    } else if (this.budgetFilter === 'over') {
+                        filtered = filtered.filter(p => this.getProjectRemaining(p) < 0);
+                    } else if (this.budgetFilter === 'warning') {
+                        filtered = filtered.filter(p => {
+                            const pct = this.getSpentPercentage(p);
+                            return pct > 80 && pct <= 100;
+                        });
+                    }
+
+                    // Filtre par date
+                    if (this.dateFrom) {
+                        filtered = filtered.filter(p => {
+                            if (!p.created_at) return true;
+                            return new Date(p.created_at) >= new Date(this.dateFrom);
+                        });
+                    }
+                    if (this.dateTo) {
+                        filtered = filtered.filter(p => {
+                            if (!p.created_at) return true;
+                            return new Date(p.created_at) <= new Date(this.dateTo);
+                        });
+                    }
+
+                    this.filteredProjects = filtered;
+                    this.sortProjects();
+                    this.currentPage = 1;
+                },
+                setSortBy(field) {
+                    if (this.sortBy === field) {
+                        this.sortAsc = !this.sortAsc;
+                    } else {
+                        this.sortBy = field;
+                        this.sortAsc = true;
+                    }
+                    this.sortProjects();
+                },
+                sortProjects() {
+                    this.filteredProjects.sort((a, b) => {
+                        let aVal = a[this.sortBy];
+                        let bVal = b[this.sortBy];
+                        if (this.sortBy === 'name') {
+                            aVal = (aVal || '').toLowerCase();
+                            bVal = (bVal || '').toLowerCase();
+                        } else {
+                            aVal = parseFloat(aVal || 0);
+                            bVal = parseFloat(bVal || 0);
+                        }
+                        return this.sortAsc ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+                    });
+                },
+
+                // ==================== CRUD LIGNES BUDGETAIRES ====================
                 async createLine() {
-                    if (!this.newLineName.trim()) {
-                        alert('Veuillez entrer un nom pour la ligne budgétaire');
+                    if (!this.newLineName) {
+                        alert('Veuillez entrer un nom');
                         return;
                     }
                     try {
@@ -1111,9 +2127,9 @@
                         const data = await response.json();
                         alert(data.message);
                         this.closeLineModal();
-                        this.fetchBudgetLines();
+                        this.fetchLines();
                     } catch (error) {
-                        console.error('[v0] Error creating line:', error);
+                        console.error('Error creating line:', error);
                     }
                 },
                 async updateLine(line) {
@@ -1130,80 +2146,196 @@
                         });
                         const data = await response.json();
                         alert(data.message);
-                        this.fetchBudgetLines();
+                        this.editingLine = null;
+                        this.fetchLines();
                     } catch (error) {
-                        console.error('[v0] Error updating line:', error);
+                        console.error('Error updating line:', error);
                     }
                 },
                 async deleteLine(id) {
-                    if (!confirm('Êtes-vous sûr de vouloir supprimer cette ligne budgétaire ?')) return;
-                    try {
-                        const response = await fetch(`${API_BASE_URL}?action=deleteBudgetLine`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                id
-                            })
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        this.fetchBudgetLines();
-                    } catch (error) {
-                        console.error('[v0] Error deleting line:', error);
-                    }
-                },
-                async saveProject() {
-                    if (!this.newProject.name || !this.newProject.total_budget) {
-                        alert('Veuillez remplir tous les champs obligatoires');
-                        return;
-                    }
-                    const action = this.isEditMode ? 'updateProject' : 'createProject';
+                    if (!confirm('Confirmer la suppression ?')) return;
+
+                    const route = `${API_BASE_URL}?action=deleteBudgetLine`;
                     const payload = {
-                        ...this.newProject,
-                        lines: this.projectLines.filter(l => l.budget_line_id)
+                        id
                     };
+
+                    console.log('=== DELETE BUDGET LINE ===');
+                    console.log('Route:', route);
+                    console.log('Payload:', payload);
+
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=${action}`, {
+                        const response = await fetch(route, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify(payload)
                         });
+
+                        console.log('HTTP status:', response.status);
+
                         const data = await response.json();
+                        console.log('Response:', data);
+
                         alert(data.message);
-                        this.closeProjectModal();
-                        this.fetchProjects();
+                        this.fetchLines();
+
                     } catch (error) {
-                        console.error('[v0] Error saving project:', error);
+                        console.error('Error deleting line:', error);
                     }
+                },
+
+
+                // ==================== CRUD PROJETS ====================
+                openProjectModal() {
+                    this.isEditMode = false;
+                    this.newProject = {
+                        name: ''
+                    };
+                    this.projectLines = [];
+                    this.currentProjectLines = [];
+                    this.projectLinesTotal = 0;
+                    this.modals.project = true;
                 },
                 async editProject(project) {
                     this.isEditMode = true;
+                    this.newProject = {
+                        ...project
+                    };
+                    this.projectLines = [];
+                    this.projectLinesTotal = 0;
+                    this.currentProjectLines = await this.fetchProjectLines(project.id);
+                    this.updateProjectLinesTotal();
+                    this.modals.project = true;
+                },
+                closeProjectModal() {
+                    this.modals.project = false;
+                },
+                addProjectLine() {
+                    this.projectLines.push({
+                        budget_line_id: '',
+                        allocated_amount: 0,
+                        name: ''
+                    });
+                },
+                removeProjectLine(index) {
+                    this.projectLines.splice(index, 1);
+                    this.updateProjectLinesTotal();
+                },
+                updateLineName(line) {
+                    const found = this.availableLines.find(l => l.id == line.budget_line_id);
+                    if (found) line.name = found.name;
+                    this.updateProjectLinesTotal();
+                },
+
+                // Filtre pour les nouvelles lignes : exclure celles deja dans currentProjectLines ET celles deja selectionnees dans projectLines
+                availableLinesForNewLine(currentId) {
+                    const usedByExisting = this.currentProjectLines.map(l => parseInt(l.budget_line_id));
+                    const usedByNew = this.projectLines
+                        .filter(l => l.budget_line_id && l.budget_line_id != currentId)
+                        .map(l => parseInt(l.budget_line_id));
+                    const allUsed = [...usedByExisting, ...usedByNew];
+                    return this.availableLines.filter(l => !allUsed.includes(parseInt(l.id)));
+                },
+
+                updateProjectLinesTotal() {
+                    const newLinesTotal = this.projectLines.reduce((sum, l) => sum + parseFloat(l.allocated_amount || 0), 0);
+                    const currentLinesTotal = this.currentProjectLines.reduce((sum, l) => sum + parseFloat(l.allocated_amount || 0), 0);
+                    this.projectLinesTotal = newLinesTotal + currentLinesTotal;
+                },
+                async deleteExistingLine(line) {
+                    if (!confirm('Supprimer cette ligne budgetaire du projet ?')) return;
+
+                    const route = `${API_BASE_URL}?action=deleteProjectBudgetLine`;
+                    const payload = {
+                        id: line.project_budget_line_id
+                    };
+
+                    console.log('=== DELETE PROJECT LINE ===');
+                    console.log('Route:', route);
+                    console.log('Payload:', payload);
+
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=getProjectDetails&id=${project.id}`);
+                        const response = await fetch(route, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        console.log('HTTP status:', response.status);
+
                         const data = await response.json();
-                        const projectData = data.data || {};
-                        this.newProject = {
-                            id: projectData.id,
-                            name: projectData.name,
-                            total_budget: projectData.total_budget,
-                            description: projectData.description
-                        };
-                        this.projectLines = (projectData.lines || []).map(l => ({
-                            budget_line_id: l.budget_line_id,
-                            allocated_amount: l.allocated_amount,
-                            name: l.name
-                        }));
-                        this.modals.project = true;
+                        console.log('Response:', data);
+
+                        if (data.success) {
+                            const index = this.currentProjectLines.indexOf(line);
+                            if (index > -1) {
+                                this.currentProjectLines.splice(index, 1);
+                            }
+                            this.updateProjectLinesTotal();
+                            alert(data.message);
+                        }
+
                     } catch (error) {
-                        console.error('[v0] Error fetching project details:', error);
+                        console.error('Error deleting line:', error);
+                    }
+                },
+                async saveProject() {
+                    if (!this.newProject.name) {
+                        alert('Veuillez entrer un nom de projet');
+                        return;
+                    }
+
+                    const action = this.isEditMode ? 'updateProject' : 'createProject';
+
+                    const updatedLines = this.isEditMode ? this.currentProjectLines : [];
+
+                    const payload = {
+                        ...(this.isEditMode && {
+                            id: this.newProject.id
+                        }),
+                        name: this.newProject.name,
+                        lines: this.projectLines.filter(
+                            l => l.budget_line_id && l.allocated_amount > 0
+                        ),
+                        updated_lines: updatedLines
+                    };
+
+                    const route = `${API_BASE_URL}?action=${action}`;
+
+                    console.log('=== SAVE PROJECT ===');
+                    console.log('Route:', route);
+                    console.log('Payload:', payload);
+                    console.log('Updated lines content:', JSON.stringify(updatedLines, null, 2));
+
+                    try {
+                        const response = await fetch(route, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        console.log('HTTP status:', response.status);
+
+                        const data = await response.json();
+                        console.log('Response:', data);
+
+                        alert(data.message);
+                        this.closeProjectModal();
+                        await this.fetchProjects();
+                        await this.fetchAllProjectLines();
+
+                    } catch (error) {
+                        console.error('Error saving project:', error);
                     }
                 },
                 async deleteProject(id) {
-                    if (!confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) return;
+                    if (!confirm('Confirmer la suppression ?')) return;
                     try {
                         const response = await fetch(`${API_BASE_URL}?action=deleteProject`, {
                             method: 'POST',
@@ -1216,25 +2348,32 @@
                         });
                         const data = await response.json();
                         alert(data.message);
-                        this.fetchProjects();
+                        await this.fetchProjects();
+                        await this.fetchAllProjectLines();
                     } catch (error) {
-                        console.error('[v0] Error deleting project:', error);
+                        console.error('Error deleting project:', error);
                     }
                 },
+
+                // ==================== DETAIL PROJET ====================
                 async viewProject(project) {
-                    try {
-                        const response = await fetch(`${API_BASE_URL}?action=getProjectDetails&id=${project.id}`);
-                        const data = await response.json();
-                        this.selectedProject = data.data || {};
-                        this.modals.detail = true;
-                        this.$nextTick(() => {
-                            this.renderChart();
-                        });
-                    } catch (error) {
-                        console.error('[v0] Error fetching project details:', error);
-                    }
+                    this.selectedProject = project;
+                    this.selectedProjectLines = await this.fetchProjectLines(project.id);
+                    await this.fetchProjectExpenses(project.id);
+                    this.detailTab = 'lines';
+                    this.modals.detail = true;
+                    this.$nextTick(() => {
+                        this.renderProjectChart();
+                        this.renderProjectLinesChart();
+                    });
                 },
-                // Modal Management
+                closeDetailModal() {
+                    this.modals.detail = false;
+                    if (this.projectDetailChart) this.projectDetailChart.destroy();
+                    if (this.projectLinesChart) this.projectLinesChart.destroy();
+                    if (this.projectExpensesByLineChart) this.projectExpensesByLineChart.destroy();
+                    if (this.projectTimelineChart) this.projectTimelineChart.destroy();
+                },
                 openLineModal() {
                     this.newLineName = '';
                     this.modals.line = true;
@@ -1242,171 +2381,655 @@
                 closeLineModal() {
                     this.modals.line = false;
                 },
-                openProjectModal() {
-                    this.isEditMode = false;
-                    this.newProject = {
-                        id: null,
-                        name: '',
-                        total_budget: 0,
-                        description: ''
-                    };
-                    this.projectLines = [];
-                    this.modals.project = true;
+                toggleBudgetLines() {
+                    this.showBudgetLines = !this.showBudgetLines;
                 },
-                closeProjectModal() {
-                    this.modals.project = false;
+                prevPage() {
+                    if (this.currentPage > 1) this.currentPage--;
                 },
-                closeDetailModal() {
-                    this.modals.detail = false;
-                    if (this.chart) {
-                        this.chart.destroy();
-                        this.chart = null;
-                    }
+                nextPage() {
+                    if (this.currentPage < this.totalPages) this.currentPage++;
                 },
-                // Project Lines Management
-                addProjectLine() {
-                    this.projectLines.push({
-                        budget_line_id: '',
-                        allocated_amount: 0,
-                        name: ''
-                    });
-                },
-                removeProjectLine(index) {
-                    this.projectLines.splice(index, 1);
-                },
-                availableLinesFiltered(currentId = '') {
-                    return this.availableLines.filter(l =>
-                        !this.projectLines.some(pl => pl.budget_line_id === l.id && l.id !== currentId)
-                    );
-                },
-                updateLineName(line) {
-                    const selected = this.availableLines.find(l => l.id == line.budget_line_id);
-                    if (selected) line.name = selected.name;
-                },
-                // Filters and Sorting
-                filterProjects() {
-                    let filtered = this.projects;
 
-                    // Search filter
-                    if (this.searchQuery) {
-                        filtered = filtered.filter(p =>
-                            p.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-                        );
-                    }
-
-                    // Budget filter
-                    if (this.budgetFilter === 'remaining') {
-                        filtered = filtered.filter(p => p.remaining >= 0);
-                    } else if (this.budgetFilter === 'over') {
-                        filtered = filtered.filter(p => p.remaining < 0);
-                    }
-
-                    this.filteredProjects = filtered;
-                    this.sortProjects();
+                // ==================== FORMATAGE ====================
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: 'XOF',
+                        minimumFractionDigits: 0
+                    }).format(value || 0);
                 },
-                setSortBy(key) {
-                    if (this.sortBy === key) {
-                        this.sortAsc = !this.sortAsc;
-                    } else {
-                        this.sortBy = key;
-                        this.sortAsc = true;
-                    }
-                    this.sortProjects();
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    return new Date(dateStr).toLocaleDateString('fr-FR');
                 },
-                sortProjects() {
-                    this.filteredProjects.sort((a, b) => {
-                        let aVal = a[this.sortBy];
-                        let bVal = b[this.sortBy];
+                getBadgeClass(remaining) {
+                    return parseFloat(remaining) < 0 ? 'badge-danger' : 'badge-success';
+                },
+                getProjectRowClass(project) {
+                    const pct = this.getSpentPercentage(project);
+                    if (pct > 100) return 'budget-exceeded';
+                    if (pct > 80) return 'budget-warning';
+                    return '';
+                },
 
-                        if (typeof aVal === 'string') {
-                            aVal = aVal.toLowerCase();
-                            bVal = bVal.toLowerCase();
+                // ==================== GRAPHIQUES GLOBAUX ====================
+                renderCharts() {
+                    if (this.budgetPieChart) this.budgetPieChart.destroy();
+                    if (this.progressBarChart) this.progressBarChart.destroy();
+
+                    const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981', '#f59e0b', '#8b5cf6'];
+
+                    if (this.$refs.budgetPieChart) {
+                        const ctx = this.$refs.budgetPieChart.getContext('2d');
+                        if (ctx && this.projects.length > 0) {
+                            this.budgetPieChart = new Chart(ctx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: this.projects.map(p => p.name),
+                                    datasets: [{
+                                        data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
+                                        backgroundColor: colors.slice(0, this.projects.length)
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#ededed'
+                                            }
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: (ctx) => {
+                                                    const val = ctx.parsed;
+                                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                                    return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
                         }
-
-                        if (this.sortAsc) {
-                            return aVal > bVal ? 1 : -1;
-                        } else {
-                            return aVal < bVal ? 1 : -1;
-                        }
-                    });
-                },
-                // Stats Calculation
-                calculateStats() {
-                    this.stats.totalProjects = this.projects.length;
-                    this.stats.totalBudget = this.projects.reduce((sum, p) => sum + parseFloat(p.total_budget || 0), 0);
-                    this.stats.totalSpent = this.projects.reduce((sum, p) => sum + parseFloat(p.total_spent || 0), 0);
-                    this.stats.totalRemaining = this.stats.totalBudget - this.stats.totalSpent;
-                    this.stats.spentPercentage = this.stats.totalBudget > 0 ?
-                        Math.round((this.stats.totalSpent / this.stats.totalBudget) * 100) :
-                        0;
-                    this.stats.projectGrowth = 12; // Mock data
-                },
-                // Chart Rendering
-                renderChart() {
-                    if (this.chart) {
-                        this.chart.destroy();
                     }
 
-                    const ctx = this.$refs.projectChart;
-                    if (!ctx) return;
-
-                    const budget = parseFloat(this.selectedProject.total_budget || 0);
-                    const spent = parseFloat(this.selectedProject.total_spent || 0);
-                    const remaining = budget - spent;
-
-                    this.chart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Dépensé', 'Restant'],
-                            datasets: [{
-                                data: [spent, remaining > 0 ? remaining : 0],
-                                backgroundColor: [
-                                    'rgba(0, 112, 243, 0.8)',
-                                    'rgba(0, 230, 118, 0.8)'
-                                ],
-                                borderColor: [
-                                    '#0070f3',
-                                    '#00e676'
-                                ],
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        color: '#ededed',
-                                        padding: 20,
-                                        font: {
-                                            size: 14
+                    if (this.$refs.progressBarChart && this.projects.length > 0) {
+                        this.progressBarChart = new Chart(this.$refs.progressBarChart, {
+                            type: 'bar',
+                            data: {
+                                labels: this.projects.map(p => p.name),
+                                datasets: [{
+                                        label: 'Budget Alloue',
+                                        data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
+                                        backgroundColor: 'rgba(0, 112, 243, 0.7)',
+                                        borderColor: '#0070f3',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Depense',
+                                        data: this.projects.map(p => parseFloat(p.spent || 0)),
+                                        backgroundColor: 'rgba(255, 184, 0, 0.7)',
+                                        borderColor: '#ffb800',
+                                        borderWidth: 1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            color: '#ededed'
                                         }
                                     }
                                 }
                             }
-                        }
+                        });
+                    }
+                },
+
+                // ==================== GRAPHIQUES DETAIL PROJET ====================
+                renderProjectChart() {
+                    if (this.projectDetailChart) this.projectDetailChart.destroy();
+                    if (this.$refs.projectChart) {
+                        const allocated = this.selectedProjectLinesAllocatedTotal;
+                        const spent = this.selectedProjectLinesSpentTotal;
+                        const remaining = allocated - spent;
+
+                        this.projectDetailChart = new Chart(this.$refs.projectChart, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Depense', 'Restant'],
+                                datasets: [{
+                                    data: [spent, remaining > 0 ? remaining : 0],
+                                    backgroundColor: ['#ffb800', '#00e676']
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            color: '#ededed'
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (ctx) => {
+                                                const val = ctx.parsed;
+                                                const pct = allocated > 0 ? ((val / allocated) * 100).toFixed(1) : 0;
+                                                return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                renderProjectLinesChart() {
+                    if (this.projectLinesChart) this.projectLinesChart.destroy();
+                    if (this.$refs.projectLinesChart && this.selectedProjectLines.length > 0) {
+                        const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981'];
+                        this.projectLinesChart = new Chart(this.$refs.projectLinesChart, {
+                            type: 'pie',
+                            data: {
+                                labels: this.selectedProjectLines.map(l => l.name || l.line_name),
+                                datasets: [{
+                                    data: this.selectedProjectLines.map(l => parseFloat(l.allocated_amount || 0)),
+                                    backgroundColor: colors.slice(0, this.selectedProjectLines.length)
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            color: '#ededed'
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (ctx) => {
+                                                const val = ctx.parsed;
+                                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                                return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                renderProjectExpensesByLineChart() {
+                    if (this.projectExpensesByLineChart) this.projectExpensesByLineChart.destroy();
+                    if (this.$refs.projectExpensesByLineChart && this.selectedProjectLines.length > 0) {
+                        this.projectExpensesByLineChart = new Chart(this.$refs.projectExpensesByLineChart, {
+                            type: 'bar',
+                            data: {
+                                labels: this.selectedProjectLines.map(l => l.name || l.line_name),
+                                datasets: [{
+                                        label: 'Alloue',
+                                        data: this.selectedProjectLines.map(l => parseFloat(l.allocated_amount || 0)),
+                                        backgroundColor: 'rgba(0, 112, 243, 0.7)',
+                                        borderColor: '#0070f3',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Depense',
+                                        data: this.selectedProjectLines.map(l => this.getLineSpent(l)),
+                                        backgroundColor: 'rgba(255, 184, 0, 0.7)',
+                                        borderColor: '#ffb800',
+                                        borderWidth: 1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            color: '#ededed'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                renderProjectTimelineChart() {
+                    if (this.projectTimelineChart) this.projectTimelineChart.destroy();
+                    if (this.$refs.projectTimelineChart && this.projectExpenses.length > 0) {
+                        // Grouper les depenses par date
+                        const grouped = {};
+                        const sorted = [...this.projectExpenses].sort((a, b) => new Date(a.expense_date) - new Date(b.expense_date));
+                        let cumul = 0;
+                        sorted.forEach(exp => {
+                            const date = this.formatDate(exp.expense_date);
+                            cumul += parseFloat(exp.amount || 0);
+                            grouped[date] = cumul;
+                        });
+
+                        this.projectTimelineChart = new Chart(this.$refs.projectTimelineChart, {
+                            type: 'line',
+                            data: {
+                                labels: Object.keys(grouped),
+                                datasets: [{
+                                        label: 'Depenses cumulees',
+                                        data: Object.values(grouped),
+                                        borderColor: '#00d4ff',
+                                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointBackgroundColor: '#00d4ff',
+                                        pointBorderColor: '#fff',
+                                        pointRadius: 4
+                                    },
+                                    {
+                                        label: 'Budget alloue',
+                                        data: Object.keys(grouped).map(() => this.selectedProjectLinesAllocatedTotal),
+                                        borderColor: '#ff3b3b',
+                                        borderDash: [5, 5],
+                                        pointRadius: 0,
+                                        fill: false
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#ededed'
+                                        },
+                                        grid: {
+                                            color: '#2a2a2a'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            color: '#ededed'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+
+                // ==================== IMPRESSION ====================
+                buildPrintWindow(title, bodyContent) {
+                    const printWindow = window.open('', '', 'width=1000,height=800');
+                    const html = `<!DOCTYPE html>
+                    <html lang="fr">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>${title}</title>
+                        <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #1a1a1a; background: #fff; line-height: 1.6; }
+                            .print-header { background: linear-gradient(135deg, #0070f3 0%, #00d4ff 100%); color: white; padding: 25px 30px; border-radius: 10px; margin-bottom: 25px; }
+                            .print-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+                            .print-header .subtitle { font-size: 13px; opacity: 0.9; }
+                            .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+                            .stat-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #0070f3; }
+                            .stat-box.success { border-left-color: #00e676; }
+                            .stat-box.warning { border-left-color: #ffb800; }
+                            .stat-box.danger { border-left-color: #ff3b3b; }
+                            .stat-box .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+                            .stat-box .val { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+                            .section { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+                            .section-title { font-size: 16px; font-weight: 600; color: #0070f3; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #e8e8e8; }
+                            table { width: 100%; border-collapse: collapse; }
+                            thead { background: #f0f4f8; }
+                            th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; color: #333; border-bottom: 2px solid #d0d0d0; }
+                            td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 12px; }
+                            tbody tr:nth-child(even) { background: #fafbfc; }
+                            .total-row { background: #f0f4f8 !important; font-weight: 700; }
+                            .badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+                            .badge-ok { background: #d4f4dd; color: #00a152; }
+                            .badge-warn { background: #fff4e0; color: #f57c00; }
+                            .badge-err { background: #ffe0e0; color: #d32f2f; }
+                            .footer { margin-top: 30px; padding-top: 15px; border-top: 2px solid #e0e0e0; text-align: center; font-size: 11px; color: #888; }
+                            .footer strong { color: #0070f3; }
+                            @media print { body { padding: 15px; } .section { break-inside: avoid; } table { break-inside: avoid; } }
+                        </style>
+                    </head>
+                    <body>
+                        ${bodyContent}
+                        <div class="footer">
+                            <p><strong>OrizonPlus</strong> &mdash; Systeme de Gestion de Projets</p>
+                            <p>Document genere le ${new Date().toLocaleString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                            <p style="margin-top:5px; font-style:italic; color:#aaa;">Ce document est confidentiel et destine uniquement aux personnes autorisees.</p>
+                        </div>
+                    </body>
+                    </html>`;
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 800);
+                },
+
+                printProjectsPage() {
+                    let rows = '';
+                    this.filteredProjects.forEach((p, i) => {
+                        const allocated = this.getProjectAllocatedFromLines(p);
+                        const spent = parseFloat(p.spent || 0);
+                        const remaining = allocated - spent;
+                        const spentPct = allocated > 0 ? ((spent / allocated) * 100).toFixed(1) : '0.0';
+                        const remPct = allocated > 0 ? ((remaining / allocated) * 100).toFixed(1) : '0.0';
+                        const badgeClass = remaining < 0 ? 'badge-err' : parseFloat(spentPct) > 80 ? 'badge-warn' : 'badge-ok';
+                        rows += `<tr>
+                            <td>${i+1}</td>
+                            <td><strong>${p.name}</strong></td>
+                            <td style="text-align:right">${this.formatCurrency(allocated)}</td>
+                            <td style="text-align:right">${this.formatCurrency(spent)} <small>(${spentPct}%)</small></td>
+                            <td style="text-align:right">${this.formatCurrency(remaining)} <small>(${remPct}%)</small></td>
+                            <td style="text-align:center"><span class="badge ${badgeClass}">${remaining < 0 ? 'Depasse' : parseFloat(spentPct) > 80 ? 'Critique' : 'OK'}</span></td>
+                        </tr>`;
                     });
+                    const body = `
+                        <div class="print-header">
+                            <h1>Liste des Projets</h1>
+                            <div class="subtitle">${this.filteredProjects.length} projet(s) - Budget total: ${this.formatCurrency(this.stats.totalBudget)}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-box"><div class="label">Total Projets</div><div class="val">${this.stats.totalProjects}</div></div>
+                            <div class="stat-box"><div class="label">Budget Total</div><div class="val">${this.formatCurrency(this.stats.totalBudget)}</div></div>
+                            <div class="stat-box warning"><div class="label">Total Depense</div><div class="val">${this.formatCurrency(this.stats.totalSpent)}</div></div>
+                            <div class="stat-box ${this.stats.totalRemaining < 0 ? 'danger' : 'success'}"><div class="label">Restant</div><div class="val">${this.formatCurrency(this.stats.totalRemaining)}</div></div>
+                        </div>
+                        <div class="section">
+                            <h2 class="section-title">Tableau des Projets</h2>
+                            <table>
+                                <thead><tr><th>#</th><th>Projet</th><th style="text-align:right">Budget</th><th style="text-align:right">Depense</th><th style="text-align:right">Restant</th><th style="text-align:center">Statut</th></tr></thead>
+                                <tbody>${rows}
+                                    <tr class="total-row"><td colspan="2"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.stats.totalBudget)}</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.stats.totalSpent)}</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.stats.totalRemaining)}</strong></td><td></td></tr>
+                                </tbody>
+                            </table>
+                        </div>`;
+                    this.buildPrintWindow('Liste des Projets - OrizonPlus', body);
                 },
-                // Utilities
-                formatCurrency(value) {
-                    return new Intl.NumberFormat('fr-FR', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0
-                    }).format(value || 0) + ' FCFA';
+
+                printBudgetLinesPage() {
+                    let rows = '';
+                    this.availableLines.forEach((l, i) => {
+                        rows += `<tr><td>${i+1}</td><td><strong>${l.name}</strong></td><td>${l.created_at || '-'}</td></tr>`;
+                    });
+                    const body = `
+                        <div class="print-header">
+                            <h1>Lignes Budgetaires</h1>
+                            <div class="subtitle">${this.availableLines.length} ligne(s) budgetaire(s)</div>
+                        </div>
+                        <div class="section">
+                            <h2 class="section-title">Liste des Lignes Budgetaires</h2>
+                            <table><thead><tr><th>#</th><th>Nom</th><th>Date de creation</th></tr></thead><tbody>${rows}</tbody></table>
+                        </div>`;
+                    this.buildPrintWindow('Lignes Budgetaires - OrizonPlus', body);
                 },
-                getProgress(project) {
-                    const budget = parseFloat(project.total_budget || 0);
-                    const spent = parseFloat(project.total_spent || 0);
-                    if (budget === 0) return 0;
-                    return Math.min(100, Math.round((spent / budget) * 100));
+
+                printChartsPage() {
+                    // Capturer les canvas en images
+                    const charts = [];
+                    if (this.$refs.budgetPieChart) charts.push({
+                        title: 'Repartition des Budgets',
+                        img: this.$refs.budgetPieChart.toDataURL()
+                    });
+                    if (this.$refs.progressBarChart) charts.push({
+                        title: 'Budget vs Depenses par Projet',
+                        img: this.$refs.progressBarChart.toDataURL()
+                    });
+
+                    let chartsHtml = charts.map(c => `
+                        <div class="section">
+                            <h2 class="section-title">${c.title}</h2>
+                            <div style="text-align:center;"><img src="${c.img}" style="max-width:100%; height:auto;" /></div>
+                        </div>`).join('');
+
+                    const body = `
+                        <div class="print-header">
+                            <h1>Graphiques - Vue Globale</h1>
+                            <div class="subtitle">Visualisation des donnees budgetaires</div>
+                        </div>
+                        ${chartsHtml}`;
+                    this.buildPrintWindow('Graphiques - OrizonPlus', body);
                 },
-                printProjectDetails() {
-                    window.print();
+
+                async printProjectDetails(project) {
+                    this.selectedProject = project;
+                    this.selectedProjectLines = await this.fetchProjectLines(project.id);
+                    await this.fetchProjectExpenses(project.id);
+
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const spent = parseFloat(project.spent || 0);
+                    const remaining = allocated - spent;
+                    const spentPct = allocated > 0 ? ((spent / allocated) * 100).toFixed(1) : '0.0';
+                    const remPct = allocated > 0 ? ((remaining / allocated) * 100).toFixed(1) : '0.0';
+
+                    let linesHtml = '';
+                    if (this.selectedProjectLines.length > 0) {
+                        let lRows = '';
+                        this.selectedProjectLines.forEach(line => {
+                            const la = parseFloat(line.allocated_amount || 0);
+                            const ls = this.getLineSpent(line);
+                            const lr = la - ls;
+                            const lp = la > 0 ? ((ls / la) * 100).toFixed(1) : '0.0';
+                            const bc = lr < 0 ? 'badge-err' : parseFloat(lp) > 80 ? 'badge-warn' : 'badge-ok';
+                            lRows += `<tr>
+                                <td><strong>${line.name || line.line_name || 'N/A'}</strong></td>
+                                <td style="text-align:right">${this.formatCurrency(la)}</td>
+                                <td style="text-align:right">${this.formatCurrency(ls)}</td>
+                                <td style="text-align:right">${this.formatCurrency(lr)}</td>
+                                <td style="text-align:center"><span class="badge ${bc}">${lp}%</span></td>
+                            </tr>`;
+                        });
+                        linesHtml = `<div class="section">
+                            <h2 class="section-title">Lignes Budgetaires</h2>
+                            <table><thead><tr><th>Ligne</th><th style="text-align:right">Alloue</th><th style="text-align:right">Depense</th><th style="text-align:right">Restant</th><th style="text-align:center">% Utilise</th></tr></thead>
+                            <tbody>${lRows}</tbody></table></div>`;
+                    }
+
+                    let expHtml = '';
+                    if (this.projectExpenses.length > 0) {
+                        let eRows = '';
+                        this.projectExpenses.forEach((exp, i) => {
+                            eRows += `<tr><td>${i+1}</td><td><strong>${exp.budget_line_name || 'N/A'}</strong></td><td>${exp.description || '-'}</td><td style="text-align:right">${this.formatCurrency(exp.amount)}</td><td style="text-align:center">${this.formatDate(exp.expense_date)}</td></tr>`;
+                        });
+                        expHtml = `<div class="section">
+                            <h2 class="section-title">Depenses Detaillees (${this.projectExpenses.length})</h2>
+                            <table><thead><tr><th>#</th><th>Ligne</th><th>Description</th><th style="text-align:right">Montant</th><th style="text-align:center">Date</th></tr></thead>
+                            <tbody>${eRows}
+                                <tr class="total-row"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.expensesTotal)}</strong></td><td></td></tr>
+                            </tbody></table></div>`;
+                    }
+
+                    const body = `
+                        <div class="print-header">
+                            <h1>Rapport du Projet</h1>
+                            <div class="subtitle">${project.name}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-box"><div class="label">Budget Alloue (100%)</div><div class="val">${this.formatCurrency(allocated)}</div></div>
+                            <div class="stat-box warning"><div class="label">Depense (${spentPct}%)</div><div class="val">${this.formatCurrency(spent)}</div></div>
+                            <div class="stat-box ${remaining >= 0 ? 'success' : 'danger'}"><div class="label">Restant (${remPct}%)</div><div class="val">${this.formatCurrency(remaining)}</div></div>
+                            <div class="stat-box"><div class="label">Nb Depenses</div><div class="val">${this.projectExpenses.length}</div></div>
+                        </div>
+                        ${linesHtml}
+                        ${expHtml}`;
+                    this.buildPrintWindow(`Projet ${project.name} - OrizonPlus`, body);
                 },
+
+                printSection(section) {
+                    const project = this.selectedProject;
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const spent = parseFloat(project.spent || 0);
+                    const remaining = allocated - spent;
+                    const spentPct = allocated > 0 ? ((spent / allocated) * 100).toFixed(1) : '0.0';
+                    const remPct = allocated > 0 ? ((remaining / allocated) * 100).toFixed(1) : '0.0';
+
+                    let sectionContent = '';
+
+                    if (section === 'lines') {
+                        if (this.selectedProjectLines.length > 0) {
+                            let rows = '';
+                            this.selectedProjectLines.forEach(line => {
+                                const la = parseFloat(line.allocated_amount || 0);
+                                const ls = this.getLineSpent(line);
+                                const lr = la - ls;
+                                const lp = la > 0 ? ((ls / la) * 100).toFixed(1) : '0.0';
+                                const bc = lr < 0 ? 'badge-err' : parseFloat(lp) > 80 ? 'badge-warn' : 'badge-ok';
+                                rows += `<tr><td><strong>${line.name || line.line_name}</strong></td><td style="text-align:right">${this.formatCurrency(la)}</td><td style="text-align:right">${this.formatCurrency(ls)}</td><td style="text-align:right">${this.formatCurrency(lr)}</td><td style="text-align:center"><span class="badge ${bc}">${lp}%</span></td></tr>`;
+                            });
+                            sectionContent = `<div class="section"><h2 class="section-title">Lignes Budgetaires (${this.selectedProjectLines.length})</h2>
+                                <table><thead><tr><th>Ligne</th><th style="text-align:right">Alloue</th><th style="text-align:right">Depense</th><th style="text-align:right">Restant</th><th style="text-align:center">% Utilise</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+                        } else {
+                            sectionContent = '<div class="section"><p style="text-align:center; color:#999;">Aucune ligne budgetaire</p></div>';
+                        }
+                    }
+
+                    if (section === 'expenses') {
+                        if (this.projectExpenses.length > 0) {
+                            let rows = '';
+                            this.projectExpenses.forEach((exp, i) => {
+                                rows += `<tr><td>${i+1}</td><td><strong>${exp.budget_line_name || 'N/A'}</strong></td><td>${exp.description || '-'}</td><td style="text-align:right">${this.formatCurrency(exp.amount)}</td><td style="text-align:center">${this.formatDate(exp.expense_date)}</td></tr>`;
+                            });
+                            sectionContent = `<div class="section"><h2 class="section-title">Depenses (${this.projectExpenses.length})</h2>
+                                <table><thead><tr><th>#</th><th>Ligne</th><th>Description</th><th style="text-align:right">Montant</th><th style="text-align:center">Date</th></tr></thead>
+                                <tbody>${rows}<tr class="total-row"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.expensesTotal)}</strong></td><td></td></tr></tbody></table></div>`;
+                        } else {
+                            sectionContent = '<div class="section"><p style="text-align:center; color:#999;">Aucune depense</p></div>';
+                        }
+                    }
+
+                    if (section === 'charts') {
+                        const charts = [];
+                        if (this.$refs.projectChart) charts.push({
+                            title: 'Budget: Depense vs Restant',
+                            img: this.$refs.projectChart.toDataURL()
+                        });
+                        if (this.$refs.projectLinesChart) charts.push({
+                            title: 'Repartition par Ligne',
+                            img: this.$refs.projectLinesChart.toDataURL()
+                        });
+                        if (this.$refs.projectExpensesByLineChart) charts.push({
+                            title: 'Alloue vs Depense par Ligne',
+                            img: this.$refs.projectExpensesByLineChart.toDataURL()
+                        });
+                        if (this.$refs.projectTimelineChart) charts.push({
+                            title: 'Evolution des Depenses',
+                            img: this.$refs.projectTimelineChart.toDataURL()
+                        });
+                        sectionContent = charts.map(c => `<div class="section"><h2 class="section-title">${c.title}</h2><div style="text-align:center"><img src="${c.img}" style="max-width:100%;height:auto;" /></div></div>`).join('');
+                    }
+
+                    if (section === 'summary') {
+                        // Imprimer tout
+                        let linesTable = '';
+                        if (this.selectedProjectLines.length > 0) {
+                            let lr = '';
+                            this.selectedProjectLines.forEach(line => {
+                                const la = parseFloat(line.allocated_amount || 0);
+                                const ls = this.getLineSpent(line);
+                                const lrem = la - ls;
+                                const lp = la > 0 ? ((ls / la) * 100).toFixed(1) : '0.0';
+                                const bc = lrem < 0 ? 'badge-err' : parseFloat(lp) > 80 ? 'badge-warn' : 'badge-ok';
+                                lr += `<tr><td><strong>${line.name || line.line_name}</strong></td><td style="text-align:right">${this.formatCurrency(la)}</td><td style="text-align:right">${this.formatCurrency(ls)}</td><td style="text-align:right">${this.formatCurrency(lrem)}</td><td style="text-align:center"><span class="badge ${bc}">${lp}%</span></td></tr>`;
+                            });
+                            linesTable = `<div class="section"><h2 class="section-title">Lignes Budgetaires</h2>
+                                <table><thead><tr><th>Ligne</th><th style="text-align:right">Alloue</th><th style="text-align:right">Depense</th><th style="text-align:right">Restant</th><th style="text-align:center">%</th></tr></thead><tbody>${lr}</tbody></table></div>`;
+                        }
+                        let expTable = '';
+                        if (this.projectExpenses.length > 0) {
+                            let er = '';
+                            this.projectExpenses.forEach((exp, i) => {
+                                er += `<tr><td>${i+1}</td><td>${exp.budget_line_name || 'N/A'}</td><td>${exp.description || '-'}</td><td style="text-align:right">${this.formatCurrency(exp.amount)}</td><td style="text-align:center">${this.formatDate(exp.expense_date)}</td></tr>`;
+                            });
+                            expTable = `<div class="section"><h2 class="section-title">Depenses (${this.projectExpenses.length})</h2>
+                                <table><thead><tr><th>#</th><th>Ligne</th><th>Description</th><th style="text-align:right">Montant</th><th style="text-align:center">Date</th></tr></thead>
+                                <tbody>${er}<tr class="total-row"><td colspan="3"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${this.formatCurrency(this.expensesTotal)}</strong></td><td></td></tr></tbody></table></div>`;
+                        }
+                        sectionContent = linesTable + expTable;
+                    }
+
+                    const body = `
+                        <div class="print-header">
+                            <h1>${project.name}</h1>
+                            <div class="subtitle">${section === 'lines' ? 'Lignes Budgetaires' : section === 'expenses' ? 'Depenses' : section === 'charts' ? 'Graphiques' : 'Resume Complet'}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-box"><div class="label">Budget (100%)</div><div class="val">${this.formatCurrency(allocated)}</div></div>
+                            <div class="stat-box warning"><div class="label">Depense (${spentPct}%)</div><div class="val">${this.formatCurrency(spent)}</div></div>
+                            <div class="stat-box ${remaining >= 0 ? 'success' : 'danger'}"><div class="label">Restant (${remPct}%)</div><div class="val">${this.formatCurrency(remaining)}</div></div>
+                            <div class="stat-box"><div class="label">Nb Depenses</div><div class="val">${this.projectExpenses.length}</div></div>
+                        </div>
+                        ${sectionContent}`;
+                    this.buildPrintWindow(`${project.name} - ${section} - OrizonPlus`, body);
+                },
+
                 logout() {
-                    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                    if (confirm('Voulez-vous vous deconnecter ?')) {
                         localStorage.removeItem('user');
                         window.location.href = 'login.php';
                     }

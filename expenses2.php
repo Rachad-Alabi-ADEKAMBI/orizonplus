@@ -872,16 +872,18 @@
                             v-model="expense.project_budget_line_id"
                             @change="updateLineInfo">
                             <option value="">Sélectionner une ligne</option>
-                            <option v-for="l in lines"
+                            <option
+                                v-for="l in lines"
                                 :key="l.project_budget_line_id"
                                 :value="l.project_budget_line_id">
                                 {{ l.name }}
                             </option>
                         </select>
 
-
                     </div>
-
+                    <p v-if="1>0">
+                        ID ligne budgétaire sélectionnée : {{ expense.project_budget_line_id }}
+                    </p>
 
                     <div v-if="selectedLine" class="info-box" :class="getInfoBoxClass()">
                         <div class="info-row">
@@ -1032,21 +1034,16 @@
 
                 },
                 updateLineInfo() {
-                    const line = this.lines.find(
-                        l => l.project_budget_line_id == this.expense.project_budget_line_id
-                    );
-
+                    const line = this.lines.find(l => l.id == this.expense.project_budget_line_id);
                     if (line) {
-                        const allocated = Number(line.allocated_amount) || 0;
-                        const spent = Number(line.spent) || 0;
-
+                        const allocated = parseFloat(line.allocated_amount || 0);
+                        const spent = parseFloat(line.spent || 0);
                         this.selectedLine = {
                             allocated_amount: allocated,
                             spent: spent,
                             remaining: allocated - spent
                         };
-
-                        console.log('Selected line info:', this.selectedLine);
+                        console.log('[v0] Selected line info:', this.selectedLine);
                     } else {
                         this.selectedLine = null;
                     }
@@ -1117,6 +1114,7 @@
                         amount: 0,
                         description: ''
                     };
+                    alert('ok');
                     this.selectedLine = null;
                     this.lines = [];
                     this.modals.expense = true;
