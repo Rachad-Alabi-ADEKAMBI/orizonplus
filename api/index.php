@@ -1,6 +1,4 @@
 <?php
-session_start();
-
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
@@ -76,6 +74,10 @@ switch ($action) {
     // 💼 LIGNES BUDGÉTAIRES
     case 'createBudgetLine':
         createBudgetLine();
+        break;
+
+    case 'createSimpleBudgetLine':
+        createSimpleBudgetLine();
         break;
 
     case 'updateBudgetLine':

@@ -1,3 +1,14 @@
+<?php
+session_start();
+
+// s'il n'y a pas de session, rediriger vers login.php
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -8,6 +19,10 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <!-- Font Awesome (si tu l'utilises pour les icônes actuelles) -->
+    <script src="https://kit.fontawesome.com/ton_code_kit.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -121,6 +136,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
         }
 
         .logo {
@@ -138,6 +154,7 @@
             display: flex;
             gap: 1rem;
             list-style: none;
+            order: 2;
         }
 
         .nav-link {
@@ -159,6 +176,55 @@
         .nav-link.active {
             color: var(--text-primary);
             background: var(--bg-tertiary);
+        }
+
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            order: 3;
+        }
+
+        @media (max-width: 768px) {
+
+
+
+            .hamburger-btn {
+                display: block;
+            }
+
+            .logo {
+                order: 1;
+            }
+
+
+            .nav-menu {
+                position: fixed;
+                top: 73px;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                border-bottom: 1px solid var(--border-color);
+                flex-direction: column;
+                gap: 0;
+                padding: 1rem 0;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 99;
+            }
+
+            .nav-menu.active {
+                transform: translateX(0);
+            }
+
+            .nav-link {
+                padding: 1rem 2rem;
+                border-radius: 0;
+            }
         }
 
         .container {
@@ -826,7 +892,7 @@
 
         @media (max-width: 768px) {
             .header-content {
-                flex-direction: column;
+                flex-direction: row;
                 gap: 1rem;
             }
 
@@ -946,6 +1012,9 @@
             display: none;
         }
     </style>
+
+
+
 </head>
 
 <body>
@@ -954,19 +1023,33 @@
         <header class="header no-print">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-chart-line"></i>
-                    OrizonPlus
+                    <img src="logo.png" alt="">
                 </div>
-                <nav>
-                    <ul class="nav-menu">
-                        <li><a href="index.php" class="nav-link active"><i class="fas fa-folder-open"></i>
-                                Projets</a></li>
-                        <li><a href="#" class="nav-link" @click.prevent="logout"><i
-                                    class="fas fa-sign-out-alt"></i> Deconnexion</a></li>
-                    </ul>
-                </nav>
+
+                <button class="hamburger-btn" @click="toggleMobileMenu" aria-label="Toggle menu">
+                    <i class="fas" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i>
+                </button>
+
+                <ul class="nav-menu" :class="{ active: mobileMenuOpen }">
+                    <li>
+                        <a href="index.php" class="nav-link active" @click="closeMobileMenu">
+                            <i class="fas fa-folder-open"></i> Projets
+                        </a>
+                    </li>
+                    <li>
+                        <a href="expenses.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-receipt"></i> Dépenses
+                        </a>
+                    </li>
+                    <li>
+                        <a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
+                            <i class="fas fa-sign-out-alt"></i> Déconnexion
+                        </a>
+                    </li>
+                </ul>
             </div>
         </header>
+
 
         <div class="container">
             <!-- Alertes Budgets Depasses -->
@@ -1293,7 +1376,7 @@
                 <div class="modal-header">
                     <h3 class="modal-title">
                         <i class="fas fa-tag"></i>
-                        Nouvelle Ligne Budgetaire
+                        Nouvelle Ligne Budgetairee
                     </h3>
                     <button class="modal-close" @click="closeLineModal">&times;</button>
                 </div>
@@ -1328,7 +1411,16 @@
                     <div class="form-group">
                         <label class="form-label">Nom du projet</label>
                         <input type="text" class="form-input" v-model="newProject.name"
-                            placeholder="Ex: Developpement Web..." />
+                            placeholder="Ex: Projet A" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea
+                            class="form-input"
+                            v-model="newProject.description"
+                            placeholder="Description du projet..."
+                            rows="3"></textarea>
                     </div>
 
                     <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
@@ -1825,7 +1917,7 @@
         const {
             createApp
         } = Vue;
-        const API_BASE_URL = 'http://127.0.0.1/orizonplus/api/index.php';
+        const API_BASE_URL = 'api/index.php';
 
         createApp({
             data() {
@@ -1847,6 +1939,7 @@
                     newLineName: '',
                     newProject: {
                         name: '',
+                        description: ''
                     },
                     projectLines: [],
                     currentProjectLines: [],
@@ -1875,7 +1968,9 @@
                     projectDetailChart: null,
                     projectLinesChart: null,
                     projectExpensesByLineChart: null,
-                    projectTimelineChart: null
+                    projectTimelineChart: null,
+                    mobileMenuOpen: false
+
                 };
             },
             computed: {
@@ -2114,22 +2209,34 @@
                         alert('Veuillez entrer un nom');
                         return;
                     }
+
+                    const route = `${API_BASE_URL}?action=createSimpleBudgetLine`;
+                    const payload = {
+                        name: this.newLineName
+                    };
+
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=createBudgetLine`, {
+                        console.log('ROUTE:', route);
+                        console.log('REQUÊTE:', payload);
+
+                        const response = await fetch(route, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({
-                                name: this.newLineName
-                            })
+                            body: JSON.stringify(payload)
                         });
+
+                        console.log('RÉPONSE BRUTE:', response);
+
                         const data = await response.json();
+                        console.log('RÉPONSE JSON:', data);
+
                         alert(data.message);
                         this.closeLineModal();
                         this.fetchLines();
                     } catch (error) {
-                        console.error('Error creating line:', error);
+                        console.error('ERREUR:', error);
                     }
                 },
                 async updateLine(line) {
@@ -2191,7 +2298,8 @@
                 openProjectModal() {
                     this.isEditMode = false;
                     this.newProject = {
-                        name: ''
+                        name: '',
+                        description: ''
                     };
                     this.projectLines = [];
                     this.currentProjectLines = [];
@@ -2298,6 +2406,7 @@
                             id: this.newProject.id
                         }),
                         name: this.newProject.name,
+                        description: this.newProject.description,
                         lines: this.projectLines.filter(
                             l => l.budget_line_id && l.allocated_amount > 0
                         ),
@@ -3031,12 +3140,20 @@
                 logout() {
                     if (confirm('Voulez-vous vous deconnecter ?')) {
                         localStorage.removeItem('user');
-                        window.location.href = 'login.php';
+                        window.location.href = 'api/index.php?action=logout';
                     }
+                },
+
+                toggleMobileMenu() {
+                    this.mobileMenuOpen = !this.mobileMenuOpen;
+                },
+
+                closeMobileMenu() {
+                    this.mobileMenuOpen = false;
                 }
             }
         }).mount('#app');
     </script>
-</body>
+
 
 </html>

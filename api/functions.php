@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 /**
  * Connexion à la base de données
@@ -41,28 +42,72 @@ function jsonError($message = '', $code = 400)
  */
 function login()
 {
-    $pdo = getPDO();
-    $data = json_decode(file_get_contents('php://input'), true);
-    $username = $data['username'] ?? '';
-    $password = $data['password'] ?? '';
+    session_start();
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
+    try {
+        $pdo = getPDO();
 
-    if ($user && password_verify($password, $user['password'])) {
+        // Récupérer et décoder le JSON
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true);
+
+        if ($data === null) {
+            jsonError('JSON invalide ou vide', 400);
+        }
+
+        $name = trim($data['name'] ?? '');
+        $password = $data['password'] ?? '';
+
+        // Vérification des champs obligatoires
+        if ($name === '' || $password === '') {
+            jsonError('Champs "username" et "password" obligatoires', 400);
+        }
+
+        // Récupérer l'utilisateur
+        $stmt = $pdo->prepare("SELECT id, name, password FROM users WHERE name = ?");
+        $stmt->execute([$name]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            jsonError('Utilisateur introuvable', 404);
+        }
+
+        // Vérifier le mot de passe
+        if (!password_verify($password, $user['password'])) {
+            jsonError('Mot de passe incorrect', 401);
+        }
+
+        // Succès
         $_SESSION['user_id'] = $user['id'];
-        jsonSuccess(['user' => $user], 'Login réussi');
-    } else {
-        jsonError('Identifiants invalides', 401);
+        jsonSuccess(['user_id' => $user['id']], 'Login réussi');
+    } catch (PDOException $e) {
+        // Erreur liée à la base de données
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur base de données: ' . $e->getMessage()
+        ]);
+        exit;
+    } catch (Exception $e) {
+        // Erreur interne générale
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur interne: ' . $e->getMessage()
+        ]);
+        exit;
     }
 }
 
+
+
 function logout()
 {
-    session_destroy();
-    jsonSuccess([], 'Déconnexion réussie');
+    session_destroy();     // Détruire la session
+    header('Location: ../login.php'); // Redirection vers la page login
+    exit;                  // Arrêter l'exécution du script
 }
+
 
 function isLoggedIn(): bool
 {
@@ -256,13 +301,20 @@ function updateProject()
 function deleteProject()
 {
     $pdo = getPDO();
-    $id = $_GET['id'] ?? null;
-    if (!$id) jsonError('ID manquant');
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? null;
+
+    if (!$id) {
+        jsonError('ID manquant');
+    }
 
     $stmt = $pdo->prepare("DELETE FROM projects WHERE id = ?");
     $stmt->execute([$id]);
+
     jsonSuccess([], 'Projet supprimé');
 }
+
 
 /**
  * 💼 LIGNES BUDGÉTAIRES
@@ -279,6 +331,41 @@ function createBudgetLine()
     $stmt->execute([$projectId, $name]);
     jsonSuccess(['id' => $pdo->lastInsertId()], 'Ligne budgétaire créée');
 }
+
+
+function createSimpleBudgetLine()
+{
+    try {
+        $pdo = getPDO();
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $name = $data['name'] ?? null;
+        if (!$name) {
+            jsonError('Paramètres manquants');
+            exit;
+        }
+
+        $stmt = $pdo->prepare(
+            "INSERT INTO budget_lines (name) VALUES (?)"
+        );
+        $stmt->execute([$name]); // <-- CORRECTION CRITIQUE
+
+        jsonSuccess(
+            ['id' => $pdo->lastInsertId()],
+            'Ligne budgétaire créée'
+        );
+        exit;
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
+
 
 function updateBudgetLine()
 {
@@ -509,15 +596,46 @@ function createExpense()
 function updateExpense()
 {
     $pdo = getPDO();
-    $data = json_decode(file_get_contents('php://input'), true);
-    $id = $data['id'] ?? null;
-    $amount = $data['amount'] ?? null;
-    if (!$id || $amount === null) jsonError('Paramètres manquants');
 
-    $stmt = $pdo->prepare("UPDATE expenses SET amount = ? WHERE id = ?");
-    $stmt->execute([$amount, $id]);
+    // ID depuis l'URL
+    $id = $_GET['id'] ?? null;
+
+    // Données JSON
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    $amount = $data['amount'] ?? null;
+    $projectBudgetLineId = $data['project_budget_line_id'] ?? null;
+    $projectId = $data['project_id'] ?? null;
+
+    if (
+        !$id ||
+        $amount === null ||
+        !$projectBudgetLineId ||
+        !$projectId
+    ) {
+        jsonError('Paramètres manquants');
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE expenses 
+        SET 
+            amount = ?, 
+            project_budget_line_id = ?, 
+            project_id = ?
+        WHERE id = ?
+    ");
+
+    $stmt->execute([
+        $amount,
+        $projectBudgetLineId,
+        $projectId,
+        $id
+    ]);
+
     jsonSuccess([], 'Dépense mise à jour');
 }
+
+
 
 function deleteExpense()
 {

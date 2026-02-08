@@ -1,3 +1,14 @@
+<?php
+session_start();
+
+// s'il n'y a pas de session, rediriger vers login.php
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -5,9 +16,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OrizonPlus • Gestion des Dépenses</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
     <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+
     <style>
         * {
             margin: 0;
@@ -90,6 +104,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
         }
 
         .logo {
@@ -107,6 +122,7 @@
             display: flex;
             gap: 1rem;
             list-style: none;
+            order: 2;
         }
 
         .nav-link {
@@ -121,12 +137,62 @@
             background: transparent;
             border: none;
             cursor: pointer;
+            font-size: 0.875rem;
         }
 
         .nav-link:hover,
         .nav-link.active {
             color: var(--text-primary);
             background: var(--bg-tertiary);
+        }
+
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            order: 3;
+        }
+
+        @media (max-width: 768px) {
+
+
+
+            .hamburger-btn {
+                display: block;
+            }
+
+            .logo {
+                order: 1;
+            }
+
+
+            .nav-menu {
+                position: fixed;
+                top: 73px;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                border-bottom: 1px solid var(--border-color);
+                flex-direction: column;
+                gap: 0;
+                padding: 1rem 0;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 99;
+            }
+
+            .nav-menu.active {
+                transform: translateX(0);
+            }
+
+            .nav-link {
+                padding: 1rem 2rem;
+                border-radius: 0;
+            }
         }
 
         .container {
@@ -326,6 +392,31 @@
             color: white;
         }
 
+        .btn-success:hover {
+            background: #00c760;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: var(--accent-yellow);
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e5a600;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e02a2a;
+            transform: translateY(-2px);
+        }
+
         .btn-secondary {
             background: var(--bg-tertiary);
             color: var(--text-primary);
@@ -335,6 +426,16 @@
         .btn-sm {
             padding: 0.5rem 1rem;
             font-size: 0.8rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .table-container {
@@ -613,8 +714,13 @@
 
         @media (max-width: 768px) {
             .header-content {
-                flex-direction: column;
+                flex-direction: row;
                 gap: 1rem;
+            }
+
+            .nav-menu {
+                flex-direction: column;
+                width: 100%;
             }
 
             .stats-grid {
@@ -633,6 +739,67 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+
+            .action-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .action-buttons .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .modal {
+                max-width: 95%;
+                width: 95%;
+            }
+
+            /* Responsive Tables avec data-label */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .table thead {
+                display: none;
+            }
+
+            .table tbody tr {
+                display: block;
+                margin-bottom: 1.5rem;
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius);
+                padding: 1rem;
+                background: var(--bg-tertiary);
+            }
+
+            .table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem 0;
+                border-bottom: 1px solid var(--border-color);
+                text-align: right;
+            }
+
+            .table tbody td:last-child {
+                border-bottom: none;
+            }
+
+            .table tbody td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--text-secondary);
+                text-align: left;
+                margin-right: 1rem;
+                flex: 1;
+                font-size: 0.85rem;
+            }
+
+            .table tbody td>* {
+                flex-shrink: 0;
+            }
         }
     </style>
 </head>
@@ -640,19 +807,34 @@
 <body>
     <div id="app">
         <!-- Header -->
+        <!-- Header -->
         <header class="header no-print">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-chart-line"></i>
-                    OrizonPlus
+                    <img src="logo.png" alt="">
                 </div>
-                <nav>
-                    <ul class="nav-menu">
-                        <li><a href="index.php" class="nav-link"><i class="fas fa-folder-open"></i> Projets</a></li>
-                        <li><a href="expenses.php" class="nav-link active"><i class="fas fa-receipt"></i> Dépenses</a></li>
-                        <li><button class="nav-link" @click="logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</button></li>
-                    </ul>
-                </nav>
+
+                <button class="hamburger-btn" @click="toggleMobileMenu" aria-label="Toggle menu">
+                    <i class="fas" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i>
+                </button>
+
+                <ul class="nav-menu" :class="{ active: mobileMenuOpen }">
+                    <li>
+                        <a href="index.php" class="nav-link active" @click="closeMobileMenu">
+                            <i class="fas fa-folder-open"></i> Projets
+                        </a>
+                    </li>
+                    <li>
+                        <a href="expenses.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-receipt"></i> Dépenses
+                        </a>
+                    </li>
+                    <li>
+                        <a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
+                            <i class="fas fa-sign-out-alt"></i> Déconnexion
+                        </a>
+                    </li>
+                </ul>
             </div>
         </header>
 
@@ -798,26 +980,39 @@
                                     <th>Alloué</th>
                                     <th>Utilisé %</th>
                                     <th>Restant</th>
+                                    <th class="no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="expense in paginatedExpenses" :key="expense.id"
                                     :class="getRowClass(expense)">
-                                    <td>{{ formatDate(expense.expense_date) }}</td>
-                                    <td><strong>{{ expense.project_name }}</strong></td>
-                                    <td>{{ expense.budget_line_name }}</td>
-                                    <td>{{ expense.description }}</td>
-                                    <td><strong style="color: var(--accent-green);">{{ formatCurrency(expense.amount) }}</strong></td>
-                                    <td>{{ formatCurrency(expense.allocated_amount) }}</td>
-                                    <td>
+                                    <td data-label="Date">{{ formatDate(expense.expense_date) }}</td>
+                                    <td data-label="Projet"><strong>{{ expense.project_name }}</strong></td>
+                                    <td data-label="Ligne budgétaire">{{ expense.budget_line_name }}</td>
+                                    <td data-label="Description">{{ expense.description }}</td>
+                                    <td data-label="Montant"><strong style="color: var(--accent-green);">{{ formatCurrency(expense.amount) }}</strong></td>
+                                    <td data-label="Alloué">{{ formatCurrency(expense.allocated_amount) }}</td>
+                                    <td data-label="Utilisé %">
                                         <span :style="{color: getPercentageColor(expense)}">
                                             {{ getUsagePercentage(expense) }}%
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Restant">
                                         <span class="badge" :class="getBadgeClass(getRemainingAmount(expense), expense.allocated_amount)">
                                             {{ formatCurrency(getRemainingAmount(expense)) }}
                                         </span>
+                                    </td>
+                                    <td class="no-print" data-label="Actions">
+                                        <div class="action-buttons">
+                                            <button class="btn btn-warning btn-sm btn-icon"
+                                                @click="editExpense(expense)" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btn-icon"
+                                                @click="deleteExpense(expense)" title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -847,13 +1042,13 @@
             <p>Rapport généré via l'application OrizonPlus - {{ new Date().toLocaleString('fr-FR') }}</p>
         </div>
 
-        <!-- Expense Modal -->
+        <!-- Expense Modal (Create/Edit) -->
         <div class="modal-overlay" :class="{active: modals.expense}" @click.self="closeExpenseModal">
             <div class="modal">
                 <div class="modal-header">
                     <h3 class="modal-title">
-                        <i class="fas fa-plus-circle"></i>
-                        Nouvelle Dépense
+                        <i :class="isEditMode ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                        {{ isEditMode ? 'Modifier la Dépense' : 'Nouvelle Dépense' }}
                     </h3>
                     <button class="modal-close" @click="closeExpenseModal">&times;</button>
                 </div>
@@ -878,10 +1073,7 @@
                                 {{ l.name }}
                             </option>
                         </select>
-
-
                     </div>
-
 
                     <div v-if="selectedLine" class="info-box" :class="getInfoBoxClass()">
                         <div class="info-row">
@@ -916,7 +1108,7 @@
                     <button class="btn btn-secondary" @click="closeExpenseModal">Annuler</button>
                     <button class="btn btn-success" @click="saveExpense">
                         <i class="fas fa-check"></i>
-                        Enregistrer
+                        {{ isEditMode ? 'Modifier' : 'Enregistrer' }}
                     </button>
                 </div>
             </div>
@@ -927,7 +1119,7 @@
         const {
             createApp
         } = Vue;
-        const API_BASE_URL = 'http://127.0.0.1/orizonplus/api/index.php';
+        const API_BASE_URL = 'api/index.php';
 
         createApp({
             data() {
@@ -937,12 +1129,14 @@
                     projects: [],
                     lines: [],
                     expense: {
+                        id: null,
                         project_id: '',
                         project_budget_line_id: '',
                         amount: 0,
                         description: ''
                     },
                     selectedLine: null,
+                    isEditMode: false,
                     modals: {
                         expense: false
                     },
@@ -960,7 +1154,8 @@
                         overBudget: 0
                     },
                     projectsChart: null,
-                    evolutionChart: null
+                    evolutionChart: null,
+                    mobileMenuOpen: false
                 };
             },
             computed: {
@@ -1007,29 +1202,22 @@
                     }
                 },
                 async fetchLines() {
-                    console.log('lines fetched !');
                     if (!this.expense.project_id) return;
                     try {
                         const response = await fetch(
                             `${API_BASE_URL}?action=getProjectBudgetLines&project_id=${this.expense.project_id}`
                         );
-
                         const data = await response.json();
-
                         this.lines = data.data || [];
 
-                        console.log('lignes:', this.lines);
-
-                        this.expense.project_budget_line_id = '';
-                        console.log('id de la ligne:', this.expense.project_budget_line_id);
-
-                        this.selectedLine = null;
-
+                        // Reset line selection when project changes unless in edit mode
+                        if (!this.isEditMode) {
+                            this.expense.project_budget_line_id = '';
+                            this.selectedLine = null;
+                        }
                     } catch (error) {
                         console.error('[v0] Error fetching lines:', error);
                     }
-
-
                 },
                 updateLineInfo() {
                     const line = this.lines.find(
@@ -1045,34 +1233,23 @@
                             spent: spent,
                             remaining: allocated - spent
                         };
-
-                        console.log('Selected line info:', this.selectedLine);
                     } else {
                         this.selectedLine = null;
                     }
                 },
                 async saveExpense() {
-
-                    console.log('ROUTE:', `${API_BASE_URL}?action=createExpense`);
-                    console.log('STATE expense:', JSON.parse(JSON.stringify(this.expense)));
-
-                    /*   if (
-                           !this.expense.project_id ||
-                           !this.expense.project_budget_line_id ||
-                           !this.expense.amount
-                       ) {
-                           console.log('VALIDATION FAILED');
-                           alert('Veuillez remplir tous les champs obligatoires');
-                           return;
-                       }
-                           */
+                    if (
+                        !this.expense.project_id ||
+                        !this.expense.project_budget_line_id ||
+                        !this.expense.amount
+                    ) {
+                        alert('Veuillez remplir tous les champs obligatoires');
+                        return;
+                    }
 
                     const payload = {
                         project_id: Number(this.expense.project_id),
-
-                        // 🔴 envoyé aussi au niveau racine
                         project_budget_line_id: Number(this.expense.project_budget_line_id),
-
                         lines: [{
                             project_budget_line_id: Number(this.expense.project_budget_line_id),
                             amount: Number(this.expense.amount),
@@ -1080,38 +1257,60 @@
                         }]
                     };
 
-                    console.log('PAYLOAD SENT:', payload);
+                    let route = `${API_BASE_URL}?action=createExpense`;
+                    let method = 'POST';
+
+                    if (this.isEditMode && this.expense.id) {
+                        route = `${API_BASE_URL}?action=updateExpense&id=${this.expense.id}`;
+                        payload.amount = Number(this.expense.amount);
+                        payload.description = this.expense.description;
+                    }
+
+                    console.log('=== SAVE EXPENSE ===');
+                    console.log('Route:', route);
+                    console.log('Payload:', payload);
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=createExpense`, {
-                            method: 'POST',
+                        const response = await fetch(route, {
+                            method,
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify(payload)
                         });
 
+                        console.log('HTTP status:', response.status);
+
                         const text = await response.text();
-                        console.log('RAW RESPONSE:', text);
+                        console.log('Raw response:', text);
 
                         const data = JSON.parse(text);
-                        console.log('PARSED RESPONSE:', data);
+                        console.log('Parsed response:', data);
 
                         if (!data.success) {
-                            alert(data.message);
+                            alert(data.message || 'Une erreur est survenue');
                             return;
                         }
 
-                        alert(data.message);
+                        alert(
+                            data.message ||
+                            (this.isEditMode ?
+                                'Dépense modifiée avec succès' :
+                                'Dépense enregistrée avec succès')
+                        );
+
                         this.closeExpenseModal();
                         this.fetchExpenses();
 
                     } catch (error) {
-                        console.error('FETCH ERROR:', error);
+                        console.error('Error saving expense:', error);
+                        alert('Erreur lors de l\'enregistrement de la dépense');
                     }
                 },
                 openExpenseModal() {
+                    this.isEditMode = false;
                     this.expense = {
+                        id: null,
                         project_id: '',
                         project_budget_line_id: '',
                         amount: 0,
@@ -1121,8 +1320,54 @@
                     this.lines = [];
                     this.modals.expense = true;
                 },
+                async editExpense(expense) {
+                    this.isEditMode = true;
+                    this.expense = {
+                        id: expense.id,
+                        project_id: expense.project_id,
+                        project_budget_line_id: expense.project_budget_line_id,
+                        amount: expense.amount,
+                        description: expense.description
+                    };
+
+                    // Fetch lines for the selected project
+                    await this.fetchLines();
+
+                    // Update line info after lines are loaded
+                    this.$nextTick(() => {
+                        this.updateLineInfo();
+                    });
+
+                    this.modals.expense = true;
+                },
+                async deleteExpense(expense) {
+                    if (!confirm(`Êtes-vous sûr de vouloir supprimer cette dépense de ${this.formatCurrency(expense.amount)} ?`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=deleteExpense&id=${expense.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            alert(data.message || 'Erreur lors de la suppression');
+                            return;
+                        }
+
+                        alert(data.message || 'Dépense supprimée avec succès');
+                        this.fetchExpenses();
+
+                    } catch (error) {
+                        console.error('[v0] Error deleting expense:', error);
+                        alert('Erreur lors de la suppression de la dépense');
+                    }
+                },
                 closeExpenseModal() {
                     this.modals.expense = false;
+                    this.isEditMode = false;
                 },
                 filterExpenses() {
                     let filtered = this.expenses;
@@ -1216,7 +1461,6 @@
                     const allocated = parseFloat(expense.allocated_amount || 0);
                     const spent = parseFloat(expense.spent || 0);
                     if (allocated === 0) return 0;
-                    // Calculate percentage: (spent / allocated) * 100, can exceed 100%
                     return Math.round((spent / allocated) * 100);
                 },
                 getRemainingAmount(expense) {
@@ -1246,91 +1490,96 @@
                     if (this.evolutionChart) this.evolutionChart.destroy();
 
                     if (this.$refs.projectsChart && this.projects.length > 0) {
-                        const projectExpenses = {};
-                        this.expenses.forEach(e => {
-                            if (!projectExpenses[e.project_name]) {
-                                projectExpenses[e.project_name] = 0;
-                            }
-                            projectExpenses[e.project_name] += parseFloat(e.amount || 0);
-                        });
+                        const ctx = this.$refs.projectsChart.getContext('2d');
+                        if (ctx) {
+                            const projectExpenses = {};
+                            this.expenses.forEach(e => {
+                                if (!projectExpenses[e.project_name]) {
+                                    projectExpenses[e.project_name] = 0;
+                                }
+                                projectExpenses[e.project_name] += parseFloat(e.amount || 0);
+                            });
 
-                        this.projectsChart = new Chart(this.$refs.projectsChart, {
-                            type: 'doughnut',
-                            data: {
-                                labels: Object.keys(projectExpenses),
-                                datasets: [{
-                                    data: Object.values(projectExpenses),
-                                    backgroundColor: ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b']
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        labels: {
-                                            color: '#ededed'
+                            this.projectsChart = new Chart(ctx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: Object.keys(projectExpenses),
+                                    datasets: [{
+                                        data: Object.values(projectExpenses),
+                                        backgroundColor: ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b']
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#ededed'
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
 
                     if (this.$refs.evolutionChart) {
-                        const monthlyExpenses = {};
-                        this.expenses.forEach(e => {
-                            const date = new Date(e.expense_date);
-                            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                            if (!monthlyExpenses[key]) {
-                                monthlyExpenses[key] = 0;
-                            }
-                            monthlyExpenses[key] += parseFloat(e.amount || 0);
-                        });
+                        const ctx = this.$refs.evolutionChart.getContext('2d');
+                        if (ctx) {
+                            const monthlyExpenses = {};
+                            this.expenses.forEach(e => {
+                                const date = new Date(e.expense_date);
+                                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                                if (!monthlyExpenses[key]) {
+                                    monthlyExpenses[key] = 0;
+                                }
+                                monthlyExpenses[key] += parseFloat(e.amount || 0);
+                            });
 
-                        const sortedKeys = Object.keys(monthlyExpenses).sort();
+                            const sortedKeys = Object.keys(monthlyExpenses).sort();
 
-                        this.evolutionChart = new Chart(this.$refs.evolutionChart, {
-                            type: 'line',
-                            data: {
-                                labels: sortedKeys,
-                                datasets: [{
-                                    label: 'Dépenses mensuelles',
-                                    data: sortedKeys.map(k => monthlyExpenses[k]),
-                                    borderColor: '#00e676',
-                                    backgroundColor: 'rgba(0, 230, 118, 0.2)',
-                                    tension: 0.4
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        ticks: {
-                                            color: '#ededed'
+                            this.evolutionChart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: sortedKeys,
+                                    datasets: [{
+                                        label: 'Dépenses mensuelles',
+                                        data: sortedKeys.map(k => monthlyExpenses[k]),
+                                        borderColor: '#00e676',
+                                        backgroundColor: 'rgba(0, 230, 118, 0.2)',
+                                        tension: 0.4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                color: '#ededed'
+                                            }
+                                        },
+                                        x: {
+                                            ticks: {
+                                                color: '#ededed'
+                                            }
                                         }
                                     },
-                                    x: {
-                                        ticks: {
-                                            color: '#ededed'
-                                        }
-                                    }
-                                },
-                                plugins: {
-                                    legend: {
-                                        labels: {
-                                            color: '#ededed'
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#ededed'
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 },
                 printExpenses() {
-                    // Create print content
                     const printContent = this.generatePrintContent();
                     const printWindow = window.open('', '', 'width=800,height=600');
                     printWindow.document.write(printContent);
@@ -1484,12 +1733,21 @@
                 logout() {
                     if (confirm('Voulez-vous vous déconnecter ?')) {
                         localStorage.removeItem('user');
-                        window.location.href = 'login.php';
+                        window.location.href = 'api/index.php?action=logout';
                     }
+                },
+
+                toggleMobileMenu() {
+                    this.mobileMenuOpen = !this.mobileMenuOpen;
+                },
+
+                closeMobileMenu() {
+                    this.mobileMenuOpen = false;
                 }
             }
         }).mount('#app');
     </script>
+
 </body>
 
 </html>
