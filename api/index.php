@@ -3,7 +3,6 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type');
-// Autoriser les méthodes spécifiques
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 
 // Autoriser certains headers
