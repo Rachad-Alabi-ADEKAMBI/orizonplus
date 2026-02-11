@@ -1,0 +1,24 @@
+sur la page projets
+    corrige la page index.php,
+    remplacer "depense" par "réalisation", "écart" à la  place de "restant", 
+    supprimer les colonnes "%Depense%" et ""%Restant%, pour chaque projet il faut
+    un nouveau champ Secteur ( xa envoie "department" lors de l'envoi au backend,
+    lors de la création ou de la modification du projet ce champ
+    sera une select avec les options "Electricité, Télécommunication, Génie Civil, AEP" ), un 
+    nouveau champ Lieu (xa envoie la data "location" au bakend lors de la validation ou de 
+    la modification) et un champ date de création (par defaut aujourd'hui et envoie date_of_creation au 
+    backend), il y a trois rôles differents et chacun ses autorisations : l'admin
+    peut tout faire, les "utlisateur" et "consultant" peuvent juste consulter la page, les projets,
+    lignes budegetaires et details du projet amsi ils ne peuvent rien ajouter, modifier ou supprimer, 
+    pour chaque projet lors de la creation on doit pouvoir ajouter jusqu'a 15 documents images ou pdf, consultables 
+    dans le modal de details du projet et modifiable supprimable par l'admin, le role est defini dans les datas
+    de vuejs, les graphiques aussi doivent etre charges en permanence pas seuleemnt apres une operation, 
+    ajoute aussi une option pour exporter les elents direment en excel ou csv (on choisit après avoir 
+    cliqué sur le bouton) a côte du bouton imprimer""et tu fasi un export moderne et intuitif selon le choix, 
+    ajoute aussi plus d'options de tri filtre etc (par secteur, par date de creation etc ...), le responsive 
+    mobile a encore des defauts, le texte deborde du cadre, il faut regler cela, supprimes aussi les 
+    notiifications mises en haut de la page pour warning les depassements de budget etc ... redonne le code complet 
+    optimisé et fonctionnel stp
+
+
+sur la page depenses

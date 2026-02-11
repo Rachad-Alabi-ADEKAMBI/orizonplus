@@ -958,10 +958,25 @@ if (!isset($_SESSION['user_id'])) {
                 margin-right: 1rem;
                 flex: 1;
                 font-size: 0.85rem;
+                min-width: 0;
             }
 
             .table tbody td>* {
                 flex-shrink: 0;
+                word-break: break-word;
+                overflow-wrap: break-word;
+            }
+
+            /* Fix text overflow on mobile */
+            .table tbody td strong {
+                word-break: break-word;
+                overflow-wrap: break-word;
+                max-width: 100%;
+            }
+
+            .badge {
+                word-break: normal;
+                white-space: nowrap;
             }
 
             /* Progress column on mobile */
@@ -1052,17 +1067,6 @@ if (!isset($_SESSION['user_id'])) {
 
 
         <div class="container">
-            <!-- Alertes Budgets Depasses -->
-            <div v-if="budgetAlerts.length > 0" class="no-print">
-                <div v-for="alert in budgetAlerts" :key="alert.id"
-                    :class="alert.type === 'exceeded' ? 'alert alert-danger' : 'alert alert-warning'">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>{{ alert.name }}</strong> -
-                    {{ alert.type === 'exceeded' ? 'Budget depasse' : 'Budget critique (>80%)' }} :
-                    {{ formatCurrency(alert.remaining) }} restant sur {{ formatCurrency(alert.allocated) }}
-                </div>
-            </div>
-
             <!-- Stats Section -->
             <div v-if="!showBudgetLines" class="stats-grid">
                 <div class="stat-card">
@@ -1097,7 +1101,7 @@ if (!isset($_SESSION['user_id'])) {
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Total Depense</span>
+                        <span class="stat-label">Total Réalisation</span>
                         <div class="stat-icon"
                             style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
                             <i class="fas fa-chart-pie"></i>
@@ -1111,7 +1115,7 @@ if (!isset($_SESSION['user_id'])) {
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Restant</span>
+                        <span class="stat-label">Écart</span>
                         <div class="stat-icon"
                             style="background: rgba(0, 212, 255, 0.2); color: var(--accent-cyan);">
                             <i class="fas fa-piggy-bank"></i>
@@ -1167,7 +1171,7 @@ if (!isset($_SESSION['user_id'])) {
                         Projets ({{ filteredProjects.length }})
                     </h2>
                     <div class="action-buttons no-print">
-                        <button class="btn btn-warning btn-sm" @click="toggleBudgetLines">
+                        <button v-if="user_role === 'admin'" class="btn btn-warning btn-sm" @click="toggleBudgetLines">
                             <i class="fas fa-list"></i>
                             Gerer Lignes Budgetaires
                         </button>
@@ -1175,7 +1179,21 @@ if (!isset($_SESSION['user_id'])) {
                             <i class="fas fa-print"></i>
                             Imprimer
                         </button>
-                        <button class="btn btn-primary" @click="openProjectModal">
+                        <div style="position: relative;">
+                            <button class="btn btn-secondary btn-sm" @click="showExportMenu = !showExportMenu">
+                                <i class="fas fa-download"></i>
+                                Exporter
+                            </button>
+                            <div v-if="showExportMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 100; min-width: 150px;">
+                                <button @click="exportToExcel" style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--text-primary); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
+                                    <i class="fas fa-file-excel"></i> Excel
+                                </button>
+                                <button @click="exportToCSV" style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--text-primary); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
+                                    <i class="fas fa-file-csv"></i> CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button v-if="user_role === 'admin'" class="btn btn-primary" @click="openProjectModal">
                             <i class="fas fa-plus"></i>
                             Nouveau Projet
                         </button>
@@ -1189,6 +1207,13 @@ if (!isset($_SESSION['user_id'])) {
                             <input type="text" class="search-input" placeholder="Rechercher un projet..."
                                 v-model="searchQuery" @input="filterProjects">
                         </div>
+                        <select class="filter-select" v-model="sectorFilter" @change="filterProjects">
+                            <option value="">Tous les secteurs</option>
+                            <option value="Electricité">Electricité</option>
+                            <option value="Télécommunication">Télécommunication</option>
+                            <option value="Génie Civil">Génie Civil</option>
+                            <option value="AEP">AEP</option>
+                        </select>
                         <select class="filter-select" v-model="budgetFilter" @change="filterProjects">
                             <option value="">Tous les projets</option>
                             <option value="remaining">Budget restant</option>
@@ -1198,8 +1223,10 @@ if (!isset($_SESSION['user_id'])) {
                         <select class="filter-select" v-model="sortBy" @change="sortProjects">
                             <option value="name">Trier par nom</option>
                             <option value="allocated_amount">Trier par budget</option>
-                            <option value="spent">Trier par depense</option>
-                            <option value="remaining">Trier par restant</option>
+                            <option value="spent">Trier par réalisation</option>
+                            <option value="remaining">Trier par écart</option>
+                            <option value="date_of_creation">Trier par date création</option>
+                            <option value="department">Trier par secteur</option>
                         </select>
                         <input type="date" class="filter-input" v-model="dateFrom" placeholder="Du"
                             @change="filterProjects">
@@ -1221,23 +1248,26 @@ if (!isset($_SESSION['user_id'])) {
                                         <i v-if="sortBy === 'name'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
+                                    <th @click="setSortBy('department')">
+                                        Secteur
+                                        <i v-if="sortBy === 'department'"
+                                            :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                                    </th>
                                     <th @click="setSortBy('allocated_amount')">
                                         Budget Alloue
                                         <i v-if="sortBy === 'allocated_amount'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
                                     <th @click="setSortBy('spent')">
-                                        Depense
+                                        Réalisation
                                         <i v-if="sortBy === 'spent'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
-                                    <th>% Depense</th>
                                     <th @click="setSortBy('remaining')">
-                                        Restant
+                                        Écart
                                         <i v-if="sortBy === 'remaining'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
-                                    <th>% Restant</th>
                                     <th>Progression</th>
                                     <th class="no-print">Actions</th>
                                 </tr>
@@ -1246,21 +1276,12 @@ if (!isset($_SESSION['user_id'])) {
                                 <tr v-for="project in paginatedProjects" :key="project.id"
                                     :class="getProjectRowClass(project)">
                                     <td data-label="Projet"><strong>{{ project.name }}</strong></td>
+                                    <td data-label="Secteur">{{ project.department || '-' }}</td>
                                     <td data-label="Budget Alloué">{{ formatCurrency(getProjectAllocatedFromLines(project)) }}</td>
-                                    <td data-label="Dépensé">{{ formatCurrency(project.spent) }}</td>
-                                    <td data-label="% Dépensé">
-                                        <span class="badge" :class="getSpentPercentage(project) > 100 ? 'badge-danger' : getSpentPercentage(project) > 80 ? 'badge-warning' : 'badge-info'">
-                                            {{ getSpentPercentage(project).toFixed(1) }}%
-                                        </span>
-                                    </td>
-                                    <td data-label="Restant">
+                                    <td data-label="Réalisation">{{ formatCurrency(project.spent) }}</td>
+                                    <td data-label="Écart">
                                         <span class="badge" :class="getBadgeClass(getProjectRemaining(project))">
                                             {{ formatCurrency(getProjectRemaining(project)) }}
-                                        </span>
-                                    </td>
-                                    <td data-label="% Restant">
-                                        <span class="badge" :class="getRemainingPercentage(project) < 20 && getRemainingPercentage(project) >= 0 ? 'badge-warning' : getRemainingPercentage(project) < 0 ? 'badge-danger' : 'badge-success'">
-                                            {{ getRemainingPercentage(project).toFixed(1) }}%
                                         </span>
                                     </td>
                                     <td data-label="Progression">
@@ -1274,20 +1295,20 @@ if (!isset($_SESSION['user_id'])) {
                                     </td>
                                     <td class="no-print" data-label="Actions">
                                         <div class="action-buttons">
-                                            <button class="btn btn-primary btn-sm btn-icon"
-                                                @click="viewProject(project)" title="Voir">
+                                            <button class="btn btn-secondary btn-sm" @click="viewProject(project)"
+                                                title="Voir details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-warning btn-sm btn-icon"
-                                                @click="printProjectDetails(project)" title="Imprimer details">
-                                                <i class="fas fa-print"></i>
-                                            </button>
-                                            <button class="btn btn-success btn-sm btn-icon"
-                                                @click="editProject(project)" title="Modifier">
+                                            <button v-if="user_role === 'admin'" class="btn btn-primary btn-sm" @click="editProject(project)"
+                                                title="Modifier">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-danger btn-sm btn-icon"
-                                                @click="deleteProject(project.id)" title="Supprimer">
+                                            <button class="btn btn-warning btn-sm" @click="printProjectDetails(project)"
+                                                title="Imprimer">
+                                                <i class="fas fa-print"></i>
+                                            </button>
+                                            <button v-if="user_role === 'admin'" class="btn btn-danger btn-sm" @click="deleteProject(project.id)"
+                                                title="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -1421,6 +1442,59 @@ if (!isset($_SESSION['user_id'])) {
                             v-model="newProject.description"
                             placeholder="Description du projet..."
                             rows="3"></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Secteur</label>
+                            <select class="form-input" v-model="newProject.department">
+                                <option value="">Sélectionner un secteur</option>
+                                <option value="Electricité">Electricité</option>
+                                <option value="Télécommunication">Télécommunication</option>
+                                <option value="Génie Civil">Génie Civil</option>
+                                <option value="AEP">AEP</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Lieu</label>
+                            <input type="text" class="form-input" v-model="newProject.location"
+                                placeholder="Lieu du projet" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Date de création</label>
+                            <input type="date" class="form-input" v-model="newProject.date_of_creation" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-paperclip" style="margin-right: 0.5rem;"></i>
+                            Documents (Images ou PDF - Max 15 fichiers)
+                        </label>
+                        <input
+                            type="file"
+                            class="form-input"
+                            multiple
+                            accept="image/*,application/pdf"
+                            @change="handleFileUpload"
+                            style="padding: 0.5rem;" />
+
+                        <div v-if="newProject.documents && newProject.documents.length > 0" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem;">
+                            <div v-for="(doc, idx) in newProject.documents" :key="idx"
+                                style="position: relative; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; text-align: center; background: var(--bg-tertiary);">
+                                <i :class="doc.type === 'pdf' ? 'fas fa-file-pdf' : 'fas fa-image'"
+                                    style="font-size: 2rem; color: var(--accent-blue);"></i>
+                                <div style="font-size: 0.7rem; margin-top: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {{ doc.name }}
+                                </div>
+                                <button v-if="user_role === 'admin'" @click="removeDocument(idx)"
+                                    style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-red); color: white; border: none; cursor: pointer; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">
+                                    ×
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
@@ -1569,6 +1643,10 @@ if (!isset($_SESSION['user_id'])) {
                         <button class="tab-btn" :class="{active: detailTab === 'expenses'}"
                             @click="detailTab = 'expenses'">
                             <i class="fas fa-receipt"></i> Depenses ({{ projectExpenses.length }})
+                        </button>
+                        <button class="tab-btn" :class="{active: detailTab === 'documents'}"
+                            @click="detailTab = 'documents'">
+                            <i class="fas fa-file-alt"></i> Documents
                         </button>
                         <button class="tab-btn" :class="{active: detailTab === 'charts'}"
                             @click="detailTab = 'charts'; $nextTick(() => { renderProjectChart(); renderProjectLinesChart(); renderProjectExpensesByLineChart(); renderProjectTimelineChart(); })">
@@ -1722,6 +1800,41 @@ if (!isset($_SESSION['user_id'])) {
                         <div v-else class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <p>Aucune depense enregistree pour ce projet</p>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Documents -->
+                    <div v-if="detailTab === 'documents'" class="tab-content active">
+                        <div v-if="selectedProject.documents && selectedProject.documents.length > 0">
+                            <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">
+                                <i class="fas fa-paperclip"></i>
+                                Documents du projet ({{ selectedProject.documents.length }})
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                                <div v-for="(doc, idx) in selectedProject.documents" :key="idx"
+                                    style="position: relative; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1rem; text-align: center; background: var(--bg-tertiary); cursor: pointer; transition: all 0.3s ease;"
+                                    @mouseover="$event.currentTarget.style.borderColor = 'var(--accent-blue)'"
+                                    @mouseout="$event.currentTarget.style.borderColor = 'var(--border-color)'"
+                                    @click="viewDocument(doc)">
+                                    <i :class="doc.type === 'pdf' ? 'fas fa-file-pdf' : 'fas fa-image'"
+                                        style="font-size: 3rem; margin-bottom: 0.5rem;"
+                                        :style="{color: doc.type === 'pdf' ? 'var(--accent-red)' : 'var(--accent-blue)'}"></i>
+                                    <div style="font-size: 0.875rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        {{ doc.name }}
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                        {{ doc.size }}
+                                    </div>
+                                    <button v-if="user_role === 'admin'" @click.stop="deleteDocument(idx)"
+                                        style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-red); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-trash" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucun document disponible pour ce projet</p>
                         </div>
                     </div>
 
@@ -1922,11 +2035,15 @@ if (!isset($_SESSION['user_id'])) {
         createApp({
             data() {
                 return {
+                    user_id: <?php echo json_encode($_SESSION['user_id'] ?? null); ?>,
+                    user_name: <?php echo json_encode($_SESSION['user_name'] ?? ''); ?>,
+                    user_role: <?php echo json_encode($_SESSION['user_role'] ?? 'utilisateur'); ?>,
                     projects: [],
                     filteredProjects: [],
                     availableLines: [],
                     allProjectLines: {}, // Cache des lignes budgétaires par projet { projectId: [...lines] }
                     searchQuery: '',
+                    sectorFilter: '',
                     budgetFilter: '',
                     sortBy: 'name',
                     sortAsc: true,
@@ -1937,9 +2054,14 @@ if (!isset($_SESSION['user_id'])) {
                     currentPage: 1,
                     itemsPerPage: 10,
                     newLineName: '',
+                    showExportMenu: false,
                     newProject: {
                         name: '',
-                        description: ''
+                        description: '',
+                        department: '',
+                        location: '',
+                        date_of_creation: new Date().toISOString().split('T')[0],
+                        documents: []
                     },
                     projectLines: [],
                     currentProjectLines: [],
@@ -1991,6 +2113,12 @@ if (!isset($_SESSION['user_id'])) {
             },
             mounted() {
                 this.loadData();
+                // Close export menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (this.showExportMenu && !e.target.closest('.action-buttons')) {
+                        this.showExportMenu = false;
+                    }
+                });
             },
             methods: {
                 async loadData() {
@@ -2000,17 +2128,20 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 async fetchProjects() {
                     try {
+                        console.log('[v0] Fetching projects...');
                         const response = await fetch(`${API_BASE_URL}?action=getProjects`);
                         const data = await response.json();
+                        console.log('[v0] Projects response:', data);
                         this.projects = data.data || [];
                         this.filteredProjects = this.projects;
+                        console.log('[v0] Projects loaded:', this.projects.length);
                         this.calculateStats();
                         this.checkBudgetAlerts();
                         this.$nextTick(() => {
                             this.renderCharts();
                         });
                     } catch (error) {
-                        console.error('Error fetching projects:', error);
+                        console.error('[v0] Error fetching projects:', error);
                     }
                 },
                 async fetchLines() {
@@ -2145,8 +2276,14 @@ if (!isset($_SESSION['user_id'])) {
                     // Filtre par recherche
                     if (this.searchQuery) {
                         filtered = filtered.filter(p =>
-                            p.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                            p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                            (p.location && p.location.toLowerCase().includes(this.searchQuery.toLowerCase()))
                         );
+                    }
+
+                    // Filtre par secteur
+                    if (this.sectorFilter) {
+                        filtered = filtered.filter(p => p.department === this.sectorFilter);
                     }
 
                     // Filtre par budget
@@ -2164,14 +2301,16 @@ if (!isset($_SESSION['user_id'])) {
                     // Filtre par date
                     if (this.dateFrom) {
                         filtered = filtered.filter(p => {
-                            if (!p.created_at) return true;
-                            return new Date(p.created_at) >= new Date(this.dateFrom);
+                            const dateToCheck = p.date_of_creation || p.created_at;
+                            if (!dateToCheck) return true;
+                            return new Date(dateToCheck) >= new Date(this.dateFrom);
                         });
                     }
                     if (this.dateTo) {
                         filtered = filtered.filter(p => {
-                            if (!p.created_at) return true;
-                            return new Date(p.created_at) <= new Date(this.dateTo);
+                            const dateToCheck = p.date_of_creation || p.created_at;
+                            if (!dateToCheck) return true;
+                            return new Date(dateToCheck) <= new Date(this.dateTo);
                         });
                     }
 
@@ -2190,14 +2329,23 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 sortProjects() {
                     this.filteredProjects.sort((a, b) => {
-                        let aVal = a[this.sortBy];
-                        let bVal = b[this.sortBy];
-                        if (this.sortBy === 'name') {
-                            aVal = (aVal || '').toLowerCase();
-                            bVal = (bVal || '').toLowerCase();
+                        let aVal, bVal;
+
+                        if (this.sortBy === 'name' || this.sortBy === 'department') {
+                            aVal = (a[this.sortBy] || '').toLowerCase();
+                            bVal = (b[this.sortBy] || '').toLowerCase();
+                        } else if (this.sortBy === 'date_of_creation') {
+                            aVal = new Date(a.date_of_creation || a.created_at || 0).getTime();
+                            bVal = new Date(b.date_of_creation || b.created_at || 0).getTime();
+                        } else if (this.sortBy === 'allocated_amount') {
+                            aVal = this.getProjectAllocatedFromLines(a);
+                            bVal = this.getProjectAllocatedFromLines(b);
+                        } else if (this.sortBy === 'remaining') {
+                            aVal = this.getProjectRemaining(a);
+                            bVal = this.getProjectRemaining(b);
                         } else {
-                            aVal = parseFloat(aVal || 0);
-                            bVal = parseFloat(bVal || 0);
+                            aVal = parseFloat(a[this.sortBy] || 0);
+                            bVal = parseFloat(b[this.sortBy] || 0);
                         }
                         return this.sortAsc ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
                     });
@@ -2299,7 +2447,11 @@ if (!isset($_SESSION['user_id'])) {
                     this.isEditMode = false;
                     this.newProject = {
                         name: '',
-                        description: ''
+                        description: '',
+                        department: '',
+                        location: '',
+                        date_of_creation: new Date().toISOString().split('T')[0],
+                        documents: []
                     };
                     this.projectLines = [];
                     this.currentProjectLines = [];
@@ -2309,7 +2461,8 @@ if (!isset($_SESSION['user_id'])) {
                 async editProject(project) {
                     this.isEditMode = true;
                     this.newProject = {
-                        ...project
+                        ...project,
+                        documents: project.documents || []
                     };
                     this.projectLines = [];
                     this.projectLinesTotal = 0;
@@ -2392,41 +2545,54 @@ if (!isset($_SESSION['user_id'])) {
                     }
                 },
                 async saveProject() {
+
                     if (!this.newProject.name) {
                         alert('Veuillez entrer un nom de projet');
                         return;
                     }
 
                     const action = this.isEditMode ? 'updateProject' : 'createProject';
-
-                    const updatedLines = this.isEditMode ? this.currentProjectLines : [];
-
-                    const payload = {
-                        ...(this.isEditMode && {
-                            id: this.newProject.id
-                        }),
-                        name: this.newProject.name,
-                        description: this.newProject.description,
-                        lines: this.projectLines.filter(
-                            l => l.budget_line_id && l.allocated_amount > 0
-                        ),
-                        updated_lines: updatedLines
-                    };
-
                     const route = `${API_BASE_URL}?action=${action}`;
+
+                    const formData = new FormData();
+
+                    // Champs simples
+                    if (this.isEditMode) {
+                        formData.append('id', this.newProject.id);
+                    }
+
+                    formData.append('name', this.newProject.name || '');
+                    formData.append('description', this.newProject.description || '');
+                    formData.append('department', this.newProject.department || '');
+                    formData.append('location', this.newProject.location || '');
+                    formData.append('date_of_creation', this.newProject.date_of_creation || '');
+
+                    // Lignes budgétaires
+                    const filteredLines = this.projectLines.filter(
+                        l => l.budget_line_id && l.allocated_amount > 0
+                    );
+
+                    formData.append('lines', JSON.stringify(filteredLines));
+
+                    if (this.isEditMode) {
+                        formData.append('updated_lines', JSON.stringify(this.currentProjectLines || []));
+                    }
+
+                    // Documents (doivent être des File objects)
+                    if (this.newProject.documents && this.newProject.documents.length) {
+                        this.newProject.documents.forEach(file => {
+                            formData.append('documents[]', file);
+                        });
+                    }
 
                     console.log('=== SAVE PROJECT ===');
                     console.log('Route:', route);
-                    console.log('Payload:', payload);
-                    console.log('Updated lines content:', JSON.stringify(updatedLines, null, 2));
 
                     try {
+
                         const response = await fetch(route, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
+                            body: formData
                         });
 
                         console.log('HTTP status:', response.status);
@@ -2434,13 +2600,19 @@ if (!isset($_SESSION['user_id'])) {
                         const data = await response.json();
                         console.log('Response:', data);
 
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Erreur serveur');
+                        }
+
                         alert(data.message);
+
                         this.closeProjectModal();
                         await this.fetchProjects();
                         await this.fetchAllProjectLines();
 
                     } catch (error) {
                         console.error('Error saving project:', error);
+                        alert('Erreur lors de la sauvegarde');
                     }
                 },
                 async deleteProject(id) {
@@ -2492,6 +2664,145 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 toggleBudgetLines() {
                     this.showBudgetLines = !this.showBudgetLines;
+                },
+
+                // ==================== DOCUMENT HANDLING ====================
+                handleFileUpload(event) {
+
+                    const files = Array.from(event.target.files);
+
+                    if (!this.newProject.documents) {
+                        this.newProject.documents = [];
+                    }
+
+                    // Séparer anciens (string) et nouveaux (File)
+                    const existingDocs = this.newProject.documents.filter(d => typeof d === 'string');
+                    const newDocs = this.newProject.documents.filter(d => d instanceof File);
+
+                    const currentCount = existingDocs.length + newDocs.length;
+
+                    if (currentCount + files.length > 15) {
+                        alert('Maximum 15 documents autorisés');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    const allowedTypes = [
+                        'image/jpeg',
+                        'image/png',
+                        'image/jpg',
+                        'application/pdf'
+                    ];
+
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+
+                    files.forEach(file => {
+
+                        if (!allowedTypes.includes(file.type)) {
+                            alert(`Type non autorisé : ${file.name}`);
+                            return;
+                        }
+
+                        if (file.size > maxSize) {
+                            alert(`Fichier trop volumineux (max 5MB) : ${file.name}`);
+                            return;
+                        }
+
+                        // éviter doublon nom + taille
+                        const duplicate = newDocs.some(
+                            d => d.name === file.name && d.size === file.size
+                        );
+
+                        if (!duplicate) {
+                            this.newProject.documents.push(file);
+                        }
+                    });
+
+                    event.target.value = '';
+                },
+                removeDocument(index) {
+                    this.newProject.documents.splice(index, 1);
+                },
+                viewDocument(doc) {
+                    if (doc.data) {
+                        window.open(doc.data, '_blank');
+                    }
+                },
+                deleteDocument(index) {
+                    if (confirm('Supprimer ce document ?')) {
+                        this.selectedProject.documents.splice(index, 1);
+                        // You would also need to update the project on the backend
+                    }
+                },
+                formatFileSize(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                    else return (bytes / 1048576).toFixed(1) + ' MB';
+                },
+
+                // ==================== EXPORT FUNCTIONS ====================
+                exportToExcel() {
+                    this.showExportMenu = false;
+                    // Create data for export
+                    const data = this.filteredProjects.map(p => ({
+                        'Projet': p.name,
+                        'Secteur': p.department || '-',
+                        'Lieu': p.location || '-',
+                        'Date de création': p.date_of_creation || p.created_at || '-',
+                        'Budget Alloué': this.getProjectAllocatedFromLines(p),
+                        'Réalisation': parseFloat(p.spent || 0),
+                        'Écart': this.getProjectRemaining(p),
+                        'Progression (%)': this.getSpentPercentage(p).toFixed(1)
+                    }));
+
+                    // Convert to Excel format (simple HTML table approach)
+                    let html = '<table><thead><tr>';
+                    const headers = Object.keys(data[0] || {});
+                    headers.forEach(h => html += `<th>${h}</th>`);
+                    html += '</tr></thead><tbody>';
+                    data.forEach(row => {
+                        html += '<tr>';
+                        headers.forEach(h => html += `<td>${row[h]}</td>`);
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+
+                    const blob = new Blob([html], {
+                        type: 'application/vnd.ms-excel'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `projets_${new Date().toISOString().split('T')[0]}.xls`;
+                    a.click();
+                },
+                exportToCSV() {
+                    this.showExportMenu = false;
+                    // Create CSV data
+                    const data = this.filteredProjects.map(p => [
+                        p.name,
+                        p.department || '-',
+                        p.location || '-',
+                        p.date_of_creation || p.created_at || '-',
+                        this.getProjectAllocatedFromLines(p),
+                        parseFloat(p.spent || 0),
+                        this.getProjectRemaining(p),
+                        this.getSpentPercentage(p).toFixed(1)
+                    ]);
+
+                    let csv = 'Projet,Secteur,Lieu,Date de création,Budget Alloué,Réalisation,Écart,Progression (%)\n';
+                    data.forEach(row => {
+                        csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+                    });
+
+                    const blob = new Blob([csv], {
+                        type: 'text/csv;charset=utf-8;'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `projets_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
                 },
                 prevPage() {
                     if (this.currentPage > 1) this.currentPage--;
@@ -3150,6 +3461,16 @@ if (!isset($_SESSION['user_id'])) {
 
                 closeMobileMenu() {
                     this.mobileMenuOpen = false;
+                }
+            },
+            watch: {
+                projects: {
+                    handler() {
+                        this.$nextTick(() => {
+                            this.renderCharts();
+                        });
+                    },
+                    deep: true
                 }
             }
         }).mount('#app');

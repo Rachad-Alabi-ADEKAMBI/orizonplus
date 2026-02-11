@@ -47,57 +47,50 @@ function login()
     try {
         $pdo = getPDO();
 
-        // Récupérer et décoder le JSON
         $rawInput = file_get_contents('php://input');
         $data = json_decode($rawInput, true);
 
-        if ($data === null) {
-            jsonError('JSON invalide ou vide', 400);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            jsonError('JSON invalide', 400);
         }
 
         $name = trim($data['name'] ?? '');
         $password = $data['password'] ?? '';
 
-        // Vérification des champs obligatoires
         if ($name === '' || $password === '') {
-            jsonError('Champs "username" et "password" obligatoires', 400);
+            jsonError('Champs "name" et "password" obligatoires', 400);
         }
 
-        // Récupérer l'utilisateur
-        $stmt = $pdo->prepare("SELECT id, name, password FROM users WHERE name = ?");
+        $stmt = $pdo->prepare("SELECT id, name, password, role FROM users WHERE name = ?");
         $stmt->execute([$name]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user) {
-            jsonError('Utilisateur introuvable', 404);
+        if (!$user || !password_verify($password, $user['password'])) {
+            jsonError('Identifiants invalides', 401);
         }
 
-        // Vérifier le mot de passe
-        if (!password_verify($password, $user['password'])) {
-            jsonError('Mot de passe incorrect', 401);
-        }
-
-        // Succès
         $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_name'] = $user['name'];
+        $_SESSION['user_role'] = $user['role'];
+
         jsonSuccess(['user_id' => $user['id']], 'Login réussi');
     } catch (PDOException $e) {
-        // Erreur liée à la base de données
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur base de données: ' . $e->getMessage()
+            'message' => 'Erreur base de données'
         ]);
         exit;
     } catch (Exception $e) {
-        // Erreur interne générale
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur interne: ' . $e->getMessage()
+            'message' => 'Erreur interne'
         ]);
         exit;
     }
 }
+
 
 
 
@@ -125,28 +118,57 @@ function getProjects()
         SELECT 
             p.id,
             p.name,
-            IFNULL(SUM(pbl.allocated_amount), 0) AS allocated_amount,
+            p.description,
+            p.department,
+            p.location,
+            p.documents,
+            p.date_of_creation,
+            p.created_at,
+
+            IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) AS allocated_amount,
             IFNULL(SUM(e.amount), 0) AS spent,
-            (IFNULL(SUM(pbl.allocated_amount), 0) - IFNULL(SUM(e.amount), 0)) AS remaining
+            (
+                IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) 
+                - IFNULL(SUM(e.amount), 0)
+            ) AS remaining
+
         FROM projects p
-        LEFT JOIN project_budget_lines pbl ON pbl.project_id = p.id
-        LEFT JOIN expenses e ON e.project_budget_line_id = pbl.id
-        GROUP BY p.id, p.name
+        LEFT JOIN project_budget_lines pbl 
+            ON pbl.project_id = p.id
+        LEFT JOIN expenses e 
+            ON e.project_budget_line_id = pbl.id
+
+        GROUP BY 
+            p.id,
+            p.name,
+            p.description,
+            p.department,
+            p.location,
+            p.documents,
+            p.date_of_creation,
+            p.created_at
+
         ORDER BY p.name
     ");
 
     $stmt->execute();
     $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Convertir les montants en float pour l'affichage dans Vue
     foreach ($projects as &$project) {
+
         $project['allocated_amount'] = (float) $project['allocated_amount'];
         $project['spent'] = (float) $project['spent'];
         $project['remaining'] = (float) $project['remaining'];
+
+        // convertir JSON documents en tableau PHP
+        $project['documents'] = $project['documents']
+            ? json_decode($project['documents'], true)
+            : [];
     }
 
     jsonSuccess($projects);
 }
+
 
 
 
@@ -158,59 +180,100 @@ function getProjectsData(PDO $pdo): array
 function createProject()
 {
     $pdo = getPDO();
-    $data = json_decode(file_get_contents('php://input'), true);
 
-    if (empty($data['name'])) {
+    $name = $_POST['name'] ?? '';
+    $description = $_POST['description'] ?? null;
+    $department = $_POST['department'] ?? null;
+    $location = $_POST['location'] ?? null;
+    $date_of_creation = $_POST['date_of_creation'] ?? null;
+    $lines = json_decode($_POST['lines'] ?? '[]', true);
+
+    if (empty($name)) {
         jsonError('Nom de projet manquant');
     }
-
-    $name = trim($data['name']);
-    //  $globalBudget = floatval($data['global_budget'] ?? 0);
-    $lines = $data['lines'] ?? [];
 
     try {
         $pdo->beginTransaction();
 
-        // 1. Création du projet
-        $stmt = $pdo->prepare("INSERT INTO projects (name) VALUES ( ?)");
-        $stmt->execute([$name]);
+        // 📁 Gestion upload fichiers
+        $uploadedFiles = [];
+
+        if (!empty($_FILES['documents']['name'][0])) {
+
+            $uploadDir = __DIR__ . '/../images/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            foreach ($_FILES['documents']['tmp_name'] as $key => $tmpName) {
+
+                $originalName = $_FILES['documents']['name'][$key];
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                // Autoriser seulement images et pdf
+                $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+                if (!in_array($extension, $allowed)) continue;
+
+                $newName = uniqid() . '.' . $extension;
+                $destination = $uploadDir . $newName;
+
+                move_uploaded_file($tmpName, $destination);
+
+                $uploadedFiles[] = $newName;
+            }
+        }
+
+        // 🗂 Insertion projet
+        $stmt = $pdo->prepare("
+            INSERT INTO projects
+            (name, description, department, location, documents, date_of_creation)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $name,
+            $description,
+            $department,
+            $location,
+            json_encode($uploadedFiles),
+            $date_of_creation
+        ]);
+
         $projectId = $pdo->lastInsertId();
 
-        // 2. Insertion des lignes budgétaires
+        // 💰 Lignes budgétaires
         if (!empty($lines)) {
+
             $stmtLine = $pdo->prepare("
-                INSERT INTO project_budget_lines 
+                INSERT INTO project_budget_lines
                 (project_id, budget_line_id, allocated_amount)
                 VALUES (?, ?, ?)
             ");
 
             foreach ($lines as $line) {
+
                 if (
                     empty($line['budget_line_id']) ||
                     !isset($line['allocated_amount'])
-                ) {
-                    continue;
-                }
+                ) continue;
 
                 $stmtLine->execute([
                     $projectId,
-                    (int) $line['budget_line_id'],
-                    (float) $line['allocated_amount']
+                    (int)$line['budget_line_id'],
+                    (float)$line['allocated_amount']
                 ]);
             }
         }
 
         $pdo->commit();
 
-        jsonSuccess(
-            ['id' => $projectId],
-            'Projet et lignes budgétaires créés'
-        );
+        jsonSuccess(['id' => $projectId], 'Projet créé avec succès');
     } catch (Exception $e) {
         $pdo->rollBack();
-        jsonError('Erreur création projet : ' . $e->getMessage());
+        jsonError('Erreur création projet');
     }
 }
+
 
 
 function getProject()
