@@ -70,6 +70,34 @@ switch ($action) {
         getProjectBudgetLines();
         break;
 
+    case 'getNotifications':
+        getNotifications();
+        break;
+
+    case 'createUser':
+        createUser();
+        break;
+
+    case 'updateUser':
+        updateUser();
+        break;
+
+    case 'banUser':
+        banUser();
+        break;
+
+    case 'unbanUser':
+        unbanUser();
+        break;
+
+    case 'getUsers':
+        getUsers();
+        break;
+
+    case 'removeExpenseDocument':
+        removeExpenseDocument();
+        break;
+
     // 💼 LIGNES BUDGÉTAIRES
     case 'createBudgetLine':
         createBudgetLine();

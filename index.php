@@ -1088,10 +1088,15 @@ if (!isset($_SESSION['user_id'])) {
                             <i class="fas fa-receipt"></i> Dépenses
                         </a>
                     </li>
-
-                    <li>
+                    <li v-if="user_role=='admin'">
                         <a href="users.php" class="nav-link" @click="closeMobileMenu">
                             <i class="fas fa-users"></i> Utilisateurs
+                        </a>
+                    </li>
+
+                    <li v-if="user_role=='admin'">
+                        <a href="notifications.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-bell"></i> Notifications
                         </a>
                     </li>
 

@@ -7,6 +7,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+$user_role = $_SESSION['user_role'] ?? 'consultant';
+$canEdit = in_array($user_role, ['admin', 'utilisateur']);
 ?>
 
 <!DOCTYPE html>
@@ -55,6 +57,11 @@ if (!isset($_SESSION['user_id'])) {
         }
 
         @media print {
+            body {
+                background: white;
+                color: black;
+            }
+
             body * {
                 visibility: hidden;
             }
@@ -78,6 +85,7 @@ if (!isset($_SESSION['user_id'])) {
             }
 
             .print-footer {
+                display: block !important;
                 position: fixed;
                 bottom: 0;
                 left: 0;
@@ -86,6 +94,26 @@ if (!isset($_SESSION['user_id'])) {
                 padding: 10px;
                 font-size: 12px;
                 border-top: 1px solid #ccc;
+                background: white;
+            }
+
+            table {
+                border: 1px solid #000;
+                margin-bottom: 20px;
+                page-break-inside: avoid;
+            }
+
+            th,
+            td {
+                border: 1px solid #ccc;
+                color: black !important;
+                padding: 8px;
+            }
+
+            h2,
+            h3 {
+                color: black !important;
+                page-break-after: avoid;
             }
         }
 
@@ -158,9 +186,6 @@ if (!isset($_SESSION['user_id'])) {
         }
 
         @media (max-width: 768px) {
-
-
-
             .hamburger-btn {
                 display: block;
             }
@@ -168,7 +193,6 @@ if (!isset($_SESSION['user_id'])) {
             .logo {
                 order: 1;
             }
-
 
             .nav-menu {
                 position: fixed;
@@ -389,7 +413,7 @@ if (!isset($_SESSION['user_id'])) {
 
         .btn-success {
             background: var(--accent-green);
-            color: white;
+            color: #111;
         }
 
         .btn-success:hover {
@@ -399,7 +423,7 @@ if (!isset($_SESSION['user_id'])) {
 
         .btn-warning {
             background: var(--accent-yellow);
-            color: #000;
+            color: #111;
         }
 
         .btn-warning:hover {
@@ -429,7 +453,15 @@ if (!isset($_SESSION['user_id'])) {
         }
 
         .btn-icon {
-            padding: 0.5rem 0.75rem;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .action-buttons {
@@ -440,6 +472,7 @@ if (!isset($_SESSION['user_id'])) {
 
         .table-container {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .table {
@@ -459,11 +492,18 @@ if (!isset($_SESSION['user_id'])) {
             color: var(--text-secondary);
             border-bottom: 1px solid var(--border-color);
             white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .table th:hover {
+            color: var(--text-primary);
         }
 
         .table td {
             padding: 1rem;
             border-bottom: 1px solid var(--border-color);
+            word-wrap: break-word;
         }
 
         .table tbody tr {
@@ -490,6 +530,7 @@ if (!isset($_SESSION['user_id'])) {
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .badge-success {
@@ -572,6 +613,8 @@ if (!isset($_SESSION['user_id'])) {
 
         .modal-body {
             padding: 1.5rem;
+            max-height: calc(90vh - 150px);
+            overflow-y: auto;
         }
 
         .modal-footer {
@@ -614,6 +657,86 @@ if (!isset($_SESSION['user_id'])) {
             border-color: var(--accent-blue);
         }
 
+        .form-input:read-only {
+            opacity: 0.7;
+            cursor: default;
+        }
+
+        .file-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-tertiary);
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--accent-blue);
+            background: var(--bg-secondary);
+        }
+
+        .file-upload-area.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: space-between;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-info i {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .file-name {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-size {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .attached-file {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            margin-top: 0.5rem;
+        }
+
+        .attached-file i {
+            font-size: 1.2rem;
+        }
+
         .info-box {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
@@ -645,8 +768,32 @@ if (!isset($_SESSION['user_id'])) {
 
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 400px;
+            width: 100%;
             margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 350px;
+        }
+
+        .chart-container canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .chart-container {
+                height: 350px;
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+                min-height: 250px;
+            }
         }
 
         .charts-grid {
@@ -688,6 +835,7 @@ if (!isset($_SESSION['user_id'])) {
             align-items: center;
             gap: 0.5rem;
             margin-top: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .pagination button {
@@ -697,6 +845,7 @@ if (!isset($_SESSION['user_id'])) {
             border-radius: var(--radius);
             color: var(--text-primary);
             cursor: pointer;
+            min-width: 40px;
         }
 
         .pagination button:hover:not(:disabled) {
@@ -712,26 +861,13 @@ if (!isset($_SESSION['user_id'])) {
             cursor: not-allowed;
         }
 
+        /* Responsive Tables with data-label */
         @media (max-width: 768px) {
-            .header-content {
-                flex-direction: row;
-                gap: 1rem;
-            }
-
-            .nav-menu {
-                flex-direction: column;
-                width: 100%;
+            .container {
+                padding: 1rem;
             }
 
             .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .filters {
-                flex-direction: column;
-            }
-
-            .charts-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -740,25 +876,21 @@ if (!isset($_SESSION['user_id'])) {
                 align-items: flex-start;
             }
 
-            .action-buttons {
+            .filters {
                 flex-direction: column;
-                width: 100%;
             }
 
-            .action-buttons .btn {
-                width: 100%;
-                justify-content: center;
+            .filter-input,
+            .search-box {
+                min-width: 100%;
             }
 
             .modal {
                 max-width: 95%;
-                width: 95%;
             }
 
-            /* Responsive Tables avec data-label */
             .table-container {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+                border: none;
             }
 
             .table thead {
@@ -767,18 +899,22 @@ if (!isset($_SESSION['user_id'])) {
 
             .table tbody tr {
                 display: block;
-                margin-bottom: 1.5rem;
+                margin-bottom: 1rem;
                 border: 1px solid var(--border-color);
                 border-radius: var(--radius);
-                padding: 1rem;
-                background: var(--bg-tertiary);
+                padding: 0.5rem;
+            }
+
+            .table tbody tr.warning,
+            .table tbody tr.danger {
+                border-left-width: 3px;
             }
 
             .table tbody td {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.75rem 0;
+                padding: 0.75rem 0.5rem;
                 border-bottom: 1px solid var(--border-color);
                 text-align: right;
             }
@@ -794,11 +930,14 @@ if (!isset($_SESSION['user_id'])) {
                 text-align: left;
                 margin-right: 1rem;
                 flex: 1;
-                font-size: 0.85rem;
             }
 
-            .table tbody td>* {
-                flex-shrink: 0;
+            .table tbody td .action-buttons {
+                justify-content: flex-end;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -806,210 +945,183 @@ if (!isset($_SESSION['user_id'])) {
 
 <body>
     <div id="app">
-        <!-- Header -->
-        <!-- Header -->
-        <header class="header no-print">
+        <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <img src="logo.png" alt="">
+                    <i class="fas fa-chart-line"></i>
+                    <span>OrizonPlus</span>
                 </div>
+                <ul class="nav-menu" :class="{ active: menuOpen }">
+                    <li><a href="index.php" class="nav-link"><i class="fas fa-home"></i> Accueil</a></li>
+                    <li><a href="expenses.php" class="nav-link active"><i class="fas fa-wallet"></i> Dépenses</a></li>
+                    <li v-if="user_role=='admin'">
+                        <a href="users.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-users"></i> Utilisateurs
+                        </a>
+                    </li>
 
-                <button class="hamburger-btn" @click="toggleMobileMenu" aria-label="Toggle menu">
-                    <i class="fas" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i>
-                </button>
-
-                <ul class="nav-menu" :class="{ active: mobileMenuOpen }">
-                    <li>
-                        <a href="index.php" class="nav-link active" @click="closeMobileMenu">
-                            <i class="fas fa-folder-open"></i> Projets
+                    <li v-if="user_role=='admin'">
+                        <a href="notifications.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-bell"></i> Notifications
                         </a>
                     </li>
-                    <li>
-                        <a href="expenses.php" class="nav-link" @click="closeMobileMenu">
-                            <i class="fas fa-receipt"></i> Dépenses
-                        </a>
-                    </li>
-                    <li>
-                        <a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
-                            <i class="fas fa-sign-out-alt"></i> Déconnexion
-                        </a>
-                    </li>
+                    <li><button @click="logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> Déconnexion</button></li>
                 </ul>
+                <button class="hamburger-btn" @click="menuOpen = !menuOpen">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </header>
 
-        <div class="container">
-            <!-- Stats Section -->
+        <main class="container">
+            <p style="margin-bottom: 5px">
+                Bonjour <?= ucfirst($_SESSION['user_name'])  ?>, Vous êtes connecté à votre compte <strong> {{ user_role }} </strong>
+            </p>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Transactions</span>
+                        <span class="stat-label">Total Dépenses</span>
                         <div class="stat-icon" style="background: rgba(0, 112, 243, 0.2); color: var(--accent-blue);">
-                            <i class="fas fa-file-invoice-dollar"></i>
+                            <i class="fas fa-receipt"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ stats.totalExpenses }}</div>
-                    <div class="stat-change" style="color: var(--accent-blue);">
-                        <i class="fas fa-check-circle"></i>
-                        Enregistrées
-                    </div>
+                    <div class="stat-change">Enregistrées</div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Montant Total</span>
-                        <div class="stat-icon" style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
-                            <i class="fas fa-money-bill-wave"></i>
+                        <div class="stat-icon" style="background: rgba(255, 184, 0, 0.2); color: var(--accent-yellow);">
+                            <i class="fas fa-coins"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.totalAmount) }}</div>
-                    <div class="stat-change" style="color: var(--accent-green);">
-                        Dépensé au total
-                    </div>
+                    <div class="stat-change">Toutes périodes</div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Ce Mois</span>
-                        <div class="stat-icon" style="background: rgba(0, 212, 255, 0.2); color: var(--accent-cyan);">
-                            <i class="fas fa-calendar-alt"></i>
+                        <div class="stat-icon" style="background: rgba(0, 230, 118, 0.2); color: var(--accent-green);">
+                            <i class="fas fa-calendar-day"></i>
                         </div>
                     </div>
                     <div class="stat-value">{{ formatCurrency(stats.thisMonth) }}</div>
-                    <div class="stat-change" style="color: var(--accent-cyan);">
-                        Dépenses mensuelles
-                    </div>
+                    <div class="stat-change">{{ new Date().toLocaleDateString('fr-FR', { month: 'long' }) }}</div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Alertes</span>
-                        <div class="stat-icon" style="background: rgba(255, 184, 0, 0.2); color: var(--accent-yellow);">
-                            <i class="fas fa-exclamation-circle"></i>
+                        <span class="stat-label">Hors Budget</span>
+                        <div class="stat-icon" style="background: rgba(255, 59, 59, 0.2); color: var(--accent-red);">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
                     </div>
-                    <div class="stat-value" style="color: var(--accent-yellow);">{{ stats.overBudget }}</div>
-                    <div class="stat-change" style="color: var(--accent-yellow);">
-                        <i class="fas fa-bell"></i>
-                        Lignes en alerte
-                    </div>
+                    <div class="stat-value">{{ stats.overBudget }}</div>
+                    <div class="stat-change">Lignes dépassées</div>
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="charts-grid no-print">
+            <!-- Section des graphiques -->
+            <div class="charts-grid">
                 <div class="chart-card">
-                    <h3 class="chart-title">
-                        <i class="fas fa-chart-pie" style="color: var(--accent-cyan);"></i>
-                        Dépenses par Projet
-                    </h3>
+                    <h3 class="chart-title">Dépenses par Projet</h3>
                     <div class="chart-container">
                         <canvas ref="projectsChart"></canvas>
                     </div>
                 </div>
                 <div class="chart-card">
-                    <h3 class="chart-title">
-                        <i class="fas fa-chart-line" style="color: var(--accent-green);"></i>
-                        Évolution des Dépenses
-                    </h3>
+                    <h3 class="chart-title">Évolution des Dépenses</h3>
                     <div class="chart-container">
                         <canvas ref="evolutionChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Expenses Table Section -->
             <div class="section-card">
                 <div class="section-header">
-                    <div>
-                        <h2 class="section-title">
-                            <i class="fas fa-list"></i>
-                            Historique des Dépenses ({{ filteredExpenses.length }})
-                        </h2>
-                    </div>
-                    <div class="no-print" style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-success btn-sm" @click="printExpenses">
-                            <i class="fas fa-print"></i>
-                            Imprimer
-                        </button>
-                        <button class="btn btn-primary" @click="openExpenseModal">
-                            <i class="fas fa-plus-circle"></i>
-                            Nouvelle Dépense
-                        </button>
-                    </div>
+                    <h2 class="section-title">
+                        <i class="fas fa-wallet"></i>
+                        Gestion des Dépenses
+                    </h2>
+                    <button v-if="canEdit" @click="openExpenseModal" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Nouvelle Dépense
+                    </button>
                 </div>
+
                 <div class="section-content">
-                    <!-- Filters -->
-                    <div class="filters no-print">
+                    <div class="filters">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" class="search-input"
-                                placeholder="Rechercher une dépense, projet ou ligne..."
-                                v-model="searchQuery" @input="filterExpenses">
+                            <input type="text" class="search-input" v-model="searchQuery" @input="filterExpenses"
+                                style="max-width: 250px;"
+                                placeholder="Rechercher...">
                         </div>
-                        <select class="filter-select" v-model="projectFilter" @change="filterExpenses">
-                            <option value="">Tous les projets</option>
-                            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+                        <select class="filter-select" v-model="projectFilter" @change="filterExpenses"
+                            style="max-width: 250px;">
+                            <option value="" style="max-width: 250px;">Tous les projets</option>
+                            <option v-for="project in projects" :key="project.id" :value="project.id" style="max-width: 250px;">
+                                {{ project.name }}
+                            </option>
                         </select>
-                        <select class="filter-select" v-model="statusFilter" @change="filterExpenses">
+                        <select class="filter-select" v-model="statusFilter" @change="filterExpenses"
+                            style="max-width: 250px;">
                             <option value="">Tous les statuts</option>
-                            <option value="ok">Budget OK</option>
-                            <option value="warning">Budget serré</option>
-                            <option value="over">Budget dépassé</option>
+                            <option value="ok">OK (&lt; 80%)</option>
+                            <option value="warning">Attention (≥ 80%)</option>
+                            <option value="over">Dépassé</option>
                         </select>
-                        <input type="date" class="filter-input" v-model="dateFrom"
-                            placeholder="Du" @change="filterExpenses">
-                        <input type="date" class="filter-input" v-model="dateTo"
-                            placeholder="Au" @change="filterExpenses">
+                        <input type="date" class="filter-input" v-model="dateFrom" @change="filterExpenses" style="max-width: 250px;">
+                        <input type="date" class="filter-input" v-model="dateTo" @change="filterExpenses" style="max-width: 250px;">
                     </div>
 
-                    <!-- Expenses Table -->
-                    <div v-if="paginatedExpenses.length === 0" class="empty-state">
-                        <i class="fas fa-receipt"></i>
-                        <p>Aucune dépense enregistrée</p>
-                    </div>
-                    <div v-else class="table-container">
-                        <table class="table">
+                    <div class="table-container">
+                        <table class="table" v-if="paginatedExpenses.length > 0">
                             <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Projet</th>
-                                    <th>Ligne budgétaire</th>
+                                    <th>Ligne Budgétaire</th>
                                     <th>Description</th>
                                     <th>Montant</th>
-                                    <th>Alloué</th>
-                                    <th>Utilisé %</th>
-                                    <th>Restant</th>
-                                    <th class="no-print">Actions</th>
+                                    <th>Réalisation</th>
+                                    <th>Statut</th>
+                                    <th>Document</th>
+                                    <th v-if="canEdit" class="no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="expense in paginatedExpenses" :key="expense.id"
                                     :class="getRowClass(expense)">
                                     <td data-label="Date">{{ formatDate(expense.expense_date) }}</td>
-                                    <td data-label="Projet"><strong>{{ expense.project_name }}</strong></td>
-                                    <td data-label="Ligne budgétaire">{{ expense.budget_line_name }}</td>
-                                    <td data-label="Description">{{ expense.description }}</td>
-                                    <td data-label="Montant"><strong style="color: var(--accent-green);">{{ formatCurrency(expense.amount) }}</strong></td>
-                                    <td data-label="Alloué">{{ formatCurrency(expense.allocated_amount) }}</td>
-                                    <td data-label="Utilisé %">
-                                        <span :style="{color: getPercentageColor(expense)}">
+                                    <td data-label="Projet"><strong>{{ reduceWord(expense.project_name) }}</strong></td>
+                                    <td data-label="Ligne Budgétaire">{{ expense.budget_line_name }}</td>
+                                    <td data-label="Description" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                                        {{ expense.description || '-' }}
+                                    </td>
+                                    <td data-label="Montant"><strong>{{ formatCurrency(expense.amount) }}</strong></td>
+                                    <td data-label="Réalisation">{{ formatCurrency(expense.spent) }}</td>
+                                    <td data-label="Statut">
+                                        <span class="badge"
+                                            :class="getBadgeClass(expense.remaining, expense.allocated_amount)">
                                             {{ getUsagePercentage(expense) }}%
                                         </span>
                                     </td>
-                                    <td data-label="Restant">
-                                        <span class="badge" :class="getBadgeClass(getRemainingAmount(expense), expense.allocated_amount)">
-                                            {{ formatCurrency(getRemainingAmount(expense)) }}
-                                        </span>
+                                    <td data-label="Document">
+                                        <button v-if="expense.document" @click="viewDocument(expense)"
+                                            class="btn btn-sm btn-secondary">
+                                            <i :class="getDocumentIcon(expense.document)"
+                                                :style="{ color: getDocumentColor(expense.document) }"></i>
+                                        </button>
+                                        <span v-else style="color: var(--text-secondary);">-</span>
                                     </td>
-                                    <td class="no-print" data-label="Actions">
+                                    <td v-if="canEdit" class="no-print" data-label="Actions">
                                         <div class="action-buttons">
-                                            <button class="btn btn-warning btn-sm btn-icon"
-                                                @click="editExpense(expense)" title="Modifier">
+                                            <button @click="editExpense(expense)" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-danger btn-sm btn-icon"
-                                                @click="deleteExpense(expense)" title="Supprimer">
+                                            <button @click="deleteExpense(expense)" class="btn btn-sm btn-danger">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -1018,128 +1130,202 @@ if (!isset($_SESSION['user_id'])) {
                             </tbody>
                         </table>
 
-                        <!-- Pagination -->
-                        <div class="pagination no-print">
-                            <button @click="prevPage" :disabled="currentPage === 1">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <button v-for="page in totalPages" :key="page"
-                                @click="currentPage = page"
-                                :class="{active: currentPage === page}">
-                                {{ page }}
-                            </button>
-                            <button @click="nextPage" :disabled="currentPage === totalPages">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                        <div v-else class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucune dépense trouvée</p>
                         </div>
+                    </div>
+
+                    <div class="pagination" v-if="totalPages > 1">
+                        <button @click="prevPage" :disabled="currentPage === 1">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button v-for="page in totalPages" :key="page" @click="currentPage = page"
+                            :class="{ active: currentPage === page }">
+                            {{ page }}
+                        </button>
+                        <button @click="nextPage" :disabled="currentPage === totalPages">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
-        <!-- Print Footer (Hidden, only shows when printing) -->
-        <div class="print-footer" style="display: none;">
-            <p>Rapport généré via l'application OrizonPlus - {{ new Date().toLocaleString('fr-FR') }}</p>
-        </div>
-
-        <!-- Expense Modal (Create/Edit) -->
-        <div class="modal-overlay" :class="{active: modals.expense}" @click.self="closeExpenseModal">
+        <!-- Modal Ajouter/Modifier Dépense -->
+        <div class="modal-overlay" :class="{ active: modals.expense }" @click.self="closeExpenseModal">
             <div class="modal">
                 <div class="modal-header">
                     <h3 class="modal-title">
-                        <i :class="isEditMode ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                        <i class="fas fa-wallet"></i>
                         {{ isEditMode ? 'Modifier la Dépense' : 'Nouvelle Dépense' }}
                     </h3>
-                    <button class="modal-close" @click="closeExpenseModal">&times;</button>
+                    <button class="modal-close" @click="closeExpenseModal">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
+
                 <div class="modal-body">
                     <div class="form-group">
-                        <label class="form-label">Projet</label>
-                        <select class="form-select" v-model="expense.project_id" @change="fetchLines">
+                        <label class="form-label">Projet *</label>
+                        <select class="form-select" v-model="expense.project_id" @change="fetchLines" required>
                             <option value="">Sélectionner un projet</option>
-                            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" v-if="lines.length > 0">
-                        <label class="form-label">Ligne budgétaire</label>
-                        <select class="form-select"
-                            v-model="expense.project_budget_line_id"
-                            @change="updateLineInfo">
-                            <option value="">Sélectionner une ligne</option>
-                            <option v-for="l in lines"
-                                :key="l.project_budget_line_id"
-                                :value="l.project_budget_line_id">
-                                {{ l.name }}
+                            <option v-for="project in projects" :key="project.id" :value="project.id">
+                                {{ reduceWord(project.name) }}
                             </option>
                         </select>
                     </div>
 
-                    <div v-if="selectedLine" class="info-box" :class="getInfoBoxClass()">
-                        <div class="info-row">
-                            <span>Montant alloué:</span>
-                            <strong>{{ formatCurrency(selectedLine.allocated_amount) }}</strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Déjà utilisé:</span>
-                            <strong>{{ formatCurrency(selectedLine.spent) }}</strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Restant:</span>
-                            <strong :style="{ color: (selectedLine.allocated_amount - selectedLine.spent) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
-                                {{ formatCurrency(selectedLine.allocated_amount - selectedLine.spent) }}
-                            </strong>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Ligne Budgétaire *</label>
+                        <select class="form-select" v-model="expense.project_budget_line_id" @change="updateLineInfo"
+                            :disabled="!expense.project_id" required>
+                            <option value="">Sélectionner une ligne</option>
+                            <option v-for="line in lines" :key="line.project_budget_line_id"
+                                :value="line.project_budget_line_id">
+                                {{ line.name }} - {{ formatCurrency(line.allocated_amount) }}
+                            </option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Montant dépensé (FCFA)</label>
-                        <input type="number" class="form-input" v-model.number="expense.amount"
-                            placeholder="Ex: 50000">
+                        <label class="form-label">Date de la dépense *</label>
+                        <input type="date" class="form-input" v-model="expense.expense_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Montant (FCFA) *</label>
+                        <input type="number" class="form-input" v-model="expense.amount" step="0.01" required
+                            placeholder="0.00">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Description</label>
                         <input type="text" class="form-input" v-model="expense.description"
-                            placeholder="Ex: Achat de matériel, Paiement prestataire...">
+                            placeholder="Description de la dépense">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Document justificatif (PDF, PNG, JPG - Max 5Mo)</label>
+
+                        <div v-if="isEditMode && expense.document && !selectedFile" class="attached-file">
+                            <i :class="getDocumentIcon(expense.document)"
+                                :style="{ color: getDocumentColor(expense.document) }"></i>
+                            <span>Document existant</span>
+                            <button @click="viewDocument(expense)" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Voir
+                            </button>
+                            <button @click="removeExistingDocument" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+
+                        <div v-if="!expense.document || selectedFile" class="file-upload-area" :class="{ dragover: isDragging }"
+                            @click="$refs.fileInput.click()" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
+                            @drop.prevent="onFileDrop">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--accent-blue);"></i>
+                            <p style="margin-top: 1rem; color: var(--text-secondary);">
+                                Cliquez ou glissez un fichier ici
+                            </p>
+                            <input type="file" ref="fileInput" class="file-input" @change="onFileSelect"
+                                accept=".pdf,.png,.jpg,.jpeg">
+                        </div>
+
+                        <div v-if="selectedFile" class="file-preview">
+                            <div class="file-info">
+                                <i :class="getFileIcon(selectedFile)" :style="{ color: getFileColor(selectedFile) }"></i>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div class="file-name">{{ selectedFile.name }}</div>
+                                    <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
+                                </div>
+                            </div>
+                            <button @click="removeFile" class="btn btn-sm btn-danger btn-icon">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="selectedLine" class="info-box" :class="getInfoBoxClass()">
+                        <div class="info-row">
+                            <span>Budget Alloué:</span>
+                            <strong>{{ formatCurrency(selectedLine.allocated_amount) }}</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Déjà Dépensé:</span>
+                            <strong>{{ formatCurrency(selectedLine.spent) }}</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Restant:</span>
+                            <strong :style="{ color: selectedLine.remaining < 0 ? 'var(--accent-red)' : 'var(--accent-green)' }">
+                                {{ formatCurrency(selectedLine.remaining) }}
+                            </strong>
+                        </div>
                     </div>
                 </div>
+
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="closeExpenseModal">Annuler</button>
-                    <button class="btn btn-success" @click="saveExpense">
-                        <i class="fas fa-check"></i>
-                        {{ isEditMode ? 'Modifier' : 'Enregistrer' }}
+                    <button @click="closeExpenseModal" class="btn btn-secondary">Annuler</button>
+                    <button @click="saveExpense" class="btn btn-primary" :disabled="isSaving">
+                        <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                        {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Visionneuse de Document -->
+        <div class="modal-overlay" :class="{ active: modals.documentViewer }" @click.self="closeDocumentViewer">
+            <div class="modal" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <i class="fas fa-file"></i>
+                        Document Justificatif
+                    </h3>
+                    <button class="modal-close" @click="closeDocumentViewer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 0; max-height: 80vh; overflow: auto;">
+                    <iframe v-if="viewingDocument && !isImage(viewingDocument)" :src="viewingDocument"
+                        style="width: 100%; height: 80vh; border: none;"></iframe>
+                    <img v-else-if="viewingDocument" :src="viewingDocument" style="width: 100%; height: auto;"
+                        alt="Document">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        const API_BASE_URL = 'api/index.php';
         const {
             createApp
         } = Vue;
-        const API_BASE_URL = 'api/index.php';
 
         createApp({
             data() {
                 return {
+                    canEdit: <?php echo $canEdit ? 'true' : 'false'; ?>,
+                    user_name: '<?php echo $_SESSION["user_name"] ?>',
+                    user_role: '<?php echo $_SESSION["user_role"] ?? "user"; ?>',
+                    menuOpen: false,
                     expenses: [],
                     filteredExpenses: [],
                     projects: [],
                     lines: [],
+                    selectedLine: null,
                     expense: {
                         id: null,
                         project_id: '',
                         project_budget_line_id: '',
                         amount: 0,
-                        description: ''
+                        expense_date: new Date().toISOString().split('T')[0],
+                        description: '',
+                        document: null
                     },
-                    selectedLine: null,
+                    selectedFile: null,
+                    isDragging: false,
                     isEditMode: false,
-                    modals: {
-                        expense: false
-                    },
+                    isSaving: false,
                     searchQuery: '',
                     projectFilter: '',
                     statusFilter: '',
@@ -1147,6 +1333,11 @@ if (!isset($_SESSION['user_id'])) {
                     dateTo: '',
                     currentPage: 1,
                     itemsPerPage: 10,
+                    modals: {
+                        expense: false,
+                        documentViewer: false
+                    },
+                    viewingDocument: null,
                     stats: {
                         totalExpenses: 0,
                         totalAmount: 0,
@@ -1155,26 +1346,25 @@ if (!isset($_SESSION['user_id'])) {
                     },
                     projectsChart: null,
                     evolutionChart: null,
-                    mobileMenuOpen: false
+                    isRenderingCharts: false
                 };
             },
             computed: {
                 paginatedExpenses() {
                     const start = (this.currentPage - 1) * this.itemsPerPage;
-                    const end = start + this.itemsPerPage;
-                    return this.filteredExpenses.slice(start, end);
+                    return this.filteredExpenses.slice(start, start + this.itemsPerPage);
                 },
                 totalPages() {
                     return Math.ceil(this.filteredExpenses.length / this.itemsPerPage);
                 }
             },
             mounted() {
-                this.loadData();
+                this.fetchProjects();
+                this.fetchExpenses();
             },
             methods: {
-                async loadData() {
-                    await this.fetchExpenses();
-                    await this.fetchProjects();
+                logout() {
+                    window.location.href = 'logout.php';
                 },
                 async fetchProjects() {
                     try {
@@ -1189,9 +1379,7 @@ if (!isset($_SESSION['user_id'])) {
                     try {
                         const response = await fetch(`${API_BASE_URL}?action=getExpenses`);
                         const data = await response.json();
-                        this.expenses = (data.data || []).sort((a, b) => {
-                            return new Date(b.expense_date) - new Date(a.expense_date);
-                        });
+                        this.expenses = data.data || [];
                         this.filteredExpenses = this.expenses;
                         this.calculateStats();
                         this.$nextTick(() => {
@@ -1201,6 +1389,19 @@ if (!isset($_SESSION['user_id'])) {
                         console.error('[v0] Error fetching expenses:', error);
                     }
                 },
+                reduceWord(text) {
+
+                    if (!text) return '';
+
+                    const str = String(text);
+
+                    if (str.length <= 20) {
+                        return str;
+                    }
+
+                    return str.substring(0, 20) + '...';
+                },
+
                 async fetchLines() {
                     if (!this.expense.project_id) return;
                     try {
@@ -1209,8 +1410,8 @@ if (!isset($_SESSION['user_id'])) {
                         );
                         const data = await response.json();
                         this.lines = data.data || [];
+                        console.log('[v0] Lines fetched:', JSON.stringify(this.lines, null, 2));
 
-                        // Reset line selection when project changes unless in edit mode
                         if (!this.isEditMode) {
                             this.expense.project_budget_line_id = '';
                             this.selectedLine = null;
@@ -1229,63 +1430,142 @@ if (!isset($_SESSION['user_id'])) {
                         const spent = Number(line.spent) || 0;
 
                         this.selectedLine = {
+                            name: line.line_name,
                             allocated_amount: allocated,
                             spent: spent,
                             remaining: allocated - spent
                         };
+                        console.log('[v0] Selected line:', this.selectedLine);
                     } else {
                         this.selectedLine = null;
                     }
                 },
+                onFileSelect(event) {
+                    const file = event.target.files[0];
+                    this.validateAndSetFile(file);
+                },
+                onDragOver(event) {
+                    this.isDragging = true;
+                },
+                onDragLeave(event) {
+                    this.isDragging = false;
+                },
+                onFileDrop(event) {
+                    this.isDragging = false;
+                    const file = event.dataTransfer.files[0];
+                    this.validateAndSetFile(file);
+                },
+                validateAndSetFile(file) {
+                    if (!file) return;
+
+                    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+
+                    if (!validTypes.includes(file.type)) {
+                        alert('Type de fichier non valide. Seuls les fichiers PDF, PNG et JPG sont acceptés.');
+                        return;
+                    }
+
+                    if (file.size > maxSize) {
+                        alert('Le fichier est trop volumineux. La taille maximale est de 5Mo.');
+                        return;
+                    }
+
+                    this.selectedFile = file;
+                },
+                removeFile() {
+                    this.selectedFile = null;
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.value = '';
+                    }
+                },
+                async removeExistingDocument() {
+                    if (!confirm('Voulez-vous vraiment supprimer ce document ?')) return;
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=removeExpenseDocument&id=${this.expense.id}`, {
+                            method: 'POST'
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.expense.document = null;
+                            alert('Document supprimé avec succès');
+                            this.fetchExpenses();
+                        } else {
+                            alert(data.message || 'Erreur lors de la suppression du document');
+                        }
+                    } catch (error) {
+                        console.error('[v0] Error removing document:', error);
+                        alert('Erreur lors de la suppression du document');
+                    }
+                },
                 async saveExpense() {
+
+                    if (!this.canEdit) return;
+
                     if (
                         !this.expense.project_id ||
                         !this.expense.project_budget_line_id ||
-                        !this.expense.amount
+                        !this.expense.amount ||
+                        !this.expense.expense_date
                     ) {
                         alert('Veuillez remplir tous les champs obligatoires');
                         return;
                     }
 
-                    const payload = {
-                        project_id: Number(this.expense.project_id),
-                        project_budget_line_id: Number(this.expense.project_budget_line_id),
-                        lines: [{
-                            project_budget_line_id: Number(this.expense.project_budget_line_id),
-                            amount: Number(this.expense.amount),
-                            description: this.expense.description || null
-                        }]
-                    };
-
-                    let route = `${API_BASE_URL}?action=createExpense`;
-                    let method = 'POST';
-
-                    if (this.isEditMode && this.expense.id) {
-                        route = `${API_BASE_URL}?action=updateExpense&id=${this.expense.id}`;
-                        payload.amount = Number(this.expense.amount);
-                        payload.description = this.expense.description;
-                    }
-
-                    console.log('=== SAVE EXPENSE ===');
-                    console.log('Route:', route);
-                    console.log('Payload:', payload);
+                    this.isSaving = true;
 
                     try {
+
+                        const formData = new FormData();
+
+                        formData.append('project_id', Number(this.expense.project_id));
+                        formData.append('project_budget_line_id', Number(this.expense.project_budget_line_id));
+                        formData.append('amount', Number(this.expense.amount));
+                        formData.append('expense_date', this.expense.expense_date);
+                        formData.append('description', this.expense.description || '');
+
+                        if (this.selectedFile) {
+                            formData.append('document', this.selectedFile);
+                        }
+
+                        let route = `${API_BASE_URL}?action=createExpense`;
+                        if (this.isEditMode && this.expense.id) {
+                            route = `${API_BASE_URL}?action=updateExpense&id=${this.expense.id}`;
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 🔎 DEBUG LOGS
+                        |--------------------------------------------------------------------------
+                        */
+
+                        console.log('===== SAVE EXPENSE =====');
+                        console.log('Route:', route);
+
+                        console.log('Payload (FormData):');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(key, value);
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | 📡 Requête
+                        |--------------------------------------------------------------------------
+                        */
+
                         const response = await fetch(route, {
-                            method,
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
+                            method: 'POST',
+                            body: formData
                         });
 
-                        console.log('HTTP status:', response.status);
+                        console.log('HTTP Status:', response.status);
 
-                        const text = await response.text();
-                        console.log('Raw response:', text);
+                        const data = await response.json();
 
-                        const data = JSON.parse(text);
-                        console.log('Parsed response:', data);
+                        console.log('Server Response:', data);
 
                         if (!data.success) {
                             alert(data.message || 'Une erreur est survenue');
@@ -1303,19 +1583,28 @@ if (!isset($_SESSION['user_id'])) {
                         this.fetchExpenses();
 
                     } catch (error) {
-                        console.error('Error saving expense:', error);
+
+                        console.error('Network / JS Error:', error);
                         alert('Erreur lors de l\'enregistrement de la dépense');
+
+                    } finally {
+                        this.isSaving = false;
                     }
                 },
                 openExpenseModal() {
+                    if (!this.canEdit) return;
+
                     this.isEditMode = false;
                     this.expense = {
                         id: null,
                         project_id: '',
                         project_budget_line_id: '',
-                        amount: 0,
-                        description: ''
+                        amount: '',
+                        expense_date: new Date().toISOString().split('T')[0],
+                        description: '',
+                        document: null
                     };
+                    this.selectedFile = null;
                     this.selectedLine = null;
                     this.lines = [];
                     this.modals.expense = true;
@@ -1327,13 +1616,14 @@ if (!isset($_SESSION['user_id'])) {
                         project_id: expense.project_id,
                         project_budget_line_id: expense.project_budget_line_id,
                         amount: expense.amount,
-                        description: expense.description
+                        expense_date: expense.expense_date,
+                        description: expense.description,
+                        document: expense.document
                     };
+                    this.selectedFile = null;
 
-                    // Fetch lines for the selected project
                     await this.fetchLines();
 
-                    // Update line info after lines are loaded
                     this.$nextTick(() => {
                         this.updateLineInfo();
                     });
@@ -1341,6 +1631,8 @@ if (!isset($_SESSION['user_id'])) {
                     this.modals.expense = true;
                 },
                 async deleteExpense(expense) {
+                    if (!this.canEdit) return;
+
                     if (!confirm(`Êtes-vous sûr de vouloir supprimer cette dépense de ${this.formatCurrency(expense.amount)} ?`)) {
                         return;
                     }
@@ -1368,6 +1660,23 @@ if (!isset($_SESSION['user_id'])) {
                 closeExpenseModal() {
                     this.modals.expense = false;
                     this.isEditMode = false;
+                    this.selectedFile = null;
+                },
+                viewDocument(expense) {
+                    if (!expense.document) return;
+
+                    // Ajouter le préfixe "images/" si nécessaire
+                    const docPath = expense.document.startsWith('images/') ?
+                        expense.document :
+                        'images/' + expense.document;
+
+                    this.viewingDocument = docPath;
+                    this.modals.documentViewer = true;
+                },
+
+                closeDocumentViewer() {
+                    this.modals.documentViewer = false;
+                    this.viewingDocument = null;
                 },
                 filterExpenses() {
                     let filtered = this.expenses;
@@ -1438,6 +1747,13 @@ if (!isset($_SESSION['user_id'])) {
                 formatDate(date) {
                     return new Date(date).toLocaleDateString('fr-FR');
                 },
+                formatFileSize(bytes) {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const sizes = ['Bytes', 'KB', 'MB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+                },
                 getRowClass(expense) {
                     const allocated = parseFloat(expense.allocated_amount || 0);
                     const spent = parseFloat(expense.spent || 0);
@@ -1485,269 +1801,286 @@ if (!isset($_SESSION['user_id'])) {
                     if (percentage > 80) return 'warning';
                     return '';
                 },
+                getFileIcon(file) {
+                    if (file.type === 'application/pdf') return 'fas fa-file-pdf';
+                    return 'fas fa-file-image';
+                },
+                getFileColor(file) {
+                    if (file.type === 'application/pdf') return 'var(--accent-red)';
+                    return 'var(--accent-blue)';
+                },
+                getDocumentIcon(filename) {
+                    if (!filename) return 'fas fa-file';
+                    if (filename.toLowerCase().endsWith('.pdf')) return 'fas fa-file-pdf';
+                    return 'fas fa-file-image';
+                },
+                getDocumentColor(filename) {
+                    if (!filename) return 'var(--text-secondary)';
+                    if (filename.toLowerCase().endsWith('.pdf')) return 'var(--accent-red)';
+                    return 'var(--accent-blue)';
+                },
+                isImage(filename) {
+                    if (!filename) return false;
+                    const ext = filename.toLowerCase();
+                    return ext.endsWith('.png') || ext.endsWith('.jpg') || ext.endsWith('.jpeg');
+                },
                 renderCharts() {
-                    if (this.projectsChart) this.projectsChart.destroy();
-                    if (this.evolutionChart) this.evolutionChart.destroy();
-
-                    if (this.$refs.projectsChart && this.projects.length > 0) {
-                        const ctx = this.$refs.projectsChart.getContext('2d');
-                        if (ctx) {
-                            const projectExpenses = {};
-                            this.expenses.forEach(e => {
-                                if (!projectExpenses[e.project_name]) {
-                                    projectExpenses[e.project_name] = 0;
-                                }
-                                projectExpenses[e.project_name] += parseFloat(e.amount || 0);
-                            });
-
-                            this.projectsChart = new Chart(ctx, {
-                                type: 'doughnut',
-                                data: {
-                                    labels: Object.keys(projectExpenses),
-                                    datasets: [{
-                                        data: Object.values(projectExpenses),
-                                        backgroundColor: ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b']
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            labels: {
-                                                color: '#ededed'
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        }
+                    if (this.isRenderingCharts) {
+                        console.log('[v0] Render already in progress, skipping...');
+                        return;
                     }
 
-                    if (this.$refs.evolutionChart) {
-                        const ctx = this.$refs.evolutionChart.getContext('2d');
-                        if (ctx) {
-                            const monthlyExpenses = {};
-                            this.expenses.forEach(e => {
-                                const date = new Date(e.expense_date);
-                                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                                if (!monthlyExpenses[key]) {
-                                    monthlyExpenses[key] = 0;
-                                }
-                                monthlyExpenses[key] += parseFloat(e.amount || 0);
-                            });
+                    this.isRenderingCharts = true;
+                    console.log('[v0] Starting charts render...');
 
-                            const sortedKeys = Object.keys(monthlyExpenses).sort();
-
-                            this.evolutionChart = new Chart(ctx, {
-                                type: 'line',
-                                data: {
-                                    labels: sortedKeys,
-                                    datasets: [{
-                                        label: 'Dépenses mensuelles',
-                                        data: sortedKeys.map(k => monthlyExpenses[k]),
-                                        borderColor: '#00e676',
-                                        backgroundColor: 'rgba(0, 230, 118, 0.2)',
-                                        tension: 0.4
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true,
-                                            ticks: {
-                                                color: '#ededed'
-                                            }
-                                        },
-                                        x: {
-                                            ticks: {
-                                                color: '#ededed'
-                                            }
-                                        }
-                                    },
-                                    plugins: {
-                                        legend: {
-                                            labels: {
-                                                color: '#ededed'
-                                            }
-                                        }
-                                    }
-                                }
-                            });
+                    // Détruire les anciens graphiques
+                    if (this.projectsChart) {
+                        try {
+                            this.projectsChart.destroy();
+                        } catch (e) {
+                            console.error('[v0] Error destroying projectsChart:', e);
                         }
+                        this.projectsChart = null;
                     }
-                },
-                printExpenses() {
-                    const printContent = this.generatePrintContent();
-                    const printWindow = window.open('', '', 'width=800,height=600');
-                    printWindow.document.write(printContent);
-                    printWindow.document.close();
-                    printWindow.focus();
+                    if (this.evolutionChart) {
+                        try {
+                            this.evolutionChart.destroy();
+                        } catch (e) {
+                            console.error('[v0] Error destroying evolutionChart:', e);
+                        }
+                        this.evolutionChart = null;
+                    }
+
+                    // Attendre que le DOM soit prêt
                     setTimeout(() => {
-                        printWindow.print();
-                        printWindow.close();
-                    }, 250);
-                },
-                generatePrintContent() {
-                    const now = new Date().toLocaleString('fr-FR');
-                    let html = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>Rapport Dépenses - OrizonPlus</title>
-                            <style>
-                                body {
-                                    font-family: Arial, sans-serif;
-                                    padding: 20px;
-                                    color: #000;
-                                    background: #fff;
-                                }
-                                h1 {
-                                    text-align: center;
-                                    color: #0070f3;
-                                    margin-bottom: 30px;
-                                }
-                                .stats {
-                                    display: grid;
-                                    grid-template-columns: repeat(4, 1fr);
-                                    gap: 15px;
-                                    margin-bottom: 30px;
-                                }
-                                .stat-box {
-                                    border: 1px solid #ddd;
-                                    padding: 15px;
-                                    border-radius: 8px;
-                                    text-align: center;
-                                }
-                                .stat-label {
-                                    font-size: 12px;
-                                    color: #666;
-                                    text-transform: uppercase;
-                                    margin-bottom: 5px;
-                                }
-                                .stat-value {
-                                    font-size: 24px;
-                                    font-weight: bold;
-                                    color: #000;
-                                }
-                                table {
-                                    width: 100%;
-                                    border-collapse: collapse;
-                                    margin-bottom: 30px;
-                                }
-                                th, td {
-                                    border: 1px solid #ddd;
-                                    padding: 10px;
-                                    text-align: left;
-                                    font-size: 12px;
-                                }
-                                th {
-                                    background: #f5f5f5;
-                                    font-weight: bold;
-                                }
-                                tr.warning {
-                                    background: #fff3cd;
-                                }
-                                tr.danger {
-                                    background: #f8d7da;
-                                }
-                                .footer {
-                                    text-align: center;
-                                    margin-top: 50px;
-                                    padding-top: 20px;
-                                    border-top: 1px solid #ddd;
-                                    font-size: 12px;
-                                    color: #666;
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            <h1>Rapport des Dépenses - OrizonPlus</h1>
-                            
-                            <div class="stats">
-                                <div class="stat-box">
-                                    <div class="stat-label">Total Transactions</div>
-                                    <div class="stat-value">${this.stats.totalExpenses}</div>
-                                </div>
-                                <div class="stat-box">
-                                    <div class="stat-label">Montant Total</div>
-                                    <div class="stat-value">${this.formatCurrency(this.stats.totalAmount)}</div>
-                                </div>
-                                <div class="stat-box">
-                                    <div class="stat-label">Ce Mois</div>
-                                    <div class="stat-value">${this.formatCurrency(this.stats.thisMonth)}</div>
-                                </div>
-                                <div class="stat-box">
-                                    <div class="stat-label">Alertes</div>
-                                    <div class="stat-value" style="color: #ffb800;">${this.stats.overBudget}</div>
-                                </div>
-                            </div>
+                        this.$nextTick(() => {
+                            try {
+                                const projectsCanvas = this.$refs.projectsChart;
+                                const evolutionCanvas = this.$refs.evolutionChart;
 
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Projet</th>
-                                        <th>Ligne budgétaire</th>
-                                        <th>Description</th>
-                                        <th>Montant</th>
-                                        <th>Alloué</th>
-                                        <th>Utilisé %</th>
-                                        <th>Restant</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
+                                if (!projectsCanvas || !evolutionCanvas) {
+                                    console.error('[v0] Les refs des canvas ne sont pas disponibles');
+                                    this.isRenderingCharts = false;
+                                    return;
+                                }
 
-                    this.filteredExpenses.forEach(expense => {
-                        const rowClass = this.getRowClass(expense);
-                        const remaining = this.getRemainingAmount(expense);
-                        html += `
-                            <tr class="${rowClass}">
-                                <td>${this.formatDate(expense.expense_date)}</td>
-                                <td><strong>${expense.project_name}</strong></td>
-                                <td>${expense.budget_line_name}</td>
-                                <td>${expense.description}</td>
-                                <td><strong>${this.formatCurrency(expense.amount)}</strong></td>
-                                <td>${this.formatCurrency(expense.allocated_amount)}</td>
-                                <td>${this.getUsagePercentage(expense)}%</td>
-                                <td>${this.formatCurrency(remaining)}</td>
-                            </tr>`;
-                    });
+                                // Vérifier que les canvas sont dans le DOM
+                                if (!document.body.contains(projectsCanvas) || !document.body.contains(evolutionCanvas)) {
+                                    console.error('[v0] Les canvas ne sont pas dans le DOM');
+                                    this.isRenderingCharts = false;
+                                    return;
+                                }
 
-                    html += `
-                                </tbody>
-                            </table>
+                                const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981'];
 
-                            <div class="footer">
-                                <p><strong>Rapport généré via l'application OrizonPlus</strong></p>
-                                <p>${now}</p>
-                            </div>
-                        </body>
-                        </html>
-                    `;
+                                // Graphique des dépenses par projet
+                                if (projectsCanvas && this.projects.length > 0 && this.expenses.length > 0) {
+                                    try {
+                                        const parent1 = projectsCanvas.parentElement;
+                                        if (parent1) {
+                                            parent1.style.position = 'relative';
+                                            parent1.style.height = '400px';
+                                            parent1.style.width = '100%';
+                                        }
 
-                    return html;
-                },
-                logout() {
-                    if (confirm('Voulez-vous vous déconnecter ?')) {
-                        localStorage.removeItem('user');
-                        window.location.href = 'api/index.php?action=logout';
-                    }
-                },
+                                        const ctx1 = projectsCanvas.getContext('2d');
+                                        if (!ctx1) {
+                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour projectsCanvas');
+                                            this.isRenderingCharts = false;
+                                            return;
+                                        }
 
-                toggleMobileMenu() {
-                    this.mobileMenuOpen = !this.mobileMenuOpen;
-                },
+                                        const projectExpenses = {};
+                                        this.expenses.forEach(e => {
+                                            if (!projectExpenses[e.project_name]) {
+                                                projectExpenses[e.project_name] = 0;
+                                            }
+                                            projectExpenses[e.project_name] += parseFloat(e.amount || 0);
+                                        });
 
-                closeMobileMenu() {
-                    this.mobileMenuOpen = false;
+                                        this.projectsChart = new Chart(ctx1, {
+                                            type: 'doughnut',
+                                            data: {
+                                                labels: Object.keys(projectExpenses),
+                                                datasets: [{
+                                                    data: Object.values(projectExpenses),
+                                                    backgroundColor: colors.slice(0, Object.keys(projectExpenses).length),
+                                                    borderColor: '#111111',
+                                                    borderWidth: 2
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                devicePixelRatio: 2,
+                                                plugins: {
+                                                    legend: {
+                                                        display: true,
+                                                        position: 'bottom',
+                                                        labels: {
+                                                            color: '#ededed',
+                                                            padding: 15,
+                                                            font: {
+                                                                size: 13,
+                                                                weight: '600'
+                                                            }
+                                                        }
+                                                    },
+                                                    tooltip: {
+                                                        enabled: true,
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                                        padding: 12,
+                                                        cornerRadius: 8,
+                                                        callbacks: {
+                                                            label: (ctx) => {
+                                                                const val = ctx.parsed;
+                                                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                                                return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } catch (e) {
+                                        console.error('[v0] Erreur création graphique projects:', e);
+                                    }
+                                }
+
+                                // Graphique d'évolution des dépenses
+                                if (evolutionCanvas && this.expenses.length > 0) {
+                                    try {
+                                        const parent2 = evolutionCanvas.parentElement;
+                                        if (parent2) {
+                                            parent2.style.position = 'relative';
+                                            parent2.style.height = '400px';
+                                            parent2.style.width = '100%';
+                                        }
+
+                                        const ctx2 = evolutionCanvas.getContext('2d');
+                                        if (!ctx2) {
+                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour evolutionCanvas');
+                                            this.isRenderingCharts = false;
+                                            return;
+                                        }
+
+                                        const sorted = [...this.expenses].sort((a, b) =>
+                                            new Date(a.expense_date) - new Date(b.expense_date)
+                                        );
+
+                                        const grouped = {};
+                                        sorted.forEach(e => {
+                                            const date = this.formatDate(e.expense_date);
+                                            if (!grouped[date]) {
+                                                grouped[date] = 0;
+                                            }
+                                            grouped[date] += parseFloat(e.amount || 0);
+                                        });
+
+                                        // Calculer le cumulé
+                                        const dates = Object.keys(grouped);
+                                        const cumulativeData = [];
+                                        let cumul = 0;
+                                        dates.forEach(date => {
+                                            cumul += grouped[date];
+                                            cumulativeData.push(cumul);
+                                        });
+
+                                        this.evolutionChart = new Chart(ctx2, {
+                                            type: 'line',
+                                            data: {
+                                                labels: dates,
+                                                datasets: [{
+                                                    label: 'Dépenses cumulées',
+                                                    data: cumulativeData,
+                                                    borderColor: '#00d4ff',
+                                                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                                    fill: true,
+                                                    tension: 0.4,
+                                                    pointBackgroundColor: '#00d4ff',
+                                                    pointBorderColor: '#fff',
+                                                    pointRadius: 4,
+                                                    pointBorderWidth: 2
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                devicePixelRatio: 2,
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        ticks: {
+                                                            color: '#ededed',
+                                                            font: {
+                                                                size: 12
+                                                            },
+                                                            callback: function(value) {
+                                                                return value.toLocaleString();
+                                                            }
+                                                        },
+                                                        grid: {
+                                                            color: '#2a2a2a'
+                                                        }
+                                                    },
+                                                    x: {
+                                                        ticks: {
+                                                            color: '#ededed',
+                                                            font: {
+                                                                size: 12
+                                                            },
+                                                            maxRotation: 45,
+                                                            minRotation: 45
+                                                        },
+                                                        grid: {
+                                                            color: '#2a2a2a',
+                                                            display: false
+                                                        }
+                                                    }
+                                                },
+                                                plugins: {
+                                                    legend: {
+                                                        display: true,
+                                                        labels: {
+                                                            color: '#ededed',
+                                                            padding: 15,
+                                                            font: {
+                                                                size: 13,
+                                                                weight: '600'
+                                                            }
+                                                        }
+                                                    },
+                                                    tooltip: {
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                                        padding: 12,
+                                                        cornerRadius: 8,
+                                                        callbacks: {
+                                                            label: (ctx) => {
+                                                                return `Total: ${this.formatCurrency(ctx.parsed.y)}`;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } catch (e) {
+                                        console.error('[v0] Erreur création graphique evolution:', e);
+                                    }
+                                }
+
+                                console.log('[v0] Rendu des graphiques terminé');
+                                this.isRenderingCharts = false;
+                            } catch (error) {
+                                console.error('[v0] Erreur générale renderCharts:', error);
+                                this.isRenderingCharts = false;
+                            }
+                        });
+                    }, 200);
                 }
             }
         }).mount('#app');
     </script>
-
 </body>
 
 </html>
