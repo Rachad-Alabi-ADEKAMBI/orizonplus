@@ -293,70 +293,293 @@ function getProject()
 function updateProject()
 {
     $pdo = getPDO();
-    $data = json_decode(file_get_contents('php://input'), true);
 
-    $id = $data['id'] ?? null;
-    $name = trim($data['name'] ?? '');
-    $lines = $data['lines'] ?? []; // nouvelles lignes
-    $updatedLines = $data['updated_lines'] ?? []; // lignes existantes
+    $id = $_POST['id'] ?? null;
+    $name = $_POST['name'] ?? '';
+    $description = $_POST['description'] ?? null;
+    $department = $_POST['department'] ?? null;
+    $location = $_POST['location'] ?? null;
+    $date_of_creation = $_POST['date_of_creation'] ?? null;
 
-    if (!$id || !$name) {
+    $lines = json_decode($_POST['lines'] ?? '[]', true);
+    $updatedLines = json_decode($_POST['updated_lines'] ?? '[]', true);
+    $deletedLines = json_decode($_POST['deleted_lines'] ?? '[]', true);
+    $keptDocuments = json_decode($_POST['existing_documents'] ?? '[]', true);
+
+    $currentUserId = $_POST['current_user_id'] ?? null;
+    $currentUserName = $_POST['current_user_name'] ?? null;
+
+    if (!$id || empty($name)) {
         jsonError('Paramètres manquants');
     }
 
     try {
+
         $pdo->beginTransaction();
 
-        // 1. Mise à jour du nom du projet
-        $stmt = $pdo->prepare("UPDATE projects SET name = ? WHERE id = ?");
-        $stmt->execute([$name, $id]);
+        /*
+        |--------------------------------------------------------------------------
+        | 🔎 Récupération ancien projet
+        |--------------------------------------------------------------------------
+        */
 
-        // 2. Mise à jour des lignes existantes
+        $stmtOld = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
+        $stmtOld->execute([$id]);
+        $oldProject = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+        if (!$oldProject) {
+            jsonError('Projet introuvable');
+        }
+
+        $changes = [];
+
+        /*
+        |--------------------------------------------------------------------------
+        | 📁 Gestion documents
+        |--------------------------------------------------------------------------
+        */
+
+        $oldDocuments = json_decode($oldProject['documents'] ?? '[]', true);
+        $uploadDir = __DIR__ . '/../images/';
+
+        // Supprimer fichiers retirés
+        foreach ($oldDocuments as $oldFile) {
+            if (!in_array($oldFile, $keptDocuments)) {
+                $filePath = $uploadDir . $oldFile;
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                $changes[] = "Document supprimé : {$oldFile}";
+            }
+        }
+
+        $finalDocuments = $keptDocuments ?? [];
+
+        // Ajouter nouveaux fichiers
+        if (!empty($_FILES['documents']['name'][0])) {
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            foreach ($_FILES['documents']['tmp_name'] as $key => $tmpName) {
+
+                $originalName = $_FILES['documents']['name'][$key];
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+                if (!in_array($extension, $allowed)) continue;
+
+                $newName = uniqid() . '.' . $extension;
+                $destination = $uploadDir . $newName;
+
+                move_uploaded_file($tmpName, $destination);
+
+                $finalDocuments[] = $newName;
+
+                $changes[] = "Nouveau document ajouté : {$newName}";
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🔄 Comparaison champs principaux
+        |--------------------------------------------------------------------------
+        */
+
+        $fieldsToCheck = [
+            'name' => $name,
+            'description' => $description,
+            'department' => $department,
+            'location' => $location,
+            'date_of_creation' => $date_of_creation
+        ];
+
+        foreach ($fieldsToCheck as $field => $newValue) {
+
+            $oldValue = $oldProject[$field];
+
+            if ((string)$oldValue !== (string)$newValue) {
+                $changes[] = strtoupper($field) . " modifié : \"{$oldValue}\" → \"{$newValue}\"";
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🗂 Mise à jour projet
+        |--------------------------------------------------------------------------
+        */
+
+        $stmtUpdateProject = $pdo->prepare("
+            UPDATE projects SET
+                name = ?,
+                description = ?,
+                department = ?,
+                location = ?,
+                documents = ?,
+                date_of_creation = ?
+            WHERE id = ?
+        ");
+
+        $stmtUpdateProject->execute([
+            $name,
+            $description,
+            $department,
+            $location,
+            json_encode($finalDocuments),
+            $date_of_creation,
+            $id
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 💰 Mise à jour lignes existantes
+        |--------------------------------------------------------------------------
+        */
+
         if (!empty($updatedLines)) {
+
             $stmtUpdate = $pdo->prepare("
-                UPDATE project_budget_lines 
-                SET allocated_amount = ? 
-                WHERE id = ?
-            ");
+        UPDATE project_budget_lines
+        SET allocated_amount = ?
+        WHERE id = ?
+    ");
 
             foreach ($updatedLines as $line) {
-                if (!isset($line['project_budget_line_id']) || !isset($line['allocated_amount'])) {
-                    continue;
+
+                if (
+                    empty($line['project_budget_line_id']) ||
+                    !isset($line['allocated_amount'])
+                ) continue;
+
+                // Récupérer ancien montant pour log
+                $stmtOldAmount = $pdo->prepare("
+            SELECT allocated_amount 
+            FROM project_budget_lines 
+            WHERE id = ?
+        ");
+                $stmtOldAmount->execute([(int)$line['project_budget_line_id']]);
+                $oldAmount = $stmtOldAmount->fetchColumn();
+
+                if ((float)$oldAmount !== (float)$line['allocated_amount']) {
+                    $changes[] = "Ligne ID {$line['project_budget_line_id']} modifiée : "
+                        . $oldAmount . " → "
+                        . $line['allocated_amount'];
                 }
 
                 $stmtUpdate->execute([
-                    (float) $line['allocated_amount'],
-                    (int) $line['project_budget_line_id']
+                    (float)$line['allocated_amount'],
+                    (int)$line['project_budget_line_id']
                 ]);
             }
         }
 
-        // 3. Insertion des nouvelles lignes
+
+        /*
+        |--------------------------------------------------------------------------
+        | ➕ Nouvelles lignes
+        |--------------------------------------------------------------------------
+        */
+
         if (!empty($lines)) {
+
             $stmtInsert = $pdo->prepare("
-                INSERT INTO project_budget_lines 
+                INSERT INTO project_budget_lines
                 (project_id, budget_line_id, allocated_amount)
                 VALUES (?, ?, ?)
             ");
 
             foreach ($lines as $line) {
-                if (empty($line['budget_line_id']) || !isset($line['allocated_amount'])) {
-                    continue;
-                }
+
+                if (
+                    empty($line['budget_line_id']) ||
+                    !isset($line['allocated_amount'])
+                ) continue;
+
+                $changes[] = "Nouvelle ligne ajoutée (Budget ID {$line['budget_line_id']}) : "
+                    . $line['allocated_amount'];
 
                 $stmtInsert->execute([
                     $id,
-                    (int) $line['budget_line_id'],
-                    (float) $line['allocated_amount']
+                    (int)$line['budget_line_id'],
+                    (float)$line['allocated_amount']
                 ]);
             }
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | ❌ Suppression lignes
+        |--------------------------------------------------------------------------
+        */
+
+        if (!empty($deletedLines)) {
+
+            $stmtDelete = $pdo->prepare("
+                DELETE FROM project_budget_lines WHERE id = ?
+            ");
+
+            foreach ($deletedLines as $lineId) {
+
+                $changes[] = "Ligne ID {$lineId} supprimée";
+
+                $stmtDelete->execute([(int)$lineId]);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🔔 Notification complète
+        |--------------------------------------------------------------------------
+        */
+        $currentUserId = $_SESSION['user_id'];
+        $currentUserName = $_SESSION['user_name'];
+
+        $notificationText =
+            "Projet \"{$oldProject['name']}\" (ID {$id}) modifié par {$currentUserName}.\n\n"
+            . implode("\n", $changes);
+
+        createNotification(
+            $notificationText,
+            $currentUserId,
+            $currentUserName
+        );
         $pdo->commit();
-        jsonSuccess([], 'Projet et lignes budgétaires mis à jour');
+
+        jsonSuccess([], 'Projet mis à jour avec succès');
     } catch (Exception $e) {
+
         $pdo->rollBack();
-        jsonError('Erreur mise à jour projet : ' . $e->getMessage());
+        jsonError('Erreur mise à jour projet');
+    }
+}
+
+
+function createNotification($description, $user_id, $user_name)
+{
+    $pdo = getPDO();
+
+    if (empty($description) || empty($user_id) || empty($user_name)) {
+        return false;
+    }
+
+    try {
+
+        $stmt = $pdo->prepare("
+            INSERT INTO notifications 
+            (user_id, user_name, description, created_at)
+            VALUES (?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            (int)$user_id,
+            trim($user_name),
+            trim($description)
+        ]);
+
+        return $pdo->lastInsertId();
+    } catch (Exception $e) {
+        return false;
     }
 }
 

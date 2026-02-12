@@ -20,9 +20,6 @@ if (!isset($_SESSION['user_id'])) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-
-    <!-- Font Awesome (si tu l'utilises pour les icônes actuelles) -->
-    <script src="https://kit.fontawesome.com/ton_code_kit.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -118,6 +115,17 @@ if (!isset($_SESSION['user_id'])) {
             h4 {
                 color: black !important;
                 page-break-after: avoid;
+            }
+
+            canvas {
+                max-height: 400px !important;
+                page-break-inside: avoid;
+            }
+
+            .chart-container {
+                page-break-inside: avoid;
+                height: auto !important;
+                min-height: 300px;
             }
         }
 
@@ -681,8 +689,32 @@ if (!isset($_SESSION['user_id'])) {
 
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 400px;
+            width: 100%;
             margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 350px;
+        }
+
+        .chart-container canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .chart-container {
+                height: 350px;
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+                min-height: 250px;
+            }
         }
 
         .action-buttons {
@@ -1056,6 +1088,14 @@ if (!isset($_SESSION['user_id'])) {
                             <i class="fas fa-receipt"></i> Dépenses
                         </a>
                     </li>
+
+                    <li>
+                        <a href="users.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-users"></i> Utilisateurs
+                        </a>
+                    </li>
+
+
                     <li>
                         <a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
                             <i class="fas fa-sign-out-alt"></i> Déconnexion
@@ -1068,7 +1108,12 @@ if (!isset($_SESSION['user_id'])) {
 
         <div class="container">
             <!-- Stats Section -->
-            <div v-if="!showBudgetLines" class="stats-grid">
+            <p style="margin-bottom: 5px">
+                Bonjour <?= ucfirst($_SESSION['user_name'])  ?>, Vous êtes connecté à votre compte <strong> {{ user_role }} </strong>
+            </p>
+
+            <div v-if="!showBudgetLines" class="stats-grid ">
+
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-label">Total Projets</span>
@@ -1143,20 +1188,17 @@ if (!isset($_SESSION['user_id'])) {
                     </button>
                 </div>
                 <div class="section-content">
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
-                        <div>
-                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">Repartition des Budgets
-                            </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; width: 100%;">
+                        <div style="width: 100%; min-width: 0;">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 1rem;">Répartition des Budgets</h3>
                             <div class="chart-container">
-                                <canvas ref="budgetPieChart"></canvas>
+                                <canvas ref="budgetPieChart" role="img" aria-label="Graphique de répartition des budgets"></canvas>
                             </div>
                         </div>
-                        <div>
-                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">Budget vs Depenses par
-                                Projet</h3>
+                        <div style="width: 100%; min-width: 0;">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 1rem;">Budget vs Réalisations par Projet</h3>
                             <div class="chart-container">
-                                <canvas ref="progressBarChart"></canvas>
+                                <canvas ref="progressBarChart" role="img" aria-label="Graphique comparatif budget et réalisations"></canvas>
                             </div>
                         </div>
                     </div>
@@ -1179,6 +1221,22 @@ if (!isset($_SESSION['user_id'])) {
                             <i class="fas fa-print"></i>
                             Imprimer
                         </button>
+                        <div style="position: relative;">
+                            <button class="btn btn-secondary btn-sm" @click="showImportMenu = !showImportMenu">
+                                <i class="fas fa-upload"></i>
+                                Importer
+                            </button>
+                            <div v-if="showImportMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 100; min-width: 150px;">
+                                <label style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; color: var(--text-primary); cursor: pointer; transition: background 0.2s; margin: 0;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
+                                    <i class="fas fa-file-excel"></i> Excel
+                                    <input type="file" accept=".xls,.xlsx" @change="importFromExcel" style="display: none;">
+                                </label>
+                                <label style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; color: var(--text-primary); cursor: pointer; transition: background 0.2s; margin: 0;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
+                                    <i class="fas fa-file-csv"></i> CSV
+                                    <input type="file" accept=".csv" @change="importFromCSV" style="display: none;">
+                                </label>
+                            </div>
+                        </div>
                         <div style="position: relative;">
                             <button class="btn btn-secondary btn-sm" @click="showExportMenu = !showExportMenu">
                                 <i class="fas fa-download"></i>
@@ -1259,7 +1317,7 @@ if (!isset($_SESSION['user_id'])) {
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
                                     <th @click="setSortBy('spent')">
-                                        Réalisation
+                                        Réalisations
                                         <i v-if="sortBy === 'spent'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
@@ -1484,10 +1542,10 @@ if (!isset($_SESSION['user_id'])) {
                         <div v-if="newProject.documents && newProject.documents.length > 0" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem;">
                             <div v-for="(doc, idx) in newProject.documents" :key="idx"
                                 style="position: relative; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; text-align: center; background: var(--bg-tertiary);">
-                                <i :class="doc.type === 'pdf' ? 'fas fa-file-pdf' : 'fas fa-image'"
+                                <i :class="getDocIcon(doc)"
                                     style="font-size: 2rem; color: var(--accent-blue);"></i>
                                 <div style="font-size: 0.7rem; margin-top: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                    {{ doc.name }}
+                                    {{ getDocName(doc) }}
                                 </div>
                                 <button v-if="user_role === 'admin'" @click="removeDocument(idx)"
                                     style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-red); color: white; border: none; cursor: pointer; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">
@@ -1587,10 +1645,10 @@ if (!isset($_SESSION['user_id'])) {
                     <button class="modal-close no-print" @click="closeDetailModal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">{{ selectedProject.name }}</h3>
+                    <h3 v-if="selectedProject" style="margin-bottom: 1.5rem; font-size: 1.5rem;">{{ selectedProject.name }}</h3>
 
                     <!-- Info Cards -->
-                    <div class="info-grid">
+                    <div v-if="selectedProject" class="info-grid">
                         <div class="info-box">
                             <div class="info-box-label">Budget Global (Alloue)</div>
                             <div class="info-box-value" style="color: var(--accent-blue);">
@@ -2035,42 +2093,54 @@ if (!isset($_SESSION['user_id'])) {
         createApp({
             data() {
                 return {
-                    user_id: <?php echo json_encode($_SESSION['user_id'] ?? null); ?>,
-                    user_name: <?php echo json_encode($_SESSION['user_name'] ?? ''); ?>,
-                    user_role: <?php echo json_encode($_SESSION['user_role'] ?? 'utilisateur'); ?>,
+                    API_BASE_URL: API_BASE_URL,
                     projects: [],
                     filteredProjects: [],
+                    budgetLines: [],
+                    allProjectLines: {},
                     availableLines: [],
-                    allProjectLines: {}, // Cache des lignes budgétaires par projet { projectId: [...lines] }
-                    searchQuery: '',
-                    sectorFilter: '',
-                    budgetFilter: '',
-                    sortBy: 'name',
-                    sortAsc: true,
-                    dateFrom: '',
-                    dateTo: '',
-                    showBudgetLines: false,
-                    editingLine: null,
-                    currentPage: 1,
-                    itemsPerPage: 10,
-                    newLineName: '',
-                    showExportMenu: false,
-                    newProject: {
-                        name: '',
-                        description: '',
-                        department: '',
-                        location: '',
-                        date_of_creation: new Date().toISOString().split('T')[0],
-                        documents: []
-                    },
-                    projectLines: [],
-                    currentProjectLines: [],
+                    selectedProject: null,
                     selectedProjectLines: [],
-                    projectLinesTotal: 0,
-                    isEditMode: false,
-                    selectedProject: {},
                     projectExpenses: [],
                     expensesTotal: 0,
+                    editingProject: null,
+                    newProject: {
+                        name: '',
+                        status: 'active'
+                    },
+                    editingLine: null,
+                    newLine: {
+                        name: '',
+                        project_id: null,
+                        allocated_amount: 0
+                    },
+                    newLineName: '',
+                    editingExpense: null,
+                    newExpense: {
+                        project_id: null,
+                        budget_line_id: null,
+                        amount: 0,
+                        description: '',
+                        expense_date: ''
+                    },
+                    searchQuery: '',
+                    statusFilter: 'all',
+                    categoryFilter: '',
+                    budgetPieChart: null,
+                    progressBarChart: null,
+                    budgetAlerts: [],
+                    showAddProjectModal: false,
+                    showAddLineModal: false,
+                    showAddExpenseModal: false,
+                    showBudgetLines: false,
+                    showImportMenu: false,
+                    showExportMenu: false,
+                    projectExportMenuOpen: null,
+                    isRenderingCharts: false,
+                    projectLines: [],
+                    currentProjectLines: [],
+                    projectLinesTotal: 0,
+                    isEditMode: false,
                     detailTab: 'lines',
                     modals: {
                         line: false,
@@ -2084,15 +2154,28 @@ if (!isset($_SESSION['user_id'])) {
                         totalRemaining: 0,
                         spentPercentage: 0
                     },
-                    budgetAlerts: [],
-                    budgetPieChart: null,
-                    progressBarChart: null,
+                    budgetStats: {
+                        totalAllocated: 0,
+                        totalSpent: 0,
+                        totalRemaining: 0,
+                        overbudgetCount: 0
+                    },
                     projectDetailChart: null,
                     projectLinesChart: null,
                     projectExpensesByLineChart: null,
                     projectTimelineChart: null,
-                    mobileMenuOpen: false
-
+                    mobileMenuOpen: false,
+                    user_name: '<?php echo $_SESSION["user_name"] ?>',
+                    user_role: '<?php echo $_SESSION["user_role"] ?? "user"; ?>',
+                    sectorFilter: '',
+                    budgetFilter: '',
+                    sortBy: 'name',
+                    sortOrder: 'asc',
+                    sortAsc: true,
+                    dateFrom: '',
+                    dateTo: '',
+                    currentPage: 1,
+                    itemsPerPage: 10
                 };
             },
             computed: {
@@ -2118,7 +2201,29 @@ if (!isset($_SESSION['user_id'])) {
                     if (this.showExportMenu && !e.target.closest('.action-buttons')) {
                         this.showExportMenu = false;
                     }
+                    if (this.projectExportMenuOpen !== null && !e.target.closest('.action-buttons')) {
+                        this.projectExportMenuOpen = null;
+                    }
                 });
+            },
+            beforeDestroy() {
+                // Nettoyer les graphiques avant la destruction du composant
+                if (this.budgetPieChart) {
+                    try {
+                        this.budgetPieChart.destroy();
+                    } catch (e) {
+                        console.log('[v0] Erreur destruction budgetPieChart dans beforeDestroy:', e.message);
+                    }
+                    this.budgetPieChart = null;
+                }
+                if (this.progressBarChart) {
+                    try {
+                        this.progressBarChart.destroy();
+                    } catch (e) {
+                        console.log('[v0] Erreur destruction progressBarChart dans beforeDestroy:', e.message);
+                    }
+                    this.progressBarChart = null;
+                }
             },
             methods: {
                 async loadData() {
@@ -2128,13 +2233,10 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 async fetchProjects() {
                     try {
-                        console.log('[v0] Fetching projects...');
                         const response = await fetch(`${API_BASE_URL}?action=getProjects`);
                         const data = await response.json();
-                        console.log('[v0] Projects response:', data);
                         this.projects = data.data || [];
                         this.filteredProjects = this.projects;
-                        console.log('[v0] Projects loaded:', this.projects.length);
                         this.calculateStats();
                         this.checkBudgetAlerts();
                         this.$nextTick(() => {
@@ -2556,7 +2658,10 @@ if (!isset($_SESSION['user_id'])) {
 
                     const formData = new FormData();
 
+                    // ==============================
                     // Champs simples
+                    // ==============================
+
                     if (this.isEditMode) {
                         formData.append('id', this.newProject.id);
                     }
@@ -2567,7 +2672,10 @@ if (!isset($_SESSION['user_id'])) {
                     formData.append('location', this.newProject.location || '');
                     formData.append('date_of_creation', this.newProject.date_of_creation || '');
 
+                    // ==============================
                     // Lignes budgétaires
+                    // ==============================
+
                     const filteredLines = this.projectLines.filter(
                         l => l.budget_line_id && l.allocated_amount > 0
                     );
@@ -2575,18 +2683,50 @@ if (!isset($_SESSION['user_id'])) {
                     formData.append('lines', JSON.stringify(filteredLines));
 
                     if (this.isEditMode) {
-                        formData.append('updated_lines', JSON.stringify(this.currentProjectLines || []));
+
+                        formData.append(
+                            'updated_lines',
+                            JSON.stringify(this.currentProjectLines || [])
+                        );
+
+                        formData.append(
+                            'deleted_lines',
+                            JSON.stringify(this.deletedProjectLines || [])
+                        );
                     }
 
-                    // Documents (doivent être des File objects)
-                    if (this.newProject.documents && this.newProject.documents.length) {
-                        this.newProject.documents.forEach(file => {
-                            formData.append('documents[]', file);
-                        });
-                    }
+                    // ==============================
+                    // Documents
+                    // ==============================
+
+                    // 1️⃣ Documents déjà existants (strings)
+                    const existingDocs = (this.newProject.documents || [])
+                        .filter(doc => typeof doc === 'string');
+
+                    formData.append(
+                        'existing_documents',
+                        JSON.stringify(existingDocs)
+                    );
+
+                    // 2️⃣ Nouveaux fichiers (File objects)
+                    const newFiles = (this.newProject.documents || [])
+                        .filter(doc => doc instanceof File);
+
+                    newFiles.forEach(file => {
+                        formData.append('documents[]', file);
+                    });
+
+                    // ==============================
+                    // DEBUG PROPRE
+                    // ==============================
 
                     console.log('=== SAVE PROJECT ===');
                     console.log('Route:', route);
+
+                    console.log('FormData content:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key, value);
+                    }
 
                     try {
 
@@ -2743,28 +2883,40 @@ if (!isset($_SESSION['user_id'])) {
                 // ==================== EXPORT FUNCTIONS ====================
                 exportToExcel() {
                     this.showExportMenu = false;
-                    // Create data for export
-                    const data = this.filteredProjects.map(p => ({
-                        'Projet': p.name,
-                        'Secteur': p.department || '-',
-                        'Lieu': p.location || '-',
-                        'Date de création': p.date_of_creation || p.created_at || '-',
-                        'Budget Alloué': this.getProjectAllocatedFromLines(p),
-                        'Réalisation': parseFloat(p.spent || 0),
-                        'Écart': this.getProjectRemaining(p),
-                        'Progression (%)': this.getSpentPercentage(p).toFixed(1)
-                    }));
-
-                    // Convert to Excel format (simple HTML table approach)
+                    // Create data for export with budget lines
                     let html = '<table><thead><tr>';
-                    const headers = Object.keys(data[0] || {});
-                    headers.forEach(h => html += `<th>${h}</th>`);
+                    html += '<th>Projet</th><th>Secteur</th><th>Lieu</th><th>Date de création</th><th>Ligne Budgetaire</th><th>Budget Alloué Ligne</th><th>Réalisations Ligne</th><th>Écart Ligne</th>';
                     html += '</tr></thead><tbody>';
-                    data.forEach(row => {
-                        html += '<tr>';
-                        headers.forEach(h => html += `<td>${row[h]}</td>`);
-                        html += '</tr>';
+
+                    this.filteredProjects.forEach(project => {
+                        const lines = this.allProjectLines.filter(l => l.project_id === project.id);
+                        if (lines.length > 0) {
+                            lines.forEach(line => {
+                                html += '<tr>';
+                                html += `<td>${project.name}</td>`;
+                                html += `<td>${project.department || '-'}</td>`;
+                                html += `<td>${project.location || '-'}</td>`;
+                                html += `<td>${project.date_of_creation || project.created_at || '-'}</td>`;
+                                html += `<td>${line.line_name || '-'}</td>`;
+                                html += `<td>${line.allocated_amount || 0}</td>`;
+                                html += `<td>${line.spent || 0}</td>`;
+                                html += `<td>${(parseFloat(line.allocated_amount || 0) - parseFloat(line.spent || 0))}</td>`;
+                                html += '</tr>';
+                            });
+                        } else {
+                            html += '<tr>';
+                            html += `<td>${project.name}</td>`;
+                            html += `<td>${project.department || '-'}</td>`;
+                            html += `<td>${project.location || '-'}</td>`;
+                            html += `<td>${project.date_of_creation || project.created_at || '-'}</td>`;
+                            html += `<td>-</td>`;
+                            html += `<td>${project.allocated_amount || 0}</td>`;
+                            html += `<td>${project.spent || 0}</td>`;
+                            html += `<td>${project.remaining || 0}</td>`;
+                            html += '</tr>';
+                        }
                     });
+
                     html += '</tbody></table>';
 
                     const blob = new Blob([html], {
@@ -2778,21 +2930,36 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 exportToCSV() {
                     this.showExportMenu = false;
-                    // Create CSV data
-                    const data = this.filteredProjects.map(p => [
-                        p.name,
-                        p.department || '-',
-                        p.location || '-',
-                        p.date_of_creation || p.created_at || '-',
-                        this.getProjectAllocatedFromLines(p),
-                        parseFloat(p.spent || 0),
-                        this.getProjectRemaining(p),
-                        this.getSpentPercentage(p).toFixed(1)
-                    ]);
+                    // Create CSV data with budget lines
+                    let csv = 'Projet,Secteur,Lieu,Date de création,Ligne Budgetaire,Budget Alloué Ligne,Réalisations Ligne,Écart Ligne\n';
 
-                    let csv = 'Projet,Secteur,Lieu,Date de création,Budget Alloué,Réalisation,Écart,Progression (%)\n';
-                    data.forEach(row => {
-                        csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+                    this.filteredProjects.forEach(project => {
+                        const lines = this.allProjectLines.filter(l => l.project_id === project.id);
+                        if (lines.length > 0) {
+                            lines.forEach(line => {
+                                csv += [
+                                    `"${project.name}"`,
+                                    `"${project.department || '-'}"`,
+                                    `"${project.location || '-'}"`,
+                                    `"${project.date_of_creation || project.created_at || '-'}"`,
+                                    `"${line.line_name || '-'}"`,
+                                    line.allocated_amount || 0,
+                                    line.spent || 0,
+                                    (parseFloat(line.allocated_amount || 0) - parseFloat(line.spent || 0))
+                                ].join(',') + '\n';
+                            });
+                        } else {
+                            csv += [
+                                `"${project.name}"`,
+                                `"${project.department || '-'}"`,
+                                `"${project.location || '-'}"`,
+                                `"${project.date_of_creation || project.created_at || '-'}"`,
+                                '"-"',
+                                project.allocated_amount || 0,
+                                project.spent || 0,
+                                project.remaining || 0
+                            ].join(',') + '\n';
+                        }
                     });
 
                     const blob = new Blob([csv], {
@@ -2803,6 +2970,220 @@ if (!isset($_SESSION['user_id'])) {
                     a.href = url;
                     a.download = `projets_${new Date().toISOString().split('T')[0]}.csv`;
                     a.click();
+                },
+                exportProjectToExcel(project) {
+                    this.projectExportMenuOpen = null;
+                    const lines = this.allProjectLines.filter(l => l.project_id === project.id);
+
+                    let html = '<table><thead><tr>';
+                    html += '<th>Projet</th><th>Secteur</th><th>Lieu</th><th>Date création</th><th>Ligne Budgetaire</th><th>Budget Alloué Ligne</th><th>Réalisations Ligne</th><th>Écart Ligne</th>';
+                    html += '</tr></thead><tbody>';
+
+                    if (lines.length > 0) {
+                        lines.forEach(line => {
+                            html += '<tr>';
+                            html += `<td>${project.name}</td>`;
+                            html += `<td>${project.department || '-'}</td>`;
+                            html += `<td>${project.location || '-'}</td>`;
+                            html += `<td>${project.date_of_creation || project.created_at || '-'}</td>`;
+                            html += `<td>${line.line_name || '-'}</td>`;
+                            html += `<td>${line.allocated_amount || 0}</td>`;
+                            html += `<td>${line.spent || 0}</td>`;
+                            html += `<td>${(parseFloat(line.allocated_amount || 0) - parseFloat(line.spent || 0))}</td>`;
+                            html += '</tr>';
+                        });
+                    } else {
+                        html += '<tr>';
+                        html += `<td>${project.name}</td>`;
+                        html += `<td>${project.department || '-'}</td>`;
+                        html += `<td>${project.location || '-'}</td>`;
+                        html += `<td>${project.date_of_creation || project.created_at || '-'}</td>`;
+                        html += `<td>-</td>`;
+                        html += `<td>${project.allocated_amount || 0}</td>`;
+                        html += `<td>${project.spent || 0}</td>`;
+                        html += `<td>${project.remaining || 0}</td>`;
+                        html += '</tr>';
+                    }
+
+                    html += '</tbody></table>';
+
+                    const blob = new Blob([html], {
+                        type: 'application/vnd.ms-excel'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `projet_${project.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.xls`;
+                    a.click();
+                },
+                exportProjectToCSV(project) {
+                    this.projectExportMenuOpen = null;
+                    const lines = this.allProjectLines.filter(l => l.project_id === project.id);
+
+                    let csv = 'Projet,Secteur,Lieu,Date création,Ligne Budgetaire,Budget Alloué Ligne,Réalisations Ligne,Écart Ligne\n';
+
+                    if (lines.length > 0) {
+                        lines.forEach(line => {
+                            csv += [
+                                `"${project.name}"`,
+                                `"${project.department || '-'}"`,
+                                `"${project.location || '-'}"`,
+                                `"${project.date_of_creation || project.created_at || '-'}"`,
+                                `"${line.line_name || '-'}"`,
+                                line.allocated_amount || 0,
+                                line.spent || 0,
+                                (parseFloat(line.allocated_amount || 0) - parseFloat(line.spent || 0))
+                            ].join(',') + '\n';
+                        });
+                    } else {
+                        csv += [
+                            `"${project.name}"`,
+                            `"${project.department || '-'}"`,
+                            `"${project.location || '-'}"`,
+                            `"${project.date_of_creation || project.created_at || '-'}"`,
+                            '"-"',
+                            project.allocated_amount || 0,
+                            project.spent || 0,
+                            project.remaining || 0
+                        ].join(',') + '\n';
+                    }
+
+                    const blob = new Blob([csv], {
+                        type: 'text/csv;charset=utf-8;'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `projet_${project.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                },
+                toggleProjectExportMenu(projectId) {
+                    this.projectExportMenuOpen = this.projectExportMenuOpen === projectId ? null : projectId;
+                },
+                async importFromExcel(event) {
+                    this.showImportMenu = false;
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const text = e.target.result;
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(text, 'text/html');
+                            const rows = doc.querySelectorAll('tr');
+
+                            // Skip header row
+                            for (let i = 1; i < rows.length; i++) {
+                                const cells = rows[i].querySelectorAll('td');
+                                if (cells.length >= 8) {
+                                    const projectData = {
+                                        name: cells[0].textContent.trim(),
+                                        department: cells[1].textContent.trim(),
+                                        location: cells[2].textContent.trim(),
+                                        date_of_creation: cells[3].textContent.trim(),
+                                        line_name: cells[4].textContent.trim(),
+                                        allocated_amount: parseFloat(cells[5].textContent.trim()) || 0,
+                                    };
+
+                                    await this.importProjectData(projectData);
+                                }
+                            }
+
+                            alert('Import réussi!');
+                            await this.fetchProjects();
+                            await this.fetchAllProjectLines();
+                        } catch (error) {
+                            console.error('Erreur d\'import:', error);
+                            alert('Erreur lors de l\'import du fichier');
+                        }
+                    };
+                    reader.readAsText(file);
+                    event.target.value = '';
+                },
+                async importFromCSV(event) {
+                    this.showImportMenu = false;
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const text = e.target.result;
+                            const lines = text.split('\n');
+
+                            // Skip header row
+                            for (let i = 1; i < lines.length; i++) {
+                                if (!lines[i].trim()) continue;
+
+                                const cells = lines[i].split(',').map(cell => cell.replace(/^"|"$/g, '').trim());
+
+                                if (cells.length >= 8) {
+                                    const projectData = {
+                                        name: cells[0],
+                                        department: cells[1] !== '-' ? cells[1] : '',
+                                        location: cells[2] !== '-' ? cells[2] : '',
+                                        date_of_creation: cells[3] !== '-' ? cells[3] : '',
+                                        line_name: cells[4] !== '-' ? cells[4] : '',
+                                        allocated_amount: parseFloat(cells[5]) || 0,
+                                    };
+
+                                    await this.importProjectData(projectData);
+                                }
+                            }
+
+                            alert('Import réussi!');
+                            await this.fetchProjects();
+                            await this.fetchAllProjectLines();
+                        } catch (error) {
+                            console.error('Erreur d\'import:', error);
+                            alert('Erreur lors de l\'import du fichier');
+                        }
+                    };
+                    reader.readAsText(file);
+                    event.target.value = '';
+                },
+                async importProjectData(data) {
+                    // Check if project exists
+                    let project = this.projects.find(p => p.name === data.name);
+
+                    if (!project) {
+                        // Create new project
+                        const response = await fetch(`${API_BASE_URL}?action=createProject`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                name: data.name,
+                                department: data.department,
+                                location: data.location,
+                                date_of_creation: data.date_of_creation,
+                                lines: data.line_name ? [{
+                                    budget_line_id: this.getLineIdByName(data.line_name),
+                                    allocated_amount: data.allocated_amount
+                                }] : []
+                            })
+                        });
+
+                        await response.json();
+                    }
+                },
+                getLineIdByName(lineName) {
+                    const line = this.availableLines.find(l => l.name === lineName);
+                    return line ? line.id : null;
+                },
+                getDocIcon(doc) {
+                    if (typeof doc === 'string') {
+                        return doc.toLowerCase().endsWith('.pdf') ? 'fas fa-file-pdf' : 'fas fa-image';
+                    }
+                    return doc.type === 'application/pdf' ? 'fas fa-file-pdf' : 'fas fa-image';
+                },
+                getDocName(doc) {
+                    if (typeof doc === 'string') {
+                        return doc;
+                    }
+                    return doc.name || 'Document';
                 },
                 prevPage() {
                     if (this.currentPage > 1) this.currentPage--;
@@ -2835,101 +3216,266 @@ if (!isset($_SESSION['user_id'])) {
 
                 // ==================== GRAPHIQUES GLOBAUX ====================
                 renderCharts() {
-                    if (this.budgetPieChart) this.budgetPieChart.destroy();
-                    if (this.progressBarChart) this.progressBarChart.destroy();
-
-                    const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981', '#f59e0b', '#8b5cf6'];
-
-                    if (this.$refs.budgetPieChart) {
-                        const ctx = this.$refs.budgetPieChart.getContext('2d');
-                        if (ctx && this.projects.length > 0) {
-                            this.budgetPieChart = new Chart(ctx, {
-                                type: 'doughnut',
-                                data: {
-                                    labels: this.projects.map(p => p.name),
-                                    datasets: [{
-                                        data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
-                                        backgroundColor: colors.slice(0, this.projects.length)
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            labels: {
-                                                color: '#ededed'
-                                            }
-                                        },
-                                        tooltip: {
-                                            callbacks: {
-                                                label: (ctx) => {
-                                                    const val = ctx.parsed;
-                                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                                    return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        }
+                    // Éviter les appels multiples simultanés
+                    if (this.isRenderingCharts) {
+                        console.log('[v0] Rendu des graphiques déjà en cours, appel ignoré');
+                        return;
                     }
 
-                    if (this.$refs.progressBarChart && this.projects.length > 0) {
-                        this.progressBarChart = new Chart(this.$refs.progressBarChart, {
-                            type: 'bar',
-                            data: {
-                                labels: this.projects.map(p => p.name),
-                                datasets: [{
-                                        label: 'Budget Alloue',
-                                        data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
-                                        backgroundColor: 'rgba(0, 112, 243, 0.7)',
-                                        borderColor: '#0070f3',
-                                        borderWidth: 1
-                                    },
-                                    {
-                                        label: 'Depense',
-                                        data: this.projects.map(p => parseFloat(p.spent || 0)),
-                                        backgroundColor: 'rgba(255, 184, 0, 0.7)',
-                                        borderColor: '#ffb800',
-                                        borderWidth: 1
+                    this.isRenderingCharts = true;
+
+                    // Attendre que Vue soit complètement monté
+                    setTimeout(() => {
+                        this.$nextTick(() => {
+                            try {
+                                // Détruire complètement les anciens graphiques
+                                if (this.budgetPieChart) {
+                                    try {
+                                        this.budgetPieChart.destroy();
+                                    } catch (e) {
+                                        console.log('[v0] Erreur destruction budgetPieChart:', e.message);
                                     }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        ticks: {
-                                            color: '#ededed'
-                                        },
-                                        grid: {
-                                            color: '#2a2a2a'
-                                        }
-                                    },
-                                    x: {
-                                        ticks: {
-                                            color: '#ededed'
-                                        },
-                                        grid: {
-                                            color: '#2a2a2a'
-                                        }
+                                    this.budgetPieChart = null;
+                                }
+                                if (this.progressBarChart) {
+                                    try {
+                                        this.progressBarChart.destroy();
+                                    } catch (e) {
+                                        console.log('[v0] Erreur destruction progressBarChart:', e.message);
                                     }
-                                },
-                                plugins: {
-                                    legend: {
-                                        labels: {
-                                            color: '#ededed'
+                                    this.progressBarChart = null;
+                                }
+
+                                // Vérifier que les canvas existent dans le DOM
+                                const pieCanvas = this.$refs.budgetPieChart;
+                                const barCanvas = this.$refs.progressBarChart;
+
+
+                                if (!pieCanvas || !barCanvas) {
+                                    console.error('[v0] Les refs des canvas ne sont pas disponibles');
+                                    this.isRenderingCharts = false;
+                                    return;
+                                }
+
+                                // Vérifier que les canvas sont dans le DOM
+                                if (!document.body.contains(pieCanvas) || !document.body.contains(barCanvas)) {
+                                    console.error('[v0] Les canvas ne sont pas dans le DOM');
+                                    this.isRenderingCharts = false;
+                                    return;
+                                }
+
+                                if (this.projects.length === 0) {
+                                    this.isRenderingCharts = false;
+                                    return;
+                                }
+
+                                const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981', '#f59e0b', '#8b5cf6'];
+
+                                // Graphique Pie - Répartition des budgets
+                                if (pieCanvas && this.projects.length > 0) {
+                                    try {
+                                        const parent = pieCanvas.parentElement;
+
+                                        // S'assurer que le conteneur a les bonnes dimensions
+                                        if (parent) {
+                                            parent.style.position = 'relative';
+                                            parent.style.height = '400px';
+                                            parent.style.width = '100%';
                                         }
+
+                                        const ctx = pieCanvas.getContext('2d');
+                                        if (!ctx) {
+                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour pieCanvas');
+                                            this.isRenderingCharts = false;
+                                            return;
+                                        }
+
+                                        if (ctx) {
+                                            this.budgetPieChart = new Chart(ctx, {
+                                                type: 'doughnut',
+                                                data: {
+                                                    labels: this.projects.map(p => p.name),
+                                                    datasets: [{
+                                                        data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
+                                                        backgroundColor: colors.slice(0, this.projects.length),
+                                                        borderColor: '#111111',
+                                                        borderWidth: 2
+                                                    }]
+                                                },
+                                                options: {
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    devicePixelRatio: 2,
+                                                    plugins: {
+                                                        legend: {
+                                                            display: true,
+                                                            position: 'bottom',
+                                                            labels: {
+                                                                color: '#ededed',
+                                                                padding: 15,
+                                                                font: {
+                                                                    size: 13,
+                                                                    weight: '600'
+                                                                },
+                                                                generateLabels: (chart) => {
+                                                                    const data = chart.data;
+                                                                    return data.labels.map((label, i) => ({
+                                                                        text: label,
+                                                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                                                        hidden: false,
+                                                                        index: i
+                                                                    }));
+                                                                }
+                                                            }
+                                                        },
+                                                        tooltip: {
+                                                            enabled: true,
+                                                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                                            padding: 12,
+                                                            cornerRadius: 8,
+                                                            titleFont: {
+                                                                size: 14,
+                                                                weight: 'bold'
+                                                            },
+                                                            bodyFont: {
+                                                                size: 13
+                                                            },
+                                                            callbacks: {
+                                                                label: (ctx) => {
+                                                                    const val = ctx.parsed;
+                                                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                                                    return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error('[v0] Erreur création graphique pie:', e);
                                     }
                                 }
+
+                                // Graphique Bar - Budget vs Réalisations
+                                if (barCanvas && this.projects.length > 0) {
+                                    try {
+                                        const parent2 = barCanvas.parentElement;
+
+                                        // S'assurer que le conteneur a les bonnes dimensions
+                                        if (parent2) {
+                                            parent2.style.position = 'relative';
+                                            parent2.style.height = '400px';
+                                            parent2.style.width = '100%';
+                                        }
+
+                                        const ctx2 = barCanvas.getContext('2d');
+                                        if (!ctx2) {
+                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour barCanvas');
+                                            this.isRenderingCharts = false;
+                                            return;
+                                        }
+
+                                        if (ctx2) {
+                                            this.progressBarChart = new Chart(ctx2, {
+                                                type: 'bar',
+                                                data: {
+                                                    labels: this.projects.map(p => p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name),
+                                                    datasets: [{
+                                                            label: 'Budget Alloué',
+                                                            data: this.projects.map(p => this.getProjectAllocatedFromLines(p)),
+                                                            backgroundColor: 'rgba(0, 112, 243, 0.8)',
+                                                            borderColor: '#0070f3',
+                                                            borderWidth: 2,
+                                                            borderRadius: 4
+                                                        },
+                                                        {
+                                                            label: 'Réalisations',
+                                                            data: this.projects.map(p => parseFloat(p.spent || 0)),
+                                                            backgroundColor: 'rgba(255, 184, 0, 0.8)',
+                                                            borderColor: '#ffb800',
+                                                            borderWidth: 2,
+                                                            borderRadius: 4
+                                                        }
+                                                    ]
+                                                },
+                                                options: {
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    devicePixelRatio: 2,
+                                                    scales: {
+                                                        y: {
+                                                            beginAtZero: true,
+                                                            max: Math.max(...this.projects.map(p => Math.max(this.getProjectAllocatedFromLines(p), parseFloat(p.spent || 0)))) * 1.1,
+                                                            ticks: {
+                                                                color: '#ededed',
+                                                                font: {
+                                                                    size: 12
+                                                                },
+                                                                callback: function(value) {
+                                                                    return value.toLocaleString();
+                                                                }
+                                                            },
+                                                            grid: {
+                                                                color: '#2a2a2a',
+                                                                drawBorder: true
+                                                            }
+                                                        },
+                                                        x: {
+                                                            ticks: {
+                                                                color: '#ededed',
+                                                                font: {
+                                                                    size: 12
+                                                                }
+                                                            },
+                                                            grid: {
+                                                                color: '#2a2a2a',
+                                                                display: false
+                                                            }
+                                                        }
+                                                    },
+                                                    plugins: {
+                                                        legend: {
+                                                            display: true,
+                                                            labels: {
+                                                                color: '#ededed',
+                                                                padding: 15,
+                                                                font: {
+                                                                    size: 13,
+                                                                    weight: '600'
+                                                                }
+                                                            }
+                                                        },
+                                                        tooltip: {
+                                                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                                            padding: 12,
+                                                            cornerRadius: 8,
+                                                            titleFont: {
+                                                                size: 14,
+                                                                weight: 'bold'
+                                                            },
+                                                            bodyFont: {
+                                                                size: 13
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error('[v0] Erreur création graphique bar:', e);
+                                    }
+                                }
+
+                                console.log('[v0] Rendu des graphiques terminé');
+                                this.isRenderingCharts = false;
+                            } catch (error) {
+                                console.error('[v0] Erreur générale renderCharts:', error);
+                                this.isRenderingCharts = false;
                             }
                         });
-                    }
+                    }, 200); // Délai de 200ms pour s'assurer que les refs sont montées
                 },
 
                 // ==================== GRAPHIQUES DETAIL PROJET ====================
@@ -3446,6 +3992,59 @@ if (!isset($_SESSION['user_id'])) {
                         </div>
                         ${sectionContent}`;
                     this.buildPrintWindow(`${project.name} - ${section} - OrizonPlus`, body);
+                },
+
+                toggleProjectExportMenu(projectId) {
+                    if (this.projectExportMenuOpen === projectId) {
+                        this.projectExportMenuOpen = null;
+                    } else {
+                        this.projectExportMenuOpen = projectId;
+                    }
+                },
+
+                exportProjectToExcel(project) {
+                    // Simple export CSV (compatible Excel)
+                    this.exportProjectToCSV(project);
+                    this.projectExportMenuOpen = null;
+                },
+
+                exportProjectToCSV(project) {
+                    const lines = this.allProjectLines[project.id] || [];
+                    const allocated = this.getProjectAllocatedFromLines(project);
+                    const spent = parseFloat(project.spent || 0);
+                    const remaining = allocated - spent;
+
+                    let csv = 'Type,Nom,Montant Alloue,Montant Depense,Restant\n';
+                    csv += `Projet,${project.name},${allocated},${spent},${remaining}\n`;
+                    csv += '\nLignes Budgetaires\n';
+                    csv += 'Ligne,Montant Alloue,Montant Depense,Restant,% Utilise\n';
+
+                    lines.forEach(line => {
+                        const la = parseFloat(line.allocated_amount || 0);
+                        const ls = this.getLineSpent(line);
+                        const lr = la - ls;
+                        const lp = la > 0 ? ((ls / la) * 100).toFixed(1) : '0.0';
+                        csv += `${line.name || line.line_name},${la},${ls},${lr},${lp}%\n`;
+                    });
+
+                    const blob = new Blob([csv], {
+                        type: 'text/csv;charset=utf-8;'
+                    });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `projet_${project.name}_${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+                    this.projectExportMenuOpen = null;
+                },
+
+                setSortBy(field) {
+                    if (this.sortBy === field) {
+                        this.sortAsc = !this.sortAsc;
+                    } else {
+                        this.sortBy = field;
+                        this.sortAsc = true;
+                    }
+                    this.sortProjects();
                 },
 
                 logout() {
