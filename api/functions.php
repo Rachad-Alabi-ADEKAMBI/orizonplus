@@ -4,22 +4,7 @@ session_start();
 /**
  * Connexion à la base de données
  */
-function getPDO(): PDO
-{
-    $host = 'localhost';
-    $db   = 'orizonplus';
-    $user = 'root';
-    $pass = '';
-    $charset = 'utf8mb4';
-
-    $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-    $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ];
-
-    return new PDO($dsn, $user, $pass, $options);
-}
+include 'db.php';
 
 /**
  * Helpers JSON
@@ -61,14 +46,20 @@ function login()
             jsonError('Champs "name" et "password" obligatoires', 400);
         }
 
-        $stmt = $pdo->prepare("SELECT id, name, password, role FROM users WHERE name = ?");
+        // Vérifier l'utilisateur et son statut
+        $stmt = $pdo->prepare("SELECT id, name, password, role, status FROM users WHERE name = ?");
         $stmt->execute([$name]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user || $user['status'] !== 'Actif') {
+            jsonError('Ce compte n\'existe pas', 404);
+        }
+
+        if (!password_verify($password, $user['password'])) {
             jsonError('Identifiants invalides', 401);
         }
 
+        // Stocker les infos en session
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_role'] = $user['role'];
@@ -78,18 +69,19 @@ function login()
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur base de données'
+            'message' => 'Erreur base de données : ' . $e->getMessage()
         ]);
         exit;
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur interne'
+            'message' => 'Erreur interne : ' . $e->getMessage()
         ]);
         exit;
     }
 }
+
 
 
 
@@ -114,61 +106,76 @@ function getProjects()
 {
     $pdo = getPDO();
 
-    $stmt = $pdo->prepare("
-        SELECT 
-            p.id,
-            p.name,
-            p.description,
-            p.department,
-            p.location,
-            p.documents,
-            p.date_of_creation,
-            p.created_at,
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.department,
+                p.location,
+                p.documents,
+                p.date_of_creation,
+                p.created_at,
+                IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) AS allocated_amount,
+                IFNULL(SUM(e.amount), 0) AS spent,
+                (
+                    IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) 
+                    - IFNULL(SUM(e.amount), 0)
+                ) AS remaining
+            FROM projects p
+            LEFT JOIN project_budget_lines pbl 
+                ON pbl.project_id = p.id
+            LEFT JOIN expenses e 
+                ON e.project_budget_line_id = pbl.id
+            GROUP BY 
+                p.id,
+                p.name,
+                p.description,
+                p.department,
+                p.location,
+                p.documents,
+                p.date_of_creation,
+                p.created_at
+            ORDER BY p.name
+        ");
+        $stmt->execute();
 
-            IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) AS allocated_amount,
-            IFNULL(SUM(e.amount), 0) AS spent,
-            (
-                IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) 
-                - IFNULL(SUM(e.amount), 0)
-            ) AS remaining
+        $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        FROM projects p
-        LEFT JOIN project_budget_lines pbl 
-            ON pbl.project_id = p.id
-        LEFT JOIN expenses e 
-            ON e.project_budget_line_id = pbl.id
+        // S'assurer que $projects est un tableau
+        if (!is_array($projects)) {
+            $projects = [];
+        }
 
-        GROUP BY 
-            p.id,
-            p.name,
-            p.description,
-            p.department,
-            p.location,
-            p.documents,
-            p.date_of_creation,
-            p.created_at
+        foreach ($projects as &$project) {
 
-        ORDER BY p.name
-    ");
+            // S'assurer que les montants sont des floats
+            $project['allocated_amount'] = isset($project['allocated_amount']) ? (float) $project['allocated_amount'] : 0.0;
+            $project['spent'] = isset($project['spent']) ? (float) $project['spent'] : 0.0;
+            $project['remaining'] = isset($project['remaining']) ? (float) $project['remaining'] : 0.0;
 
-    $stmt->execute();
-    $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Convertir le JSON documents en tableau, en cas d'erreur retourner tableau vide
+            $decoded = json_decode($project['documents'], true);
+            $project['documents'] = is_array($decoded) ? $decoded : [];
+        }
 
-    foreach ($projects as &$project) {
-
-        $project['allocated_amount'] = (float) $project['allocated_amount'];
-        $project['spent'] = (float) $project['spent'];
-        $project['remaining'] = (float) $project['remaining'];
-
-        // convertir JSON documents en tableau PHP
-        $project['documents'] = $project['documents']
-            ? json_decode($project['documents'], true)
-            : [];
+        // Envoyer la réponse JSON
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'data' => $projects
+        ]);
+        exit;
+    } catch (PDOException $e) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de la récupération des projets : ' . $e->getMessage()
+        ]);
+        exit;
     }
-
-    jsonSuccess($projects);
 }
-
 
 
 
