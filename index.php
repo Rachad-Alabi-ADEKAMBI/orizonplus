@@ -1227,35 +1227,13 @@ if (!isset($_SESSION['user_id'])) {
                             Imprimer
                         </button>
                         <div style="position: relative;">
-                            <button class="btn btn-secondary btn-sm" @click="showImportMenu = !showImportMenu">
-                                <i class="fas fa-upload"></i>
-                                Importer
-                            </button>
-                            <div v-if="showImportMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 100; min-width: 150px;">
-                                <label style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; color: var(--text-primary); cursor: pointer; transition: background 0.2s; margin: 0;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-                                    <i class="fas fa-file-excel"></i> Excel
-                                    <input type="file" accept=".xls,.xlsx" @change="importFromExcel" style="display: none;">
-                                </label>
-                                <label style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; color: var(--text-primary); cursor: pointer; transition: background 0.2s; margin: 0;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-                                    <i class="fas fa-file-csv"></i> CSV
-                                    <input type="file" accept=".csv" @change="importFromCSV" style="display: none;">
-                                </label>
-                            </div>
-                        </div>
-                        <div style="position: relative;">
-                            <button class="btn btn-secondary btn-sm" @click="showExportMenu = !showExportMenu">
+                            <button class="btn btn-secondary btn-sm" @click="exportAll">
                                 <i class="fas fa-download"></i>
                                 Exporter
                             </button>
-                            <div v-if="showExportMenu" style="position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 100; min-width: 150px;">
-                                <button @click="exportToExcel" style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--text-primary); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-                                    <i class="fas fa-file-excel"></i> Excel
-                                </button>
-                                <button @click="exportToCSV" style="display: block; width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--text-primary); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">
-                                    <i class="fas fa-file-csv"></i> CSV
-                                </button>
-                            </div>
                         </div>
+
+
                         <button v-if="user_role === 'admin'" class="btn btn-primary" @click="openProjectModal">
                             <i class="fas fa-plus"></i>
                             Nouveau Projet
@@ -1316,6 +1294,11 @@ if (!isset($_SESSION['user_id'])) {
                                         <i v-if="sortBy === 'department'"
                                             :class="sortAsc ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
                                     </th>
+
+                                    <th>
+                                        Localisation
+
+                                    </th>
                                     <th @click="setSortBy('allocated_amount')">
                                         Budget Alloue
                                         <i v-if="sortBy === 'allocated_amount'"
@@ -1340,6 +1323,7 @@ if (!isset($_SESSION['user_id'])) {
                                     :class="getProjectRowClass(project)">
                                     <td data-label="Projet"><strong>{{ project.name }}</strong></td>
                                     <td data-label="Secteur">{{ project.department || '-' }}</td>
+                                    <td data-label="Localisation">{{ project.location || '-' }}</td>
                                     <td data-label="Budget Alloué">{{ formatCurrency(getProjectAllocatedFromLines(project)) }}</td>
                                     <td data-label="Réalisation">{{ formatCurrency(project.spent) }}</td>
                                     <td data-label="Écart">
@@ -1362,17 +1346,41 @@ if (!isset($_SESSION['user_id'])) {
                                                 title="Voir details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button v-if="user_role === 'admin'" class="btn btn-primary btn-sm" @click="editProject(project)"
+
+                                            <button v-if="user_role === 'admin'  && project.project_status === `Déverrouillé`"
+                                                class="btn btn-primary btn-sm" @click="editProject(project)"
                                                 title="Modifier">
                                                 <i class="fas fa-edit"></i>
                                             </button>
+
+
+
+
                                             <button class="btn btn-warning btn-sm" @click="printProjectDetails(project)"
                                                 title="Imprimer">
                                                 <i class="fas fa-print"></i>
                                             </button>
-                                            <button v-if="user_role === 'admin'" class="btn btn-danger btn-sm" @click="deleteProject(project.id)"
+
+                                            <button v-if="user_role === 'admin' && project.project_status === `Déverrouillé`"
+                                                class="btn btn-danger btn-sm" @click="deleteProject(project.id)"
                                                 title="Supprimer">
                                                 <i class="fas fa-trash"></i>
+                                            </button>
+
+                                            <button
+                                                v-if="user_role === 'admin' && project.project_status == `Déverrouillé`"
+                                                class="btn btn-link btn-sm"
+                                                @click="lockProject(project.id)"
+                                                title="Clôturer">
+                                                <i class="fas fa-unlock"></i>
+                                            </button>
+
+                                            <button
+                                                v-if="user_role === 'admin' && project.project_status === 'Verrouillé'"
+                                                class="btn btn-success btn-sm"
+                                                @click="unlockProject(project.id)"
+                                                title="Ouvrir">
+                                                <i class="fas fa-unlock"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -1705,7 +1713,7 @@ if (!isset($_SESSION['user_id'])) {
                         </button>
                         <button class="tab-btn" :class="{active: detailTab === 'expenses'}"
                             @click="detailTab = 'expenses'">
-                            <i class="fas fa-receipt"></i> Depenses ({{ projectExpenses.length }})
+                            <i class="fas fa-receipt"></i> Réalisations ({{ projectExpenses.length }})
                         </button>
                         <button class="tab-btn" :class="{active: detailTab === 'documents'}"
                             @click="detailTab = 'documents'">
@@ -1717,7 +1725,7 @@ if (!isset($_SESSION['user_id'])) {
                         </button>
                         <button class="tab-btn" :class="{active: detailTab === 'summary'}"
                             @click="detailTab = 'summary'">
-                            <i class="fas fa-file-alt"></i> Resume
+                            <i class="fas fa-file-alt"></i> Résumé
                         </button>
                     </div>
 
@@ -1799,14 +1807,14 @@ if (!isset($_SESSION['user_id'])) {
                     <div v-if="detailTab === 'expenses'" class="tab-content active">
                         <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
                             <button class="btn btn-success btn-sm" @click="printSection('expenses')">
-                                <i class="fas fa-print"></i> Imprimer Depenses
+                                <i class="fas fa-print"></i> Imprimer Réalisations
                             </button>
                         </div>
                         <div v-if="projectExpenses.length > 0">
                             <div class="summary-card">
                                 <div class="summary-grid">
                                     <div class="summary-item">
-                                        <div class="label">Total des depenses</div>
+                                        <div class="label">Total des réalisations</div>
                                         <div class="value" style="color: var(--accent-yellow);">
                                             {{ formatCurrency(expensesTotal) }}
                                         </div>
@@ -2087,6 +2095,15 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
         </div>
+    </div>
+    <div class="pagefooter">
+        <p class="text-center text-secondary small text-center mt-4"
+            style="text-align: center">
+            &copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
+            <a class="text text-secondary"
+                style="text-decoration: none; font-weight: bold; color: white;"
+                href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+        </p>
     </div>
 
     <script>
@@ -2780,6 +2797,46 @@ if (!isset($_SESSION['user_id'])) {
                         console.error('Error deleting project:', error);
                     }
                 },
+                async lockProject(id) {
+                    if (!confirm('Clôturer ce projet  ?')) return;
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=lockProject`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id
+                            })
+                        });
+                        const data = await response.json();
+                        alert(data.message);
+                        await this.fetchProjects();
+                        await this.fetchAllProjectLines();
+                    } catch (error) {
+                        console.error('Error locking project:', error);
+                    }
+                },
+                async unlockProject(id) {
+                    if (!confirm('Ouvrir de nouveau ce projet  ?')) return;
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=unlockProject`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id
+                            })
+                        });
+                        const data = await response.json();
+                        alert(data.message);
+                        await this.fetchProjects();
+                        await this.fetchAllProjectLines();
+                    } catch (error) {
+                        console.error('Error unlocking project:', error);
+                    }
+                },
 
                 // ==================== DETAIL PROJET ====================
                 async viewProject(project) {
@@ -2869,10 +2926,45 @@ if (!isset($_SESSION['user_id'])) {
                     this.newProject.documents.splice(index, 1);
                 },
                 viewDocument(doc) {
-                    if (doc.data) {
-                        window.open(doc.data, '_blank');
+                    if (!doc) return;
+
+                    let filePath = doc.document || doc;
+                    if (!filePath) return;
+
+                    // Nettoyer un éventuel slash au début
+                    filePath = filePath.replace(/^\/+/, '');
+
+                    // Ajouter "images/" si absent
+                    if (!filePath.startsWith('images/')) {
+                        filePath = 'images/' + filePath;
+                    }
+
+                    // Construire l’URL correcte basée sur le dossier courant du projet
+                    const basePath = window.location.pathname.split('/').slice(0, -1).join('/');
+                    const fullUrl = window.location.origin + basePath + '/' + filePath;
+
+                    console.log('Opening document:', fullUrl);
+
+                    window.open(fullUrl, '_blank');
+                },
+                methods: {
+                    getImgUrl(fileName) {
+                        if (!fileName) return '';
+
+                        // Nettoyer un éventuel slash au début
+                        fileName = fileName.replace(/^\/+/, '');
+
+                        // Ajouter "images/" si absent
+                        if (!fileName.startsWith('images/')) {
+                            fileName = 'images/' + fileName;
+                        }
+
+                        // Construire l’URL correcte basée sur le projet
+                        const basePath = window.location.pathname.split('/').slice(0, -1).join('/');
+                        return window.location.origin + basePath + '/' + fileName;
                     }
                 },
+
                 deleteDocument(index) {
                     if (confirm('Supprimer ce document ?')) {
                         this.selectedProject.documents.splice(index, 1);
@@ -3183,6 +3275,14 @@ if (!isset($_SESSION['user_id'])) {
                         return doc.toLowerCase().endsWith('.pdf') ? 'fas fa-file-pdf' : 'fas fa-image';
                     }
                     return doc.type === 'application/pdf' ? 'fas fa-file-pdf' : 'fas fa-image';
+                },
+                exportAll() {
+                    // Ouvre le fichier export.php dans un nouvel onglet
+                    const exportUrl = 'api/export.php';
+                    window.open(exportUrl, '_blank');
+
+                    // Affiche un message après
+                    alert('Exportation effectuée !');
                 },
                 getDocName(doc) {
                     if (typeof doc === 'string') {

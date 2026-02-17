@@ -965,7 +965,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             <i class="fas fa-bell"></i> Notifications
                         </a>
                     </li>
-                    <li><button @click="logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> Déconnexion</button></li>
+                    <li>
+                        <a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
+                            <i class="fas fa-sign-out-alt"></i> Déconnexion
+                        </a>
+                    </li>
                 </ul>
                 <button class="hamburger-btn" @click="menuOpen = !menuOpen">
                     <i class="fas fa-bars"></i>
@@ -1010,6 +1014,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     <div class="stat-value">{{ formatCurrency(stats.thisMonth) }}</div>
                     <div class="stat-change">{{ new Date().toLocaleDateString('fr-FR', { month: 'long' }) }}</div>
                 </div>
+                <!--
 
                 <div class="stat-card">
                     <div class="stat-header">
@@ -1021,6 +1026,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     <div class="stat-value">{{ stats.overBudget }}</div>
                     <div class="stat-change">Lignes dépassées</div>
                 </div>
+
+-->
             </div>
 
             <!-- Section des graphiques -->
@@ -1293,6 +1300,16 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="pagefooter">
+        <p class="text-center text-secondary small text-center mt-4"
+            style="text-align: center">
+            &copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
+            <a class="text text-secondary"
+                style="text-decoration: none; font-weight: bold; color: white;"
+                href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+        </p>
     </div>
 
     <script>

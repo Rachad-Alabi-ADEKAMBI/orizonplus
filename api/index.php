@@ -128,6 +128,14 @@ switch ($action) {
         deleteBudgetLine();
         break;
 
+    case 'lockProject':
+        lockProject();
+        break;
+
+    case 'unlockProject':
+        unlockProject();
+        break;
+
     // 💰 DÉPENSES
     case 'getExpenses':
         getExpenses();

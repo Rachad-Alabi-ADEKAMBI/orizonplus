@@ -108,37 +108,22 @@ function getProjects()
 
     try {
         $stmt = $pdo->prepare("
-            SELECT 
-                p.id,
-                p.name,
-                p.description,
-                p.department,
-                p.location,
-                p.documents,
-                p.date_of_creation,
-                p.created_at,
-                IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) AS allocated_amount,
-                IFNULL(SUM(e.amount), 0) AS spent,
-                (
-                    IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) 
-                    - IFNULL(SUM(e.amount), 0)
-                ) AS remaining
-            FROM projects p
-            LEFT JOIN project_budget_lines pbl 
-                ON pbl.project_id = p.id
-            LEFT JOIN expenses e 
-                ON e.project_budget_line_id = pbl.id
-            GROUP BY 
-                p.id,
-                p.name,
-                p.description,
-                p.department,
-                p.location,
-                p.documents,
-                p.date_of_creation,
-                p.created_at
-            ORDER BY p.name
-        ");
+    SELECT 
+        p.*,
+        IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) AS allocated_amount,
+        IFNULL(SUM(e.amount), 0) AS spent,
+        (
+            IFNULL(SUM(DISTINCT pbl.allocated_amount), 0) 
+            - IFNULL(SUM(e.amount), 0)
+        ) AS remaining
+    FROM projects p
+    LEFT JOIN project_budget_lines pbl 
+        ON pbl.project_id = p.id
+    LEFT JOIN expenses e 
+        ON e.project_budget_line_id = pbl.id
+    GROUP BY p.id
+    ORDER BY p.name
+");
         $stmt->execute();
 
         $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -194,6 +179,7 @@ function createProject()
     $location = $_POST['location'] ?? null;
     $date_of_creation = $_POST['date_of_creation'] ?? null;
     $lines = json_decode($_POST['lines'] ?? '[]', true);
+    $status = "Déverouillé";
 
     if (empty($name)) {
         jsonError('Nom de projet manquant');
@@ -233,8 +219,8 @@ function createProject()
         // 🗂 Insertion projet
         $stmt = $pdo->prepare("
             INSERT INTO projects
-            (name, description, department, location, documents, date_of_creation)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (name, description, department, location, documents,  status, date_of_creation)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -243,6 +229,7 @@ function createProject()
             $department,
             $location,
             json_encode($uploadedFiles),
+            $status,
             $date_of_creation
         ]);
 
@@ -278,6 +265,64 @@ function createProject()
     } catch (Exception $e) {
         $pdo->rollBack();
         jsonError('Erreur création projet');
+    }
+}
+
+function lockProject()
+{
+    try {
+        $pdo = getPDO();
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($data['id'])) {
+            jsonError('ID du projet manquant');
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE projects 
+            SET project_status = 'Verrouillé'
+            WHERE id = ?
+        ");
+
+        $stmt->execute([(int)$data['id']]);
+
+        if ($stmt->rowCount() === 0) {
+            jsonError('Projet introuvable');
+        }
+
+        jsonSuccess([], 'Projet clôturé avec succès');
+    } catch (Exception $e) {
+        jsonError('Erreur lors du verrouillage du projet');
+    }
+}
+
+function unlockProject()
+{
+    try {
+        $pdo = getPDO();
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($data['id'])) {
+            jsonError('ID du projet manquant');
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE projects 
+            SET project_status = 'Déverrouillé'
+            WHERE id = ?
+        ");
+
+        $stmt->execute([(int)$data['id']]);
+
+        if ($stmt->rowCount() === 0) {
+            jsonError('Projet introuvable');
+        }
+
+        jsonSuccess([], 'Projet ouvert avec succès');
+    } catch (Exception $e) {
+        jsonError('Erreur lors du déverrouillage du projet');
     }
 }
 

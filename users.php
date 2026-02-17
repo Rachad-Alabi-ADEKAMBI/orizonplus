@@ -712,10 +712,11 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 							<i class="fas fa-bell"></i> Notifications
 						</a>
 					</li>
-					<a href="logout.php" class="nav-link">
-						<i class="fas fa-sign-out-alt"></i>
-						<span>Déconnexion</span>
-					</a>
+					<li>
+						<a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
+							<i class="fas fa-sign-out-alt"></i> Déconnexion
+						</a>
+					</li>
 				</nav>
 				<button class="hamburger-btn" @click="menuOpen = !menuOpen">
 					<i class="fas fa-bars"></i>
@@ -955,6 +956,16 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 				</div>
 			</div>
 		</div>
+	</div>
+
+	<div class="pagefooter">
+		<p class="text-center text-secondary small text-center mt-4"
+			style="text-align: center">
+			&copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
+			<a class="text text-secondary"
+				style="text-decoration: none; font-weight: bold; color: white;"
+				href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+		</p>
 	</div>
 
 	<script>

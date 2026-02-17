@@ -427,15 +427,16 @@ if (isset($_SESSION['user_id'])) {
 
 
             </form>
+
+            <p class="text-center text-secondary small text-center mt-4"
+                style="text-align: center; margin-top: 30px; ">
+                &copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
+                <a class="text text-secondary"
+                    style="text-decoration: none; color:   white; font-weight: bold;"
+                    href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+            </p>
         </div>
 
-        <p class="text-center text-secondary small text-center mt-4"
-            style="text-align: center">
-            &copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
-            <a class="text text-secondary"
-                style="text-decoration: none; color:   #00d4ff; font-weight: bold;"
-                href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
-        </p>
     </div>
 
     <script>
