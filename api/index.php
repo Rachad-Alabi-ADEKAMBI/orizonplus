@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type');
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 
@@ -28,12 +27,8 @@ if (!$action) {
     jsonError("Paramètre 'action' manquant");
 }
 
-// Vérifier connexion (sauf login)
-/*
-if (!in_array($action, $publicActions) && !isLoggedIn()) {
-    jsonError("Utilisateur non authentifié", 401);
-}
-*/
+
+
 switch ($action) {
 
     // 🔐 AUTH
@@ -119,6 +114,10 @@ switch ($action) {
         getProjectDetails();
         break;
 
+    case 'newExpenseValidation':
+        newExpenseValidation();
+        break;
+
     case 'deleteProjectBudgetLine':
         deleteProjectBudgetLine();
         break;
@@ -130,6 +129,18 @@ switch ($action) {
 
     case 'lockProject':
         lockProject();
+        break;
+
+    case 'acceptExpenseValidation':
+        acceptExpenseValidation();
+        break;
+
+    case 'rejectExpenseValidation':
+        rejectExpenseValidation();
+        break;
+
+    case 'getAllExpensesValidations':
+        getAllExpensesValidations();
         break;
 
     case 'unlockProject':

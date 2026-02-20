@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_role = $_SESSION['user_role'] ?? 'consultant';
+$user_id = $_SESSION['user_id'] ?? null;
 $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 ?>
 
@@ -782,23 +783,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             max-height: 100%;
         }
 
-        @media (max-width: 1024px) {
-            .chart-container {
-                height: 350px;
-                min-height: 300px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .chart-container {
-                height: 300px;
-                min-height: 250px;
-            }
-        }
-
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -811,15 +798,17 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
         }
 
         .chart-title {
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 1rem;
-            color: var(--text-secondary);
         }
 
         .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
             color: var(--text-secondary);
         }
 
@@ -831,29 +820,32 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
         .pagination {
             display: flex;
-            justify-content: center;
-            align-items: center;
             gap: 0.5rem;
             margin-top: 1.5rem;
+            justify-content: center;
             flex-wrap: wrap;
         }
 
         .pagination button {
-            padding: 0.5rem 1rem;
-            background: var(--bg-tertiary);
+            padding: 0.5rem 0.75rem;
             border: 1px solid var(--border-color);
-            border-radius: var(--radius);
+            background: var(--bg-tertiary);
             color: var(--text-primary);
+            border-radius: var(--radius);
             cursor: pointer;
-            min-width: 40px;
+            transition: all 0.3s ease;
+            font-weight: 600;
         }
 
         .pagination button:hover:not(:disabled) {
+            border-color: var(--accent-blue);
             background: var(--accent-blue);
         }
 
         .pagination button.active {
             background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
         }
 
         .pagination button:disabled {
@@ -861,14 +853,44 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             cursor: not-allowed;
         }
 
-        /* Responsive Tables with data-label */
+        .file-count-info {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .file-count-info.warning {
+            color: var(--accent-yellow);
+        }
+
+        .file-count-info.danger {
+            color: var(--accent-red);
+        }
+
+        .validation-badge {
+            background: rgba(255, 184, 0, 0.2);
+            color: var(--accent-yellow);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 350px;
+                min-height: 300px;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
             }
 
             .section-header {
@@ -876,25 +898,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 align-items: flex-start;
             }
 
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
             .filters {
                 flex-direction: column;
             }
 
+            .filter-select,
             .filter-input,
-            .search-box {
-                min-width: 100%;
-            }
-
-            .modal {
-                max-width: 95%;
-            }
-
-            .table-container {
-                border: none;
-            }
-
-            .table thead {
-                display: none;
+            .search-input {
+                width: 100%;
             }
 
             .table tbody tr {
@@ -960,9 +975,15 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </a>
                     </li>
 
-                    <li v-if="user_role=='admin'">
+                    <li v-if="user_role == 'admin' || user_role == 'utilisateur'">
                         <a href="notifications.php" class="nav-link" @click="closeMobileMenu">
                             <i class="fas fa-bell"></i> Notifications
+                        </a>
+                    </li>
+
+                    <li v-if="user_role == 'utilisateur'">
+                        <a href="parameters.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-cog"></i> Paramètres
                         </a>
                     </li>
                     <li>
@@ -1014,20 +1035,28 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     <div class="stat-value">{{ formatCurrency(stats.thisMonth) }}</div>
                     <div class="stat-change">{{ new Date().toLocaleDateString('fr-FR', { month: 'long' }) }}</div>
                 </div>
-                <!--
 
-                <div class="stat-card">
+                <div v-if="user_role == 'admin'" class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Hors Budget</span>
-                        <div class="stat-icon" style="background: rgba(255, 59, 59, 0.2); color: var(--accent-red);">
-                            <i class="fas fa-exclamation-triangle"></i>
+                        <span class="stat-label">Validations En Attente</span>
+                        <div class="stat-icon" style="background: rgba(255, 184, 0, 0.2); color: var(--accent-yellow);">
+                            <i class="fas fa-hourglass-half"></i>
                         </div>
                     </div>
-                    <div class="stat-value">{{ stats.overBudget }}</div>
-                    <div class="stat-change">Lignes dépassées</div>
+                    <div class="stat-value">{{ stats.pendingValidations }}</div>
+                    <div class="stat-change">À traiter</div>
                 </div>
 
--->
+                <div v-else class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Mes Validations En Attente</span>
+                        <div class="stat-icon" style="background: rgba(255, 184, 0, 0.2); color: var(--accent-yellow);">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ stats.myPendingValidations }}</div>
+                    <div class="stat-change">Demandes personnelles</div>
+                </div>
             </div>
 
             <!-- Section des graphiques -->
@@ -1046,15 +1075,21 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
             </div>
 
-            <div class="section-card">
+            <div class="section-card" v-show="!showValidationsSection">
                 <div class="section-header">
                     <h2 class="section-title">
                         <i class="fas fa-wallet"></i>
                         Gestion des Dépenses
                     </h2>
-                    <button v-if="canEdit" @click="openExpenseModal" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Nouvelle Dépense
-                    </button>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button v-if="canEdit" @click="toggleValidationsSection" class="btn btn-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Dépassements de Budget
+                        </button>
+                        <button v-if="canEdit" @click="openExpenseModal" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nouvelle Dépense
+                        </button>
+                    </div>
                 </div>
 
                 <div class="section-content">
@@ -1069,8 +1104,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             style="max-width: 250px;">
                             <option value="" style="max-width: 250px;">Tous les projets</option>
                             <option v-for="project in projects" :key="project.id" :value="project.id" style="max-width: 250px;">
-                                {{ project.name }}
+                                {{ reduceWord(project.name) }}
                             </option>
+                        </select>
+
+                        <select class="filter-select" v-model="sectionFilter" @change="filterExpenses"
+                            style="max-width: 250px;">
+                            <option value="">Toutes les sections</option>
+                            <option value="">Sélectionner un secteur</option>
+                            <option value="Electricité">Electricité</option>
+                            <option value="Télécommunication">Télécommunication</option>
+                            <option value="Génie Civil">Génie Civil</option>
+                            <option value="AEP">AEP</option>
                         </select>
                         <select class="filter-select" v-model="statusFilter" @change="filterExpenses"
                             style="max-width: 250px;">
@@ -1157,6 +1202,165 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     </div>
                 </div>
             </div>
+
+            <!-- Section Dépassements de Budget -->
+            <div v-if="showValidationsSection && (user_role == 'admin' || expensesValidations.length > 0)" class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Dépassements de Budget
+                    </h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button @click="toggleValidationsSection" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </button>
+                        <button @click="fetchExpensesValidations" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section-content">
+                    <div v-if="user_role == 'admin'">
+                        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                            Toutes les demandes de dépassement de budget ({{ adminValidations.length }} au total)
+                        </p>
+                        <div class="table-container">
+                            <table class="table" v-if="adminValidations.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th>Demandeur</th>
+                                        <th>Projet</th>
+                                        <th>Ligne Budgétaire</th>
+                                        <th>Montant Demandé</th>
+                                        <th>Description</th>
+                                        <th>Statut</th>
+                                        <th>Documents</th>
+                                        <th class="no-print">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="validation in paginatedAdminValidations" :key="validation.validation_id"
+                                        :class="validation.status === 'en attente' ? 'warning' : ''">
+                                        <td data-label="Demandeur"><strong>{{ validation.user_name }}</strong></td>
+                                        <td data-label="Projet">{{ reduceWord(validation.project_name) }}</td>
+                                        <td data-label="Ligne Budgétaire">{{ validation.budget_line_name }}</td>
+                                        <td data-label="Montant Demandé"><strong>{{ formatCurrency(validation.requested_amount) }}</strong></td>
+                                        <td data-label="Description" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                                            {{ validation.description || '-' }}
+                                        </td>
+                                        <td data-label="Statut">
+                                            <span class="validation-badge" v-if="validation.status === 'en attente'">
+                                                <i class="fas fa-hourglass-half"></i> En attente
+                                            </span>
+                                            <span class="badge badge-success" v-else-if="validation.status === 'acceptée'">
+                                                <i class="fas fa-check"></i> Acceptée
+                                            </span>
+                                            <span class="badge badge-danger" v-else>
+                                                <i class="fas fa-times"></i> Refusée
+                                            </span>
+                                        </td>
+                                        <td data-label="Documents">
+                                            <button v-if="validation.documents && validation.documents.length > 0"
+                                                @click="viewValidationDocuments(validation)"
+                                                class="btn btn-sm btn-secondary">
+                                                <i class="fas fa-file"></i> {{ validation.documents.length }}
+                                            </button>
+                                            <span v-else style="color: var(--text-secondary);">-</span>
+                                        </td>
+                                        <td class="no-print" data-label="Actions">
+                                            <div class="action-buttons">
+                                                <button v-if="validation.status === 'en attente'"
+                                                    @click="acceptValidation(validation)"
+                                                    class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check"></i> Accepter
+                                                </button>
+                                                <button v-if="validation.status === 'en attente'"
+                                                    @click="rejectValidation(validation)"
+                                                    class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-times"></i> Refuser
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-else class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <p>Aucune demande de dépassement</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-else>
+                        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                            Vos demandes de dépassement de budget ({{ userValidations.length }} au total) - <strong style="color: var(--accent-yellow);">{{ stats.myPendingValidations }} en attente</strong>
+                        </p>
+                        <div class="table-container">
+                            <table class="table" v-if="userValidations.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th>Projet</th>
+                                        <th>Ligne Budgétaire</th>
+                                        <th>Montant Demandé</th>
+                                        <th>Description</th>
+                                        <th>Statut</th>
+                                        <th>Documents</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="validation in paginatedUserValidations" :key="validation.validation_id"
+                                        :class="validation.status === 'en attente' ? 'warning' : ''">
+                                        <td data-label="Projet">{{ reduceWord(validation.project_name) }}</td>
+                                        <td data-label="Ligne Budgétaire">{{ validation.budget_line_name }}</td>
+                                        <td data-label="Montant Demandé"><strong>{{ formatCurrency(validation.requested_amount) }}</strong></td>
+                                        <td data-label="Description" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                                            {{ validation.description || '-' }}
+                                        </td>
+                                        <td data-label="Statut">
+                                            <span class="validation-badge" v-if="validation.status === 'en attente'">
+                                                <i class="fas fa-hourglass-half"></i> En attente
+                                            </span>
+                                            <span class="badge badge-success" v-else-if="validation.status === 'acceptée'">
+                                                <i class="fas fa-check"></i> Acceptée
+                                            </span>
+                                            <span class="badge badge-danger" v-else>
+                                                <i class="fas fa-times"></i> Refusée
+                                            </span>
+                                        </td>
+                                        <td data-label="Documents">
+                                            <button v-if="validation.documents && validation.documents.length > 0"
+                                                @click="viewValidationDocuments(validation)"
+                                                class="btn btn-sm btn-secondary">
+                                                <i class="fas fa-file"></i> {{ validation.documents.length }}
+                                            </button>
+                                            <span v-else style="color: var(--text-secondary);">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-else class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <p>Vous n'avez aucune demande de dépassement</p>
+                            </div>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="pagination" v-if="totalValidationsPages > 1">
+                            <button @click="validationsCurrentPage--" :disabled="validationsCurrentPage === 1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button v-for="page in totalValidationsPages" :key="page" @click="validationsCurrentPage = page"
+                                :class="{ active: validationsCurrentPage === page }">
+                                {{ page }}
+                            </button>
+                            <button @click="validationsCurrentPage++" :disabled="validationsCurrentPage === totalValidationsPages">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Modal Ajouter/Modifier Dépense -->
@@ -1213,42 +1417,53 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Document justificatif (PDF, PNG, JPG - Max 5Mo)</label>
+                        <label class="form-label">Documents justificatifs (PDF, PNG, JPG - Max 15 fichiers, 5Mo par fichier)</label>
 
-                        <div v-if="isEditMode && expense.document && !selectedFile" class="attached-file">
-                            <i :class="getDocumentIcon(expense.document)"
-                                :style="{ color: getDocumentColor(expense.document) }"></i>
-                            <span>Document existant</span>
-                            <button @click="viewDocument(expense)" class="btn btn-sm btn-primary">
-                                <i class="fas fa-eye"></i> Voir
-                            </button>
-                            <button @click="removeExistingDocument" class="btn btn-sm btn-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <!-- Documents existants (mode édition) -->
+                        <div v-if="isEditMode && expense.documents && expense.documents.length > 0" style="margin-bottom: 1rem;">
+                            <div v-for="(doc, index) in expense.documents" :key="index" class="attached-file" style="margin-bottom: 0.5rem;">
+                                <i :class="getDocumentIcon(doc)"
+                                    :style="{ color: getDocumentColor(doc) }"></i>
+                                <span>Document {{ index + 1 }}</span>
+                                <button @click="viewDocumentFromPath(doc)" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> Voir
+                                </button>
+                                <button @click="removeExistingDocumentByIndex(index)" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <div v-if="!expense.document || selectedFile" class="file-upload-area" :class="{ dragover: isDragging }"
+                        <!-- Zone d'upload -->
+                        <div class="file-upload-area" :class="{ dragover: isDragging }"
                             @click="$refs.fileInput.click()" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
                             @drop.prevent="onFileDrop">
                             <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--accent-blue);"></i>
                             <p style="margin-top: 1rem; color: var(--text-secondary);">
-                                Cliquez ou glissez un fichier ici
+                                Cliquez ou glissez des fichiers ici (plusieurs fichiers possibles)
                             </p>
                             <input type="file" ref="fileInput" class="file-input" @change="onFileSelect"
-                                accept=".pdf,.png,.jpg,.jpeg">
+                                accept=".pdf,.png,.jpg,.jpeg" multiple>
                         </div>
 
-                        <div v-if="selectedFile" class="file-preview">
-                            <div class="file-info">
-                                <i :class="getFileIcon(selectedFile)" :style="{ color: getFileColor(selectedFile) }"></i>
-                                <div style="flex: 1; min-width: 0;">
-                                    <div class="file-name">{{ selectedFile.name }}</div>
-                                    <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
+                        <div :class="['file-count-info', getTotalFilesClass()]">
+                            {{ getTotalFilesCount() }} / 15 fichiers
+                        </div>
+
+                        <!-- Fichiers sélectionnés -->
+                        <div v-if="selectedFiles.length > 0" style="margin-top: 1rem;">
+                            <div v-for="(file, index) in selectedFiles" :key="index" class="file-preview" style="margin-bottom: 0.5rem;">
+                                <div class="file-info">
+                                    <i :class="getFileIcon(file)" :style="{ color: getFileColor(file) }"></i>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="file-name">{{ file.name }}</div>
+                                        <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                                    </div>
                                 </div>
+                                <button @click="removeFileByIndex(index)" class="btn btn-sm btn-danger btn-icon">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
-                            <button @click="removeFile" class="btn btn-sm btn-danger btn-icon">
-                                <i class="fas fa-times"></i>
-                            </button>
                         </div>
                     </div>
 
@@ -1300,6 +1515,80 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
             </div>
         </div>
+
+        <!-- Modal Demande de Validation -->
+        <div class="modal-overlay" :class="{ active: modals.validation }" @click.self="closeValidationModal">
+            <div class="modal" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <i class="fas fa-exclamation-triangle" style="color: var(--accent-yellow);"></i>
+                        Dépassement de Budget
+                    </h3>
+                    <button class="modal-close" @click="closeValidationModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="info-box danger">
+                        <p style="margin-bottom: 1rem;">
+                            <strong>Attention !</strong> Le montant de cette dépense dépasse le budget restant de la ligne budgétaire sélectionnée.
+                        </p>
+                        <div class="info-row">
+                            <span>Budget Restant:</span>
+                            <strong style="color: var(--accent-red);">{{ formatCurrency(selectedLine?.remaining || 0) }}</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Montant de la Dépense:</span>
+                            <strong>{{ formatCurrency(expense.amount) }}</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Dépassement:</span>
+                            <strong style="color: var(--accent-red);">
+                                {{ formatCurrency(Math.abs((selectedLine?.remaining || 0) - expense.amount)) }}
+                            </strong>
+                        </div>
+                    </div>
+                    <p style="margin-top: 1.5rem; color: var(--text-secondary);">
+                        Voulez-vous soumettre cette dépense à l'administrateur pour validation ?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeValidationModal" class="btn btn-secondary">Annuler</button>
+                    <button @click="submitForValidation" class="btn btn-warning" :disabled="isSaving">
+                        <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+                        {{ isSaving ? 'Envoi...' : 'Soumettre pour Validation' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Visualiseur de Documents de Validation -->
+        <div class="modal-overlay" :class="{ active: modals.validationDocuments }" @click.self="closeValidationDocuments">
+            <div class="modal" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <i class="fas fa-file"></i>
+                        Documents de la Demande
+                    </h3>
+                    <button class="modal-close" @click="closeValidationDocuments">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                    <div v-if="viewingValidationDocuments && viewingValidationDocuments.length > 0">
+                        <div v-for="(doc, index) in viewingValidationDocuments" :key="index" style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color);">
+                            <h4 style="margin-bottom: 1rem;">Document {{ index + 1 }}: {{ doc }}</h4>
+                            <div style="background: var(--bg-tertiary); border-radius: var(--radius); overflow: hidden; max-height: 500px;">
+                                <iframe v-if="!isImage(doc)" :src="'images/' + doc"
+                                    style="width: 100%; height: 500px; border: none;"></iframe>
+                                <img v-else :src="'images/' + doc" style="width: 100%; height: auto; max-height: 500px;"
+                                    alt="Document">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="pagefooter">
@@ -1322,11 +1611,13 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             data() {
                 return {
                     canEdit: <?php echo $canEdit ? 'true' : 'false'; ?>,
+                    user_id: <?php echo $user_id; ?>,
                     user_name: '<?php echo $_SESSION["user_name"] ?>',
                     user_role: '<?php echo $_SESSION["user_role"] ?? "user"; ?>',
                     menuOpen: false,
                     expenses: [],
                     filteredExpenses: [],
+                    expensesValidations: [],
                     projects: [],
                     lines: [],
                     selectedLine: null,
@@ -1337,29 +1628,41 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         amount: 0,
                         expense_date: new Date().toISOString().split('T')[0],
                         description: '',
-                        document: null
+                        document: null,
+                        documents: []
                     },
                     selectedFile: null,
+                    selectedFiles: [],
                     isDragging: false,
                     isEditMode: false,
                     isSaving: false,
                     searchQuery: '',
                     projectFilter: '',
+                    locationFilter: '',
+                    sectionFilter: '',
                     statusFilter: '',
                     dateFrom: '',
                     dateTo: '',
                     currentPage: 1,
                     itemsPerPage: 10,
+                    validationsCurrentPage: 1,
+                    validationsItemsPerPage: 10,
+                    showValidationsSection: false,
                     modals: {
                         expense: false,
-                        documentViewer: false
+                        documentViewer: false,
+                        validation: false,
+                        validationDocuments: false
                     },
                     viewingDocument: null,
+                    viewingValidationDocuments: null,
                     stats: {
                         totalExpenses: 0,
                         totalAmount: 0,
                         thisMonth: 0,
-                        overBudget: 0
+                        overBudget: 0,
+                        pendingValidations: 0,
+                        myPendingValidations: 0
                     },
                     projectsChart: null,
                     evolutionChart: null,
@@ -1373,20 +1676,68 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 totalPages() {
                     return Math.ceil(this.filteredExpenses.length / this.itemsPerPage);
+                },
+                uniqueLocations() {
+                    const locations = new Set();
+                    this.expenses.forEach(e => {
+                        if (e.location) locations.add(e.location);
+                    });
+                    return Array.from(locations).sort();
+                },
+                uniqueSections() {
+                    const sections = new Set();
+                    this.expenses.forEach(e => {
+                        if (e.section) sections.add(e.section);
+                    });
+                    return Array.from(sections).sort();
+                },
+                adminValidations() {
+                    return this.expensesValidations;
+                },
+                userValidations() {
+                    return this.expensesValidations.filter(v => v.user_id == this.user_id);
+                },
+                paginatedAdminValidations() {
+                    const start = (this.validationsCurrentPage - 1) * this.validationsItemsPerPage;
+                    return this.adminValidations.slice(start, start + this.validationsItemsPerPage);
+                },
+                paginatedUserValidations() {
+                    const start = (this.validationsCurrentPage - 1) * this.validationsItemsPerPage;
+                    return this.userValidations.slice(start, start + this.validationsItemsPerPage);
+                },
+                totalValidationsPages() {
+                    const validations = this.user_role === 'admin' ? this.adminValidations : this.userValidations;
+                    return Math.ceil(validations.length / this.validationsItemsPerPage);
                 }
             },
             mounted() {
                 this.fetchProjects();
                 this.fetchExpenses();
+                this.fetchExpensesValidations();
             },
             methods: {
                 logout() {
                     window.location.href = 'logout.php';
                 },
+                closeMobileMenu() {
+                    this.menuOpen = false;
+                },
+                toggleValidationsSection() {
+                    this.showValidationsSection = !this.showValidationsSection;
+                    if (this.showValidationsSection) {
+                        this.validationsCurrentPage = 1;
+                        this.fetchExpensesValidations();
+                    }
+                },
                 async fetchProjects() {
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=getProjects`);
+                        const route = `${API_BASE_URL}?action=getProjects`;
+                        console.log('[v0] Route:', route);
+
+                        const response = await fetch(route);
                         const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
                         this.projects = data.data || [];
                     } catch (error) {
                         console.error('[v0] Error fetching projects:', error);
@@ -1394,8 +1745,13 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 async fetchExpenses() {
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=getExpenses`);
+                        const route = `${API_BASE_URL}?action=getExpenses`;
+                        console.log('[v0] Route:', route);
+
+                        const response = await fetch(route);
                         const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
                         this.expenses = data.data || [];
                         this.filteredExpenses = this.expenses;
                         this.calculateStats();
@@ -1406,28 +1762,129 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         console.error('[v0] Error fetching expenses:', error);
                     }
                 },
+                async fetchExpensesValidations() {
+                    try {
+                        const route = `${API_BASE_URL}?action=getAllExpensesValidations`;
+                        console.log('[v0] Route:', route);
+
+                        const response = await fetch(route);
+                        const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
+                        this.expensesValidations = data.data || [];
+                        this.updateValidationStats();
+                    } catch (error) {
+                        console.error('[v0] Error fetching validations:', error);
+                    }
+                },
+                updateValidationStats() {
+                    this.stats.pendingValidations = this.expensesValidations.filter(v => v.status === 'en attente').length;
+                    this.stats.myPendingValidations = this.expensesValidations.filter(
+                        v => v.user_id == this.user_id && v.status === 'en attente'
+                    ).length;
+                },
+                openExpensesValidations() {
+                    this.fetchExpensesValidations();
+                    window.location.href = '#budget-overruns';
+                },
+                async acceptValidation(validation) {
+                    if (!confirm('Êtes-vous sûr d\'accepter cette demande de dépassement ?')) return;
+
+                    try {
+                        const route = `${API_BASE_URL}?action=acceptExpenseValidation&validation_id=${validation.validation_id}`;
+                        console.log('[v0] Route:', route);
+                        console.log('[v0] Payload: {}');
+
+                        const response = await fetch(route, {
+                            method: 'POST'
+                        });
+                        const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
+
+                        if (data.success) {
+                            alert('Demande acceptée avec succès');
+                            this.fetchExpensesValidations();
+                            this.fetchExpenses();
+                        } else {
+                            alert(data.message || 'Erreur lors de l\'acceptation');
+                        }
+                    } catch (error) {
+                        console.error('[v0] Error accepting validation:', error);
+                        alert('Erreur lors de l\'acceptation de la demande');
+                    }
+                },
+                async rejectValidation(validation) {
+                    if (!confirm('Êtes-vous sûr de refuser cette demande de dépassement ?')) return;
+
+                    try {
+                        const route = `${API_BASE_URL}?action=rejectExpenseValidation&validation_id=${validation.validation_id}`;
+                        console.log('[v0] Route:', route);
+                        console.log('[v0] Payload: {}');
+
+                        const response = await fetch(route, {
+                            method: 'POST'
+                        });
+                        const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
+
+                        if (data.success) {
+                            alert('Demande refusée');
+                            this.fetchExpensesValidations();
+                        } else {
+                            alert(data.message || 'Erreur lors du refus');
+                        }
+                    } catch (error) {
+                        console.error('[v0] Error rejecting validation:', error);
+                        alert('Erreur lors du refus de la demande');
+                    }
+                },
+                viewValidationDocuments(validation) {
+                    try {
+                        const docs = typeof validation.documents === 'string' ?
+                            JSON.parse(validation.documents) :
+                            validation.documents || [];
+                        this.viewingValidationDocuments = docs;
+                        this.modals.validationDocuments = true;
+                    } catch (e) {
+                        console.error('[v0] Error parsing documents:', e);
+                        alert('Erreur lors du chargement des documents');
+                    }
+                },
+                closeValidationDocuments() {
+                    this.modals.validationDocuments = false;
+                    this.viewingValidationDocuments = null;
+                },
                 reduceWord(text) {
-
                     if (!text) return '';
-
                     const str = String(text);
-
                     if (str.length <= 20) {
                         return str;
                     }
-
                     return str.substring(0, 20) + '...';
                 },
-
+                getTotalFilesCount() {
+                    const existingCount = this.isEditMode && this.expense.documents ? this.expense.documents.length : 0;
+                    return existingCount + this.selectedFiles.length;
+                },
+                getTotalFilesClass() {
+                    const total = this.getTotalFilesCount();
+                    if (total > 15) return 'danger';
+                    if (total > 12) return 'warning';
+                    return '';
+                },
                 async fetchLines() {
                     if (!this.expense.project_id) return;
                     try {
-                        const response = await fetch(
-                            `${API_BASE_URL}?action=getProjectBudgetLines&project_id=${this.expense.project_id}`
-                        );
+                        const route = `${API_BASE_URL}?action=getProjectBudgetLines&project_id=${this.expense.project_id}`;
+                        console.log('[v0] Route:', route);
+
+                        const response = await fetch(route);
                         const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
                         this.lines = data.data || [];
-                        console.log('[v0] Lines fetched:', JSON.stringify(this.lines, null, 2));
 
                         if (!this.isEditMode) {
                             this.expense.project_budget_line_id = '';
@@ -1458,8 +1915,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     }
                 },
                 onFileSelect(event) {
-                    const file = event.target.files[0];
-                    this.validateAndSetFile(file);
+                    const files = Array.from(event.target.files);
+                    files.forEach(file => this.validateAndSetFile(file));
                 },
                 onDragOver(event) {
                     this.isDragging = true;
@@ -1469,11 +1926,17 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 onFileDrop(event) {
                     this.isDragging = false;
-                    const file = event.dataTransfer.files[0];
-                    this.validateAndSetFile(file);
+                    const files = Array.from(event.dataTransfer.files);
+                    files.forEach(file => this.validateAndSetFile(file));
                 },
                 validateAndSetFile(file) {
                     if (!file) return;
+
+                    const totalFiles = this.getTotalFilesCount();
+                    if (totalFiles >= 15) {
+                        alert('Vous ne pouvez pas ajouter plus de 15 fichiers');
+                        return;
+                    }
 
                     const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
                     const maxSize = 5 * 1024 * 1024; // 5MB
@@ -1488,38 +1951,63 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         return;
                     }
 
-                    this.selectedFile = file;
+                    this.selectedFiles.push(file);
                 },
-                removeFile() {
-                    this.selectedFile = null;
+                removeFileByIndex(index) {
+                    this.selectedFiles.splice(index, 1);
                     if (this.$refs.fileInput) {
                         this.$refs.fileInput.value = '';
                     }
                 },
-                async removeExistingDocument() {
+                removeFile() {
+                    this.selectedFiles = [];
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.value = '';
+                    }
+                },
+                async removeExistingDocumentByIndex(index) {
                     if (!confirm('Voulez-vous vraiment supprimer ce document ?')) return;
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=removeExpenseDocument&id=${this.expense.id}`, {
-                            method: 'POST'
-                        });
+                        this.expense.documents.splice(index, 1);
 
-                        const data = await response.json();
+                        if (this.isEditMode && this.expense.id) {
+                            const route = `${API_BASE_URL}?action=updateExpenseDocuments&id=${this.expense.id}`;
+                            const payload = {
+                                documents: JSON.stringify(this.expense.documents)
+                            };
+                            console.log('[v0] Route:', route);
+                            console.log('[v0] Payload:', payload);
 
-                        if (data.success) {
-                            this.expense.document = null;
-                            alert('Document supprimé avec succès');
-                            this.fetchExpenses();
-                        } else {
-                            alert(data.message || 'Erreur lors de la suppression du document');
+                            const formData = new FormData();
+                            formData.append('documents', JSON.stringify(this.expense.documents));
+
+                            const response = await fetch(route, {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            const data = await response.json();
+                            console.log('[v0] Server Response:', data);
+
+                            if (data.success) {
+                                alert('Document supprimé avec succès');
+                                this.fetchExpenses();
+                            } else {
+                                alert(data.message || 'Erreur lors de la suppression du document');
+                            }
                         }
                     } catch (error) {
                         console.error('[v0] Error removing document:', error);
                         alert('Erreur lors de la suppression du document');
                     }
                 },
+                viewDocumentFromPath(docPath) {
+                    const path = docPath.startsWith('images/') ? docPath : 'images/' + docPath;
+                    this.viewingDocument = path;
+                    this.modals.documentViewer = true;
+                },
                 async saveExpense() {
-
                     if (!this.canEdit) return;
 
                     if (
@@ -1532,10 +2020,59 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         return;
                     }
 
+                    // Vérifier le nombre de fichiers
+                    if (this.getTotalFilesCount() > 15) {
+                        alert('Vous ne pouvez pas ajouter plus de 15 fichiers');
+                        return;
+                    }
+
+                    // Vérifier si le montant dépasse le budget restant
+                    if (this.selectedLine) {
+                        const amountToAdd = Number(this.expense.amount);
+                        const allocated = Number(this.selectedLine.allocated_amount) || 0;
+
+                        // Si en mode édition, soustraire l'ancien montant
+                        let oldAmount = 0;
+                        if (this.isEditMode) {
+                            const oldExpense = this.expenses.find(e => e.id === this.expense.id);
+                            if (oldExpense) {
+                                oldAmount = Number(oldExpense.amount) || 0;
+                            }
+                        }
+
+                        const spent = Number(this.selectedLine.spent) || 0;
+                        const newSpent = spent - oldAmount + amountToAdd;
+                        const newRemaining = allocated - newSpent;
+
+                        // Si modification avec dépassement
+                        if (this.isEditMode && newRemaining < 0) {
+                            const oldExpense = this.expenses.find(e => e.id === this.expense.id);
+                            const oldRemaining = allocated - oldExpense.spent;
+
+                            if (oldRemaining >= 0) {
+                                const errorMsg = 'Impossible de modifier cette dépense au montant de ' +
+                                    this.formatCurrency(amountToAdd) + '.\n\n' +
+                                    'Raison: Le budget restant est de ' + this.formatCurrency(oldRemaining) +
+                                    ' et vous essayez de dépenser ' + this.formatCurrency(amountToAdd) +
+                                    ', ce qui dépasserait de ' + this.formatCurrency(Math.abs(newRemaining)) + '.';
+                                alert(errorMsg);
+                                return;
+                            }
+                        }
+
+                        // Si création avec dépassement
+                        if (!this.isEditMode && newRemaining < 0) {
+                            this.modals.validation = true;
+                            return;
+                        }
+                    }
+
+                    await this.saveExpenseDirectly();
+                },
+                async saveExpenseDirectly() {
                     this.isSaving = true;
 
                     try {
-
                         const formData = new FormData();
 
                         formData.append('project_id', Number(this.expense.project_id));
@@ -1544,8 +2081,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         formData.append('expense_date', this.expense.expense_date);
                         formData.append('description', this.expense.description || '');
 
-                        if (this.selectedFile) {
-                            formData.append('document', this.selectedFile);
+                        // Ajouter les fichiers multiples
+                        if (this.selectedFiles.length > 0) {
+                            this.selectedFiles.forEach((file, index) => {
+                                formData.append(`documents[]`, file);
+                            });
                         }
 
                         let route = `${API_BASE_URL}?action=createExpense`;
@@ -1553,36 +2093,23 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             route = `${API_BASE_URL}?action=updateExpense&id=${this.expense.id}`;
                         }
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | 🔎 DEBUG LOGS
-                        |--------------------------------------------------------------------------
-                        */
-
                         console.log('===== SAVE EXPENSE =====');
-                        console.log('Route:', route);
-
-                        console.log('Payload (FormData):');
+                        console.log('[v0] Route:', route);
+                        console.log('[v0] Payload (FormData):');
                         for (let [key, value] of formData.entries()) {
-                            console.log(key, value);
+                            console.log('[v0]', key, value);
                         }
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | 📡 Requête
-                        |--------------------------------------------------------------------------
-                        */
 
                         const response = await fetch(route, {
                             method: 'POST',
                             body: formData
                         });
 
-                        console.log('HTTP Status:', response.status);
+                        console.log('[v0] HTTP Status:', response.status);
 
                         const data = await response.json();
 
-                        console.log('Server Response:', data);
+                        console.log('[v0] Server Response:', data);
 
                         if (!data.success) {
                             alert(data.message || 'Une erreur est survenue');
@@ -1600,13 +2127,71 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         this.fetchExpenses();
 
                     } catch (error) {
-
-                        console.error('Network / JS Error:', error);
+                        console.error('[v0] Network / JS Error:', error);
                         alert('Erreur lors de l\'enregistrement de la dépense');
 
                     } finally {
                         this.isSaving = false;
                     }
+                },
+                async submitForValidation() {
+                    this.isSaving = true;
+
+                    try {
+                        const formData = new FormData();
+
+                        formData.append('project_id', Number(this.expense.project_id));
+                        formData.append('project_budget_line_id', Number(this.expense.project_budget_line_id));
+                        formData.append('amount', Number(this.expense.amount));
+                        formData.append('expense_date', this.expense.expense_date);
+                        formData.append('description', this.expense.description || '');
+
+                        // Ajouter les fichiers multiples
+                        if (this.selectedFiles.length > 0) {
+                            this.selectedFiles.forEach((file, index) => {
+                                formData.append(`documents[]`, file);
+                            });
+                        }
+
+                        console.log('===== SUBMIT FOR VALIDATION =====');
+                        console.log('[v0] Route:', `${API_BASE_URL}?action=newExpenseValidation`);
+                        console.log('[v0] Payload (FormData):');
+                        for (let [key, value] of formData.entries()) {
+                            console.log('[v0]', key, value);
+                        }
+
+                        const response = await fetch(`${API_BASE_URL}?action=newExpenseValidation`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        console.log('[v0] HTTP Status:', response.status);
+
+                        const data = await response.json();
+
+                        console.log('[v0] Server Response:', data);
+
+                        if (!data.success) {
+                            alert(data.message || 'Erreur lors de la soumission');
+                            return;
+                        }
+
+                        alert(data.message || 'Demande de validation envoyée avec succès à l\'administrateur');
+
+                        this.closeValidationModal();
+                        this.closeExpenseModal();
+                        this.fetchExpenses();
+                        this.fetchExpensesValidations();
+
+                    } catch (error) {
+                        console.error('[v0] Network / JS Error:', error);
+                        alert('Erreur lors de la soumission de la demande');
+                    } finally {
+                        this.isSaving = false;
+                    }
+                },
+                closeValidationModal() {
+                    this.modals.validation = false;
                 },
                 openExpenseModal() {
                     if (!this.canEdit) return;
@@ -1619,15 +2204,31 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         amount: '',
                         expense_date: new Date().toISOString().split('T')[0],
                         description: '',
-                        document: null
+                        document: null,
+                        documents: []
                     };
                     this.selectedFile = null;
+                    this.selectedFiles = [];
                     this.selectedLine = null;
                     this.lines = [];
                     this.modals.expense = true;
                 },
                 async editExpense(expense) {
                     this.isEditMode = true;
+
+                    // Parser les documents JSON s'ils existent
+                    let documents = [];
+                    if (expense.documents) {
+                        try {
+                            documents = typeof expense.documents === 'string' ?
+                                JSON.parse(expense.documents) :
+                                expense.documents;
+                        } catch (e) {
+                            console.error('[v0] Error parsing documents:', e);
+                            documents = [];
+                        }
+                    }
+
                     this.expense = {
                         id: expense.id,
                         project_id: expense.project_id,
@@ -1635,9 +2236,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         amount: expense.amount,
                         expense_date: expense.expense_date,
                         description: expense.description,
-                        document: expense.document
+                        document: expense.document,
+                        documents: documents
                     };
                     this.selectedFile = null;
+                    this.selectedFiles = [];
 
                     await this.fetchLines();
 
@@ -1655,11 +2258,15 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     }
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}?action=deleteExpense&id=${expense.id}`, {
+                        const route = `${API_BASE_URL}?action=deleteExpense&id=${expense.id}`;
+                        console.log('[v0] Route:', route);
+
+                        const response = await fetch(route, {
                             method: 'DELETE'
                         });
 
                         const data = await response.json();
+                        console.log('[v0] Server Response:', data);
 
                         if (!data.success) {
                             alert(data.message || 'Erreur lors de la suppression');
@@ -1678,11 +2285,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.modals.expense = false;
                     this.isEditMode = false;
                     this.selectedFile = null;
+                    this.selectedFiles = [];
                 },
                 viewDocument(expense) {
                     if (!expense.document) return;
 
-                    // Ajouter le préfixe "images/" si nécessaire
                     const docPath = expense.document.startsWith('images/') ?
                         expense.document :
                         'images/' + expense.document;
@@ -1690,7 +2297,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.viewingDocument = docPath;
                     this.modals.documentViewer = true;
                 },
-
                 closeDocumentViewer() {
                     this.modals.documentViewer = false;
                     this.viewingDocument = null;
@@ -1700,14 +2306,22 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
                     if (this.searchQuery) {
                         filtered = filtered.filter(e =>
-                            e.description.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                            e.project_name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                            e.budget_line_name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                            (e.description && e.description.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (e.project_name && e.project_name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (e.budget_line_name && e.budget_line_name.toLowerCase().includes(this.searchQuery.toLowerCase()))
                         );
                     }
 
                     if (this.projectFilter) {
                         filtered = filtered.filter(e => e.project_id == this.projectFilter);
+                    }
+
+                    if (this.locationFilter) {
+                        filtered = filtered.filter(e => e.location == this.locationFilter);
+                    }
+
+                    if (this.sectionFilter) {
+                        filtered = filtered.filter(e => e.section == this.sectionFilter);
                     }
 
                     if (this.statusFilter) {
@@ -1868,7 +2482,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         this.evolutionChart = null;
                     }
 
-                    // Attendre que le DOM soit prêt
                     setTimeout(() => {
                         this.$nextTick(() => {
                             try {
@@ -1881,7 +2494,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                     return;
                                 }
 
-                                // Vérifier que les canvas sont dans le DOM
                                 if (!document.body.contains(projectsCanvas) || !document.body.contains(evolutionCanvas)) {
                                     console.error('[v0] Les canvas ne sont pas dans le DOM');
                                     this.isRenderingCharts = false;
@@ -1890,210 +2502,115 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
                                 const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981'];
 
-                                // Graphique des dépenses par projet
-                                if (projectsCanvas && this.projects.length > 0 && this.expenses.length > 0) {
-                                    try {
-                                        const parent1 = projectsCanvas.parentElement;
-                                        if (parent1) {
-                                            parent1.style.position = 'relative';
-                                            parent1.style.height = '400px';
-                                            parent1.style.width = '100%';
-                                        }
+                                // Graphique par projet
+                                const projectsData = {};
+                                this.expenses.forEach(e => {
+                                    const projectName = e.project_name || 'Inconnu';
+                                    projectsData[projectName] = (projectsData[projectName] || 0) + parseFloat(e.amount || 0);
+                                });
 
-                                        const ctx1 = projectsCanvas.getContext('2d');
-                                        if (!ctx1) {
-                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour projectsCanvas');
-                                            this.isRenderingCharts = false;
-                                            return;
-                                        }
-
-                                        const projectExpenses = {};
-                                        this.expenses.forEach(e => {
-                                            if (!projectExpenses[e.project_name]) {
-                                                projectExpenses[e.project_name] = 0;
-                                            }
-                                            projectExpenses[e.project_name] += parseFloat(e.amount || 0);
-                                        });
-
-                                        this.projectsChart = new Chart(ctx1, {
-                                            type: 'doughnut',
-                                            data: {
-                                                labels: Object.keys(projectExpenses),
-                                                datasets: [{
-                                                    data: Object.values(projectExpenses),
-                                                    backgroundColor: colors.slice(0, Object.keys(projectExpenses).length),
-                                                    borderColor: '#111111',
-                                                    borderWidth: 2
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                devicePixelRatio: 2,
-                                                plugins: {
-                                                    legend: {
-                                                        display: true,
-                                                        position: 'bottom',
-                                                        labels: {
-                                                            color: '#ededed',
-                                                            padding: 15,
-                                                            font: {
-                                                                size: 13,
-                                                                weight: '600'
-                                                            }
-                                                        }
-                                                    },
-                                                    tooltip: {
-                                                        enabled: true,
-                                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                                        padding: 12,
-                                                        cornerRadius: 8,
-                                                        callbacks: {
-                                                            label: (ctx) => {
-                                                                const val = ctx.parsed;
-                                                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                                                return `${ctx.label}: ${this.formatCurrency(val)} (${pct}%)`;
-                                                            }
-                                                        }
+                                this.projectsChart = new Chart(projectsCanvas, {
+                                    type: 'doughnut',
+                                    data: {
+                                        labels: Object.keys(projectsData),
+                                        datasets: [{
+                                            data: Object.values(projectsData),
+                                            backgroundColor: colors.slice(0, Object.keys(projectsData).length),
+                                            borderColor: '#111111',
+                                            borderWidth: 2
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: true,
+                                        plugins: {
+                                            legend: {
+                                                position: 'bottom',
+                                                labels: {
+                                                    color: '#ededed',
+                                                    font: {
+                                                        size: 12
                                                     }
                                                 }
                                             }
-                                        });
-                                    } catch (e) {
-                                        console.error('[v0] Erreur création graphique projects:', e);
+                                        }
                                     }
-                                }
+                                });
 
-                                // Graphique d'évolution des dépenses
-                                if (evolutionCanvas && this.expenses.length > 0) {
-                                    try {
-                                        const parent2 = evolutionCanvas.parentElement;
-                                        if (parent2) {
-                                            parent2.style.position = 'relative';
-                                            parent2.style.height = '400px';
-                                            parent2.style.width = '100%';
-                                        }
+                                // Graphique évolution
+                                const dailyData = {};
+                                this.expenses.forEach(e => {
+                                    const date = new Date(e.expense_date).toLocaleDateString('fr-FR');
+                                    dailyData[date] = (dailyData[date] || 0) + parseFloat(e.amount || 0);
+                                });
 
-                                        const ctx2 = evolutionCanvas.getContext('2d');
-                                        if (!ctx2) {
-                                            console.error('[v0] Impossible d\'obtenir le contexte 2d pour evolutionCanvas');
-                                            this.isRenderingCharts = false;
-                                            return;
-                                        }
+                                const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
+                                const cumulativeAmounts = [];
+                                let sum = 0;
+                                sortedDates.forEach(date => {
+                                    sum += dailyData[date];
+                                    cumulativeAmounts.push(sum);
+                                });
 
-                                        const sorted = [...this.expenses].sort((a, b) =>
-                                            new Date(a.expense_date) - new Date(b.expense_date)
-                                        );
-
-                                        const grouped = {};
-                                        sorted.forEach(e => {
-                                            const date = this.formatDate(e.expense_date);
-                                            if (!grouped[date]) {
-                                                grouped[date] = 0;
-                                            }
-                                            grouped[date] += parseFloat(e.amount || 0);
-                                        });
-
-                                        // Calculer le cumulé
-                                        const dates = Object.keys(grouped);
-                                        const cumulativeData = [];
-                                        let cumul = 0;
-                                        dates.forEach(date => {
-                                            cumul += grouped[date];
-                                            cumulativeData.push(cumul);
-                                        });
-
-                                        this.evolutionChart = new Chart(ctx2, {
-                                            type: 'line',
-                                            data: {
-                                                labels: dates,
-                                                datasets: [{
-                                                    label: 'Dépenses cumulées',
-                                                    data: cumulativeData,
-                                                    borderColor: '#00d4ff',
-                                                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                                                    fill: true,
-                                                    tension: 0.4,
-                                                    pointBackgroundColor: '#00d4ff',
-                                                    pointBorderColor: '#fff',
-                                                    pointRadius: 4,
-                                                    pointBorderWidth: 2
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                devicePixelRatio: 2,
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true,
-                                                        ticks: {
-                                                            color: '#ededed',
-                                                            font: {
-                                                                size: 12
-                                                            },
-                                                            callback: function(value) {
-                                                                return value.toLocaleString();
-                                                            }
-                                                        },
-                                                        grid: {
-                                                            color: '#2a2a2a'
-                                                        }
-                                                    },
-                                                    x: {
-                                                        ticks: {
-                                                            color: '#ededed',
-                                                            font: {
-                                                                size: 12
-                                                            },
-                                                            maxRotation: 45,
-                                                            minRotation: 45
-                                                        },
-                                                        grid: {
-                                                            color: '#2a2a2a',
-                                                            display: false
-                                                        }
+                                this.evolutionChart = new Chart(evolutionCanvas, {
+                                    type: 'line',
+                                    data: {
+                                        labels: sortedDates,
+                                        datasets: [{
+                                            label: 'Cumul des Dépenses',
+                                            data: cumulativeAmounts,
+                                            borderColor: '#0070f3',
+                                            backgroundColor: 'rgba(0, 112, 243, 0.1)',
+                                            borderWidth: 3,
+                                            fill: true,
+                                            tension: 0.4,
+                                            pointBackgroundColor: '#00d4ff',
+                                            pointBorderColor: '#0070f3',
+                                            pointRadius: 5
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: true,
+                                        plugins: {
+                                            legend: {
+                                                labels: {
+                                                    color: '#ededed',
+                                                    font: {
+                                                        size: 12
                                                     }
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: {
+                                                ticks: {
+                                                    color: '#a0a0a0'
                                                 },
-                                                plugins: {
-                                                    legend: {
-                                                        display: true,
-                                                        labels: {
-                                                            color: '#ededed',
-                                                            padding: 15,
-                                                            font: {
-                                                                size: 13,
-                                                                weight: '600'
-                                                            }
-                                                        }
-                                                    },
-                                                    tooltip: {
-                                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                                        padding: 12,
-                                                        cornerRadius: 8,
-                                                        callbacks: {
-                                                            label: (ctx) => {
-                                                                return `Total: ${this.formatCurrency(ctx.parsed.y)}`;
-                                                            }
-                                                        }
-                                                    }
+                                                grid: {
+                                                    color: '#2a2a2a'
+                                                }
+                                            },
+                                            x: {
+                                                ticks: {
+                                                    color: '#a0a0a0'
+                                                },
+                                                grid: {
+                                                    color: '#2a2a2a'
                                                 }
                                             }
-                                        });
-                                    } catch (e) {
-                                        console.error('[v0] Erreur création graphique evolution:', e);
+                                        }
                                     }
-                                }
+                                });
 
-                                console.log('[v0] Rendu des graphiques terminé');
-                                this.isRenderingCharts = false;
+                                console.log('[v0] Charts rendered successfully');
                             } catch (error) {
-                                console.error('[v0] Erreur générale renderCharts:', error);
+                                console.error('[v0] Error rendering charts:', error);
+                            } finally {
                                 this.isRenderingCharts = false;
                             }
                         });
-                    }, 200);
+                    }, 100);
                 }
             }
         }).mount('#app');

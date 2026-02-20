@@ -1,10 +1,36 @@
 <?php
+
+use PhpOffice\PhpSpreadsheet\Worksheet\Validations;
+
 session_start();
 
 /**
  * Connexion à la base de données
  */
 include 'db.php';
+
+function verifyInput($input)
+{
+    if (!isset($input)) {
+        throw new Exception("Paramètre manquant.");
+    }
+
+    // Supprime les espaces avant/après
+    $input = trim($input);
+
+    // Supprime les balises HTML
+    $input = strip_tags($input);
+
+    // Supprime les caractères spéciaux dangereux
+    $input = htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
+
+    // Vérifie que c'est un entier positif
+    if (!ctype_digit($input) || intval($input) <= 0) {
+        throw new Exception("Paramètre invalide.");
+    }
+
+    return intval($input);
+}
 
 /**
  * Helpers JSON
@@ -707,17 +733,17 @@ function createExpense()
 
         // 🔹 Insertion de la dépense
         $insertExpense = $pdo->prepare("
-            INSERT INTO expenses (
-                project_id,
-                project_budget_line_id,
-                amount,
-                description,
-                expense_date,
-                document,
-                created_at,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-        ");
+                INSERT INTO expenses (
+                    project_id,
+                    project_budget_line_id,
+                    amount,
+                    description,
+                    expense_date,
+                    document,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+            ");
         $insertExpense->execute([
             $projectId,
             $projectBudgetLineId,
@@ -750,6 +776,451 @@ function createExpense()
     }
 }
 
+function newExpenseValidation()
+{
+    $pdo = getPDO();
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $currentUserId   = $_SESSION['user_id'] ?? null;
+    $currentUserName = $_SESSION['user_name'] ?? null;
+
+    if (!$currentUserId || !$currentUserName) {
+        jsonError('Utilisateur non authentifié', 401);
+    }
+
+    $projectId           = $_POST['project_id'] ?? null;
+    $projectBudgetLineId = $_POST['project_budget_line_id'] ?? null;
+    $amount              = $_POST['amount'] ?? null;
+    $expenseDate         = $_POST['expense_date'] ?? null;
+    $description         = $_POST['description'] ?? null;
+
+    if (!$projectId || !$projectBudgetLineId || !$amount || !$expenseDate) {
+        jsonError('Paramètres manquants', 400);
+    }
+
+    try {
+
+        $pdo->beginTransaction();
+
+        /*
+            ==========================
+            1️⃣ Vérification projet
+            ==========================
+            */
+
+        $stmtProject = $pdo->prepare("
+                SELECT id, name
+                FROM projects
+                WHERE id = ?
+            ");
+        $stmtProject->execute([$projectId]);
+        $project = $stmtProject->fetch(PDO::FETCH_ASSOC);
+
+        if (!$project) {
+            jsonError('Projet introuvable', 400);
+        }
+
+        /*
+            ==========================
+            2️⃣ Vérification ligne budgétaire + jointure correcte
+            ==========================
+            */
+
+        $stmtPBL = $pdo->prepare("
+                SELECT 
+                    pbl.id,
+                    pbl.allocated_amount,
+                    bl.name AS budget_name
+                FROM project_budget_lines pbl
+                JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+                WHERE pbl.id = ? AND pbl.project_id = ?
+            ");
+        $stmtPBL->execute([$projectBudgetLineId, $projectId]);
+        $budgetLine = $stmtPBL->fetch(PDO::FETCH_ASSOC);
+
+        if (!$budgetLine) {
+            jsonError('Ligne budgétaire invalide', 400);
+        }
+
+        /*
+            ==========================
+            3️⃣ Upload fichiers
+            ==========================
+            */
+
+        $uploadedFiles = [];
+        $uploadDir = __DIR__ . '/../images/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        if (!empty($_FILES['documents']['name'][0])) {
+
+            $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+
+            foreach ($_FILES['documents']['name'] as $index => $fileName) {
+
+                if ($_FILES['documents']['error'][$index] !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                if (!in_array($extension, $allowed)) {
+                    continue;
+                }
+
+                $newFileName = uniqid() . '.' . $extension;
+                $destination = $uploadDir . $newFileName;
+
+                if (move_uploaded_file($_FILES['documents']['tmp_name'][$index], $destination)) {
+                    $uploadedFiles[] = $newFileName;
+                }
+            }
+        }
+
+        $documentsJson = !empty($uploadedFiles) ? json_encode($uploadedFiles) : null;
+
+        /*
+            ==========================
+            4️⃣ Insertion validation
+            ==========================
+            */
+
+        $stmtInsert = $pdo->prepare("
+                INSERT INTO expenses_validations (
+                    project_id,
+                    project_budget_line_id,
+                    amount,
+                    description,
+                    expense_date,
+                    documents,
+                    status,
+                    created_at,
+                    user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ");
+
+        $stmtInsert->execute([
+            $projectId,
+            $projectBudgetLineId,
+            $amount,
+            $description,
+            $expenseDate,
+            $documentsJson,
+            'en attente',
+            $currentUserId
+        ]);
+
+        /*
+            ==========================
+            5️⃣ Calcul dépassement
+            ==========================
+            */
+
+        $stmtTotal = $pdo->prepare("
+                SELECT COALESCE(SUM(amount),0)
+                FROM expenses_validations
+                WHERE project_budget_line_id = ?
+                AND status = 'validée'
+            ");
+        $stmtTotal->execute([$projectBudgetLineId]);
+        $totalSpent = $stmtTotal->fetchColumn();
+
+        $allocated  = $budgetLine['allocated_amount'];
+        $newTotal   = $totalSpent + $amount;
+        $overAmount = max(0, $newTotal - $allocated);
+
+        /*
+            ==========================
+            6️⃣ Notifications
+            ==========================
+            */
+
+        $adminNotification = "Nouvelle demande de validation\n\n"
+            . "Utilisateur : {$currentUserName}\n"
+            . "Projet : {$project['name']}\n"
+            . "Ligne budgétaire : {$budgetLine['budget_name']}\n"
+            . "Montant : {$amount} FCFA\n"
+            . "Date : {$expenseDate}\n"
+            . ($description ? "Description : {$description}\n" : '')
+            . (!empty($uploadedFiles) ? "Documents : " . implode(', ', $uploadedFiles) . "\n" : '')
+            . ($overAmount > 0 ? "⚠ Dépassement : {$overAmount} FCFA\n" : '')
+            . "\nAction requise : Confirmer ou refuser.";
+
+        createNotification($adminNotification, $currentUserId, $currentUserName);
+
+        $userNotification = "Votre demande de validation a été enregistrée.\n\n"
+            . "Projet : {$project['name']}\n"
+            . "Ligne budgétaire : {$budgetLine['budget_name']}\n"
+            . "Montant : {$amount} FCFA\n"
+            . "Statut : en attente\n\n"
+            . "Vous serez notifié après décision.";
+
+        createNotification($userNotification, $currentUserId, $currentUserName);
+
+        /*
+        ==========================
+        7️⃣ Commit final
+        ==========================
+        */
+
+        $pdo->commit();
+
+        jsonSuccess([], 'Demande de validation envoyée avec succès');
+    } catch (Exception $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError('Erreur serveur : ' . $e->getMessage(), 500);
+    }
+}
+
+function acceptExpenseValidation()
+{
+    $pdo = getPDO();
+
+    $validationId = $_POST['validation_id'] ?? $_GET['validation_id'] ?? null;
+
+    if (!$validationId || !ctype_digit($validationId)) {
+        return [
+            'success' => false,
+            'message' => 'ID de validation invalide.'
+        ];
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1️⃣ Récupération validation + projet + ligne budget + utilisateur
+        |--------------------------------------------------------------------------
+        */
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.*,
+                p.name AS project_name,
+                bl.name AS budget_name,
+                u.name AS user_name
+            FROM expenses_validations ev
+            INNER JOIN projects p ON p.id = ev.project_id
+            INNER JOIN project_budget_lines pbl ON pbl.id = ev.project_budget_line_id
+            INNER JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+            INNER JOIN users u ON u.id = ev.user_id
+            WHERE ev.id = :id
+              AND ev.status = 'en attente'
+            LIMIT 1
+        ");
+
+        $stmt->execute(['id' => $validationId]);
+        $validation = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$validation) {
+            throw new Exception("Validation introuvable ou déjà traitée.");
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2️⃣ Création de la dépense
+        |--------------------------------------------------------------------------
+        */
+        $insert = $pdo->prepare("
+            INSERT INTO expenses (
+                project_id,
+                project_budget_line_id,
+                amount,
+                description,
+                expense_date,
+                documents,
+                user_id,
+                created_at
+            ) VALUES (
+                :project_id,
+                :budget_line_id,
+                :amount,
+                :description,
+                :expense_date,
+                :documents,
+                :user_id,
+                NOW()
+            )
+        ");
+
+        $insert->execute([
+            'project_id'     => $validation['project_id'],
+            'budget_line_id' => $validation['project_budget_line_id'],
+            'amount'         => $validation['amount'],
+            'description'    => $validation['description'],
+            'expense_date'   => $validation['expense_date'],
+            'documents'      => $validation['documents'],
+            'user_id'        => $validation['user_id']
+        ]);
+
+        $user_id = $validation['user_id'];
+        $stmtUser = $pdo->prepare("SELECT name FROM users WHERE id = ?");
+        $stmtUser->execute([$user_id]);
+        $user_name = $stmtUser->fetch(PDO::FETCH_COLUMN);
+
+        $expense = $pdo->lastInsertId();
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3️⃣ Mise à jour statut validation
+        |--------------------------------------------------------------------------
+        */
+        $update = $pdo->prepare("
+            UPDATE expenses_validations
+            SET status = 'acceptée'
+            WHERE id = :id
+        ");
+        $update->execute(['id' => $validationId]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 4️⃣ Notification avec nom utilisateur
+        |--------------------------------------------------------------------------
+        */
+        $message  = "Bonjour {$validation['user_name']},\n\n";
+        $message .= "Votre demande de validation a été acceptée.\n\n";
+        $message .= "Projet : {$validation['project_name']}\n";
+        $message .= "Ligne budgétaire : {$validation['budget_name']}\n";
+        $message .= "Montant : " . number_format($validation['amount'], 0, ',', ' ') . " FCFA\n";
+        $message .= "Date : {$validation['expense_date']}\n";
+
+        if (!empty($validation['description'])) {
+            $message .= "Description : {$validation['description']}\n";
+        }
+
+        $message .= "\nLa dépense a été enregistrée dans le système.";
+
+        createNotification(
+            $message,
+            $user_id,
+            $user_name,
+        );
+
+        $pdo->commit();
+
+        jsonSuccess(['expense_id' => $expense], 'Dépense enregistrée avec succès');
+    } catch (Throwable $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError($e->getMessage());
+    }
+}
+
+function rejectExpenseValidation()
+{
+
+    $validationId = verifyInput($_POST['validation_id']);
+    global $pdo;
+
+    try {
+        // 1️⃣ Récupérer la validation uniquement si elle est en attente
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM expenses_validations
+            WHERE id = ? AND status = 'en attente'
+        ");
+        $stmt->execute([$validationId]);
+        $validation = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$validation) {
+            throw new Exception("Validation introuvable ou déjà traitée.");
+        }
+
+        // 2️⃣ Mettre à jour le statut
+        $stmtUpdate = $pdo->prepare("
+            UPDATE expenses_validations
+            SET status = 'refusée'
+            WHERE id = ?
+        ");
+        $stmtUpdate->execute([$validationId]);
+
+        // 3️⃣ Notification utilisateur
+        $title = "Demande de dépense refusée";
+        $message = "Votre demande de dépense d’un montant de "
+            . number_format($validation['amount'], 2, ',', ' ')
+            . " a été refusée.";
+
+        $stmtNotif = $pdo->prepare("
+            INSERT INTO notifications (
+                user_id,
+                title,
+                message,
+                type,
+                created_at,
+                is_read
+            ) VALUES (?, ?, ?, ?, NOW(), 0)
+        ");
+        $stmtNotif->execute([
+            $validation['user_id'],
+            $title,
+            $message,
+            'expense_validation'
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Demande refusée et utilisateur notifié.'
+        ];
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
+    }
+}
+
+function getAllExpensesValidations()
+{
+    $pdo = getPDO(); // connexion PDO
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.id AS validation_id,
+                ev.project_id,
+                p.name AS project_name,
+                ev.project_budget_line_id,
+                bl.name AS budget_line_name,
+                ev.amount AS requested_amount,
+                ev.description,
+                ev.expense_date,
+                ev.documents,
+                ev.status,
+                ev.user_id,
+                u.name AS user_name,
+                ev.created_at
+            FROM expenses_validations ev
+            LEFT JOIN projects p ON ev.project_id = p.id
+            LEFT JOIN project_budget_lines pbl ON ev.project_budget_line_id = pbl.id
+            LEFT JOIN budget_lines bl ON pbl.budget_line_id = bl.id
+            LEFT JOIN users u ON ev.user_id = u.id
+            ORDER BY ev.created_at DESC
+        ");
+
+        $stmt->execute();
+        $validations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        jsonSuccess($validations);
+
+        exit;
+    } catch (Exception $e) {
+        echo "Erreur : " . $e->getMessage();
+        exit;
+    }
+}
 
 
 function updateExpense()
@@ -1326,7 +1797,7 @@ function getExpenses()
             e.amount,
             e.expense_date,
             e.description,
-            e.document,
+            e.documents,
             e.created_at,
             e.updated_at
         FROM expenses e
