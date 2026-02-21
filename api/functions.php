@@ -656,6 +656,10 @@ function updateProject()
 
 function createExpense()
 {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
     $pdo = getPDO();
 
     $currentUserId = $_SESSION['user_id'] ?? null;
@@ -678,79 +682,99 @@ function createExpense()
     try {
         $pdo->beginTransaction();
 
-        // 🔹 Récupérer le nom du projet
+        // 🔹 Projet
         $stmtProject = $pdo->prepare("SELECT name FROM projects WHERE id = ?");
         $stmtProject->execute([$projectId]);
         $project = $stmtProject->fetch(PDO::FETCH_ASSOC);
+
         if (!$project) {
             jsonError('Projet introuvable', 400);
         }
+
         $projectName = $project['name'];
 
-        // 🔹 Vérifier que la ligne budgétaire appartient au projet et récupérer budget_line_id
+        // 🔹 Ligne budgétaire projet
         $stmtPBL = $pdo->prepare("SELECT budget_line_id FROM project_budget_lines WHERE id = ? AND project_id = ?");
         $stmtPBL->execute([$projectBudgetLineId, $projectId]);
         $pbl = $stmtPBL->fetch(PDO::FETCH_ASSOC);
+
         if (!$pbl) {
             jsonError('Ligne budgétaire introuvable pour ce projet', 400);
         }
+
         $budgetLineId = $pbl['budget_line_id'];
 
-        // 🔹 Récupérer le nom de la ligne budgétaire
+        // 🔹 Nom ligne budgétaire
         $stmtBudget = $pdo->prepare("SELECT name FROM budget_lines WHERE id = ?");
         $stmtBudget->execute([$budgetLineId]);
         $budget = $stmtBudget->fetch(PDO::FETCH_ASSOC);
+
         if (!$budget) {
             jsonError('Nom de ligne budgétaire introuvable', 400);
         }
+
         $budgetName = $budget['name'];
 
-        // 🔹 Gestion du document
-        $documentPath = null;
-        if (!empty($_FILES['document']['name'])) {
-            $uploadDir = __DIR__ . '/../images/'; // images à la racine
-            if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
-                jsonError('Impossible de créer le dossier pour les documents', 500);
+        // 🔹 Gestion multi-documents (max 15)
+        $uploadedFiles = [];
+
+        if (!empty($_FILES['documents']['name'][0])) {
+
+            if (count($_FILES['documents']['name']) > 15) {
+                jsonError('Maximum 15 documents autorisés', 400);
             }
 
-            $originalName = $_FILES['document']['name'];
-            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            $uploadDir = __DIR__ . '/../images/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
             $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
 
-            if (!in_array($extension, $allowed)) {
-                jsonError('Format de document non autorisé', 400);
+            foreach ($_FILES['documents']['name'] as $index => $originalName) {
+
+                if ($_FILES['documents']['error'][$index] !== UPLOAD_ERR_OK) {
+                    jsonError('Erreur lors de l\'upload d\'un document', 400);
+                }
+
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                if (!in_array($extension, $allowed)) {
+                    jsonError('Format de document non autorisé', 400);
+                }
+
+                $newFileName = uniqid() . '_' . time() . '.' . $extension;
+                $destination = $uploadDir . $newFileName;
+
+                if (!move_uploaded_file($_FILES['documents']['tmp_name'][$index], $destination)) {
+                    jsonError('Impossible d\'enregistrer un document', 500);
+                }
+
+                $uploadedFiles[] = $newFileName;
             }
-
-            $newFileName = uniqid() . '.' . $extension;
-            $destination = $uploadDir . $newFileName;
-
-            if (!move_uploaded_file($_FILES['document']['tmp_name'], $destination)) {
-                jsonError('Erreur lors de l\'upload du document', 500);
-            }
-
-            $documentPath = $newFileName; // chemin relatif pour le front
         }
 
-        // 🔹 Insertion de la dépense
+        // 🔹 Insertion
         $insertExpense = $pdo->prepare("
-                INSERT INTO expenses (
-                    project_id,
-                    project_budget_line_id,
-                    amount,
-                    description,
-                    expense_date,
-                    document,
-                    created_at,
-                    updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-            ");
+            INSERT INTO expenses (
+                project_id,
+                project_budget_line_id,
+                amount,
+                description,
+                expense_date,
+                documents,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+        ");
+
         $insertExpense->execute([
             $projectId,
             $projectBudgetLineId,
             $amount,
             $description,
             $expenseDate,
-            $documentPath
+            json_encode($uploadedFiles)
         ]);
 
         $expenseId = $pdo->lastInsertId();
@@ -760,21 +784,151 @@ function createExpense()
             . "Ligne budgétaire: {$budgetName}\n"
             . "Montant: {$amount} FCFA\n"
             . ($description ? "Description: {$description}\n" : '')
-            . ($documentPath ? "Document: {$documentPath}" : '');
+            . (!empty($uploadedFiles) ? "Documents joints: " . count($uploadedFiles) : '');
 
         createNotification($notificationText, $currentUserId, $currentUserName);
 
         $pdo->commit();
 
         jsonSuccess(['expense_id' => $expenseId], 'Dépense enregistrée avec succès');
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        jsonError('Erreur PDO : ' . $e->getMessage(), 500);
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        jsonError('Erreur : ' . $e->getMessage(), 500);
+    } catch (Throwable $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError('Erreur interne du serveur', 500);
     }
 }
+
+function updateExpenseDocuments()
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $pdo = getPDO();
+
+    $currentUserId   = $_SESSION['user_id'] ?? null;
+    $currentUserName = $_SESSION['user_name'] ?? null;
+    $expenseId       = $_POST['id'] ?? $_GET['id'] ?? null;
+
+    if (!$currentUserId) {
+        jsonError('Utilisateur non connecté', 401);
+    }
+
+    if (!$expenseId) {
+        jsonError('ID de la dépense manquant', 400);
+    }
+
+    // documents existants envoyés par le front après suppression
+    $existingDocuments = isset($_POST['documents']) ? json_decode($_POST['documents'], true) : [];
+
+    if (!is_array($existingDocuments)) {
+        $existingDocuments = [];
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // 🔹 Récupérer la dépense existante
+        $stmt = $pdo->prepare("SELECT documents FROM expenses WHERE id = ?");
+        $stmt->execute([$expenseId]);
+        $expense = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$expense) {
+            jsonError('Dépense introuvable', 404);
+        }
+
+        $oldDocuments = json_decode($expense['documents'] ?? '[]', true);
+        if (!is_array($oldDocuments)) $oldDocuments = [];
+
+        // 🔹 Supprimer physiquement les documents retirés
+        $documentsToDelete = array_diff($oldDocuments, $existingDocuments);
+        $uploadDir = __DIR__ . '/../images/';
+        foreach ($documentsToDelete as $doc) {
+            $path = $uploadDir . $doc;
+            if (file_exists($path)) {
+                unlink($path);
+            }
+        }
+
+        $uploadedFiles = [];
+
+        // 🔹 Ajouter de nouveaux fichiers si fournis
+        if (!empty($_FILES['documents']['name'][0])) {
+            $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+
+            foreach ($_FILES['documents']['name'] as $index => $originalName) {
+                if ($_FILES['documents']['error'][$index] !== UPLOAD_ERR_OK) {
+                    jsonError('Erreur lors de l\'upload d\'un document', 400);
+                }
+
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                if (!in_array($extension, $allowed)) {
+                    jsonError('Format de document non autorisé', 400);
+                }
+
+                $newFileName = uniqid() . '_' . time() . '.' . $extension;
+                $destination = $uploadDir . $newFileName;
+
+                if (!move_uploaded_file($_FILES['documents']['tmp_name'][$index], $destination)) {
+                    jsonError('Impossible d\'enregistrer un document', 500);
+                }
+
+                $uploadedFiles[] = $newFileName;
+            }
+        }
+
+        // 🔹 Fusionner les documents existants + nouveaux
+        $allDocuments = array_merge($existingDocuments, $uploadedFiles);
+
+        // 🔹 Limite 15 documents
+        if (count($allDocuments) > 15) {
+            jsonError('Maximum 15 documents autorisés par dépense', 400);
+        }
+
+        // 🔹 Mise à jour
+        $stmtUpdate = $pdo->prepare("
+            UPDATE expenses
+            SET documents = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmtUpdate->execute([json_encode($allDocuments), $expenseId]);
+
+        // 🔹 Récupérer infos de la dépense et projet
+        $stmtInfo = $pdo->prepare("
+    SELECT e.description AS expense_desc, p.name AS project_name
+    FROM expenses e
+    JOIN projects p ON e.project_id = p.id
+    WHERE e.id = ?
+");
+        $stmtInfo->execute([$expenseId]);
+        $info = $stmtInfo->fetch(PDO::FETCH_ASSOC);
+
+        $projectName = $info['project_name'] ?? "Projet inconnu";
+        $expenseDesc = $info['expense_desc'] ?? "Dépense sans description";
+
+        $user_id = 1;
+        $user_name = "Admin";
+
+        // 🔹 Notification
+        $notificationText = "Documents de la dépense \"{$expenseDesc}\" du projet \"{$projectName}\" mis à jour par {$currentUserName}. "
+            . "Total documents : " . count($allDocuments);
+
+        createNotification($notificationText, $user_id, $user_name);
+
+        $pdo->commit();
+
+        jsonSuccess(['documents' => $allDocuments], 'Documents mis à jour avec succès');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonError('Erreur serveur : ' . $e->getMessage(), 500);
+    }
+}
+
 
 function newExpenseValidation()
 {
@@ -1119,66 +1273,137 @@ function acceptExpenseValidation()
     }
 }
 
-function rejectExpenseValidation()
+function updatePassword()
 {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    $validationId = verifyInput($_POST['validation_id']);
-    global $pdo;
+    header('Content-Type: application/json');
+
+    $pdo = getPDO();
+
+    $userId = $_SESSION['user_id'] ?? null;
+    $oldPassword = $_POST['old_password'] ?? null;
+    $newPassword = $_POST['new_password'] ?? null;
+    $confirmPassword = $_POST['confirm_password'] ?? null;
+
+    if (!$userId) {
+        jsonError("Utilisateur non connecté.", 401);
+    }
+
+    if (!$oldPassword || !$newPassword || !$confirmPassword) {
+        jsonError("Tous les champs sont obligatoires.", 400);
+    }
+
+    if ($newPassword !== $confirmPassword) {
+        jsonError("Le nouveau mot de passe et sa confirmation ne correspondent pas.", 400);
+    }
+
+    if (strlen($newPassword) < 6) {
+        jsonError("Le mot de passe doit contenir au moins 6 caractères.", 400);
+    }
 
     try {
-        // 1️⃣ Récupérer la validation uniquement si elle est en attente
+
+        $stmt = $pdo->prepare("SELECT name, password FROM users WHERE id = :id AND status = 'Actif'");
+        $stmt->execute(['id' => $userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            jsonError("Utilisateur introuvable ou inactif.", 404);
+        }
+
+        if (!password_verify($oldPassword, $user['password'])) {
+            jsonError("L'ancien mot de passe est incorrect.", 400);
+        }
+
+        $pdo->beginTransaction();
+
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        $stmtUpdate = $pdo->prepare("UPDATE users SET password = :password WHERE id = :id");
+        $stmtUpdate->execute([
+            'password' => $hashedPassword,
+            'id' => $userId
+        ]);
+
+        $message = "Bonjour {$user['name']}, votre mot de passe a été mis à jour avec succès.";
+        createNotification($message, $userId, $user['name']);
+
+        $pdo->commit();
+
+        jsonSuccess([], "Mot de passe mis à jour avec succès.");
+    } catch (Throwable $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError("Erreur interne du serveur.", 500);
+    }
+}
+
+function rejectExpenseValidation()
+{
+    $pdo = getPDO();
+
+    $validationId = $_POST['validation_id'] ?? $_GET['validation_id'] ?? null;
+
+    if (!$validationId || !ctype_digit($validationId)) {
+        jsonError('ID de validation invalide.');
+        return;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // 1️⃣ Récupérer la validation + utilisateur uniquement si en attente
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM expenses_validations
-            WHERE id = ? AND status = 'en attente'
+            SELECT ev.*, u.name AS user_name
+            FROM expenses_validations ev
+            INNER JOIN users u ON u.id = ev.user_id
+            WHERE ev.id = :id AND ev.status = 'en attente'
+            LIMIT 1
         ");
-        $stmt->execute([$validationId]);
+        $stmt->execute(['id' => $validationId]);
         $validation = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$validation) {
             throw new Exception("Validation introuvable ou déjà traitée.");
         }
 
-        // 2️⃣ Mettre à jour le statut
-        $stmtUpdate = $pdo->prepare("
+        // 2️⃣ Mettre à jour le statut en 'refusée'
+        $update = $pdo->prepare("
             UPDATE expenses_validations
             SET status = 'refusée'
-            WHERE id = ?
+            WHERE id = :id
         ");
-        $stmtUpdate->execute([$validationId]);
+        $update->execute(['id' => $validationId]);
 
         // 3️⃣ Notification utilisateur
-        $title = "Demande de dépense refusée";
-        $message = "Votre demande de dépense d’un montant de "
-            . number_format($validation['amount'], 2, ',', ' ')
-            . " a été refusée.";
+        $message  = "Bonjour {$validation['user_name']},\n\n";
+        $message .= "Votre demande de validation d'une dépense a été refusée.\n\n";
+        $message .= "Montant : " . number_format($validation['amount'], 0, ',', ' ') . " FCFA\n";
+        if (!empty($validation['description'])) {
+            $message .= "Description : {$validation['description']}\n";
+        }
+        $message .= "\nMerci de vérifier votre demande ou contacter l'administration.";
 
-        $stmtNotif = $pdo->prepare("
-            INSERT INTO notifications (
-                user_id,
-                title,
-                message,
-                type,
-                created_at,
-                is_read
-            ) VALUES (?, ?, ?, ?, NOW(), 0)
-        ");
-        $stmtNotif->execute([
-            $validation['user_id'],
-            $title,
+        createNotification(
             $message,
-            'expense_validation'
-        ]);
+            $validation['user_id'],
+            $validation['user_name'],
+        );
 
-        return [
-            'success' => true,
-            'message' => 'Demande refusée et utilisateur notifié.'
-        ];
-    } catch (Exception $e) {
-        return [
-            'success' => false,
-            'message' => $e->getMessage()
-        ];
+        $pdo->commit();
+
+        jsonSuccess([], 'Demande refusée et utilisateur notifié.');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonError($e->getMessage());
     }
 }
 
@@ -1225,10 +1450,18 @@ function getAllExpensesValidations()
 
 function updateExpense()
 {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
     $pdo = getPDO();
 
     $currentUserId = $_SESSION['user_id'] ?? null;
     $currentUserName = $_SESSION['user_name'] ?? null;
+
+    if (!$currentUserId || !$currentUserName) {
+        jsonError('Utilisateur non authentifié', 401);
+    }
 
     $id = $_GET['id'] ?? null;
     $projectId = $_POST['project_id'] ?? null;
@@ -1244,15 +1477,8 @@ function updateExpense()
     try {
         $pdo->beginTransaction();
 
-        // Récupérer l’ancienne dépense
-        $stmtOld = $pdo->prepare("
-            SELECT e.*, p.name AS project_name, bl.name AS budget_line_name
-            FROM expenses e
-            JOIN project_budget_lines pbl ON e.project_budget_line_id = pbl.id
-            JOIN budget_lines bl ON pbl.budget_line_id = bl.id
-            JOIN projects p ON e.project_id = p.id
-            WHERE e.id = ?
-        ");
+        // 🔹 Récupérer ancienne dépense
+        $stmtOld = $pdo->prepare("SELECT * FROM expenses WHERE id = ?");
         $stmtOld->execute([$id]);
         $oldExpense = $stmtOld->fetch(PDO::FETCH_ASSOC);
 
@@ -1260,36 +1486,53 @@ function updateExpense()
             jsonError('Dépense introuvable', 404);
         }
 
-        // Gestion du document
-        $documentPath = $oldExpense['document'] ?? null;
-        if (!empty($_FILES['document']['name'])) {
-            $uploadDir = __DIR__ . '/../images/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-
-            $originalName = $_FILES['document']['name'];
-            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-
-            if (!in_array($extension, $allowed)) {
-                jsonError('Format de document non autorisé', 400);
-            }
-
-            // Supprimer ancien fichier si existant
-            if ($documentPath && file_exists(__DIR__ . '/../' . $documentPath)) {
-                unlink(__DIR__ . '/../' . $documentPath);
-            }
-
-            $newFileName = uniqid() . '.' . $extension;
-            $destination = $uploadDir . $newFileName;
-
-            if (!move_uploaded_file($_FILES['document']['tmp_name'], $destination)) {
-                jsonError('Erreur lors de l\'upload du document', 500);
-            }
-
-            $documentPath = 'images/' . $newFileName;
+        $existingDocuments = [];
+        if (!empty($oldExpense['documents'])) {
+            $existingDocuments = json_decode($oldExpense['documents'], true) ?? [];
         }
 
-        // Mise à jour de la dépense
+        $uploadedFiles = $existingDocuments;
+
+        // 🔹 Gestion nouveaux documents (max 15 total)
+        if (!empty($_FILES['documents']['name'][0])) {
+
+            $newFilesCount = count($_FILES['documents']['name']);
+
+            if (($newFilesCount + count($existingDocuments)) > 15) {
+                jsonError('Maximum 15 documents autorisés au total', 400);
+            }
+
+            $uploadDir = __DIR__ . '/../images/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
+
+            foreach ($_FILES['documents']['name'] as $index => $originalName) {
+
+                if ($_FILES['documents']['error'][$index] !== UPLOAD_ERR_OK) {
+                    jsonError('Erreur lors de l\'upload d\'un document', 400);
+                }
+
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                if (!in_array($extension, $allowed)) {
+                    jsonError('Format de document non autorisé', 400);
+                }
+
+                $newFileName = uniqid() . '_' . time() . '.' . $extension;
+                $destination = $uploadDir . $newFileName;
+
+                if (!move_uploaded_file($_FILES['documents']['tmp_name'][$index], $destination)) {
+                    jsonError('Impossible d\'enregistrer un document', 500);
+                }
+
+                $uploadedFiles[] = $newFileName;
+            }
+        }
+
+        // 🔹 Mise à jour
         $stmtUpdate = $pdo->prepare("
             UPDATE expenses SET
                 project_id = ?,
@@ -1297,57 +1540,65 @@ function updateExpense()
                 amount = ?,
                 description = ?,
                 expense_date = ?,
-                document = ?,
+                documents = ?,
                 updated_at = NOW()
             WHERE id = ?
         ");
+
         $stmtUpdate->execute([
             $projectId,
             $projectBudgetLineId,
             $amount,
             $description,
             $expenseDate,
-            $documentPath,
+            json_encode($uploadedFiles),
             $id
         ]);
 
-        // Préparer la notification détaillée
+        // 🔹 Détection des changements
         $changes = [];
+
         if ($oldExpense['amount'] != $amount) {
             $changes[] = "Montant: {$oldExpense['amount']} → {$amount}";
         }
+
         if ($oldExpense['project_budget_line_id'] != $projectBudgetLineId) {
-            $changes[] = "Ligne budgétaire: {$oldExpense['budget_line_name']} → ID {$projectBudgetLineId}";
+            $changes[] = "Ligne budgétaire modifiée";
         }
+
         if ($oldExpense['project_id'] != $projectId) {
-            $changes[] = "Projet: {$oldExpense['project_name']} → ID {$projectId}";
+            $changes[] = "Projet modifié";
         }
+
         if (($oldExpense['description'] ?? '') != ($description ?? '')) {
-            $changes[] = "Description: \"{$oldExpense['description']}\" → \"{$description}\"";
+            $changes[] = "Description modifiée";
         }
+
         if (($oldExpense['expense_date'] ?? '') != $expenseDate) {
-            $changes[] = "Date de dépense: {$oldExpense['expense_date']} → {$expenseDate}";
-        }
-        if (($oldExpense['document'] ?? '') != ($documentPath ?? '')) {
-            $changes[] = "Document: " . ($oldExpense['document'] ?? 'aucun') . " → " . ($documentPath ?? 'aucun');
+            $changes[] = "Date modifiée";
         }
 
-        $notificationText = "Dépense modifiée par {$currentUserName}:\n" . implode("\n", $changes);
+        if (json_encode($existingDocuments) !== json_encode($uploadedFiles)) {
+            $changes[] = "Documents mis à jour (" . count($uploadedFiles) . " total)";
+        }
 
-        createNotification($notificationText, $currentUserId, $currentUserName);
+        if (!empty($changes)) {
+            $notificationText = "Dépense modifiée par {$currentUserName}:\n" . implode("\n", $changes);
+            createNotification($notificationText, $currentUserId, $currentUserName);
+        }
 
         $pdo->commit();
 
         jsonSuccess([], 'Dépense mise à jour avec succès');
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        jsonError('Erreur PDO : ' . $e->getMessage(), 500);
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        jsonError('Erreur : ' . $e->getMessage(), 500);
+    } catch (Throwable $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError('Erreur interne du serveur', 500);
     }
 }
-
 
 
 

@@ -877,6 +877,114 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             display: inline-block;
         }
 
+        .badge-locked {
+            background: rgba(255, 59, 59, 0.15);
+            color: var(--accent-red);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+
+        .locked-project-notice {
+            background: rgba(255, 59, 59, 0.1);
+            border: 1px solid rgba(255, 59, 59, 0.3);
+            border-left: 3px solid var(--accent-red);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--accent-red);
+            font-size: 0.9rem;
+        }
+
+        .locked-project-notice i {
+            font-size: 1.25rem;
+        }
+
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .footer-section h4 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .footer-section p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-top: 2rem;
+        }
+
+        .footer-info {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .footer-stats {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .footer-stat {
+            text-align: center;
+        }
+
+        .footer-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .footer-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
         @media (max-width: 1024px) {
             .charts-grid {
                 grid-template-columns: 1fr;
@@ -910,6 +1018,15 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             .filter-input,
             .search-input {
                 width: 100%;
+                max-width: 100% !important;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+
+            .table thead {
+                display: none;
             }
 
             .table tbody tr {
@@ -918,18 +1035,24 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 border: 1px solid var(--border-color);
                 border-radius: var(--radius);
                 padding: 0.5rem;
+                background: var(--bg-secondary);
             }
 
-            .table tbody tr.warning,
+            .table tbody tr.warning {
+                border-left: 3px solid var(--accent-yellow);
+                background: rgba(255, 184, 0, 0.05);
+            }
+
             .table tbody tr.danger {
-                border-left-width: 3px;
+                border-left: 3px solid var(--accent-red);
+                background: rgba(255, 59, 59, 0.05);
             }
 
             .table tbody td {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.75rem 0.5rem;
+                padding: 0.75rem 0.75rem;
                 border-bottom: 1px solid var(--border-color);
                 text-align: right;
             }
@@ -944,7 +1067,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 color: var(--text-secondary);
                 text-align: left;
                 margin-right: 1rem;
-                flex: 1;
+                flex-shrink: 0;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
             }
 
             .table tbody td .action-buttons {
@@ -953,6 +1079,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
             .charts-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-wrap: nowrap;
             }
         }
     </style>
@@ -981,7 +1111,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </a>
                     </li>
 
-                    <li v-if="user_role == 'utilisateur'">
+                    <li v-if="user_role == 'utilisateur' || user_role == 'consultant'">
                         <a href="parameters.php" class="nav-link" @click="closeMobileMenu">
                             <i class="fas fa-cog"></i> Paramètres
                         </a>
@@ -1082,7 +1212,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         Gestion des Dépenses
                     </h2>
 
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button v-if="canEdit" @click="toggleValidationsSection" class="btn btn-warning">
                             <i class="fas fa-exclamation-triangle"></i> Dépassements de Budget
                         </button>
@@ -1102,20 +1232,27 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </div>
                         <select class="filter-select" v-model="projectFilter" @change="filterExpenses"
                             style="max-width: 250px;">
-                            <option value="" style="max-width: 250px;">Tous les projets</option>
-                            <option v-for="project in projects" :key="project.id" :value="project.id" style="max-width: 250px;">
+                            <option value="">Tous les projets</option>
+                            <option v-for="project in availableProjects" :key="project.id" :value="project.id">
                                 {{ reduceWord(project.name) }}
                             </option>
                         </select>
 
-                        <select class="filter-select" v-model="sectionFilter" @change="filterExpenses"
-                            style="max-width: 250px;">
-                            <option value="">Toutes les sections</option>
-                            <option value="">Sélectionner un secteur</option>
-                            <option value="Electricité">Electricité</option>
-                            <option value="Télécommunication">Télécommunication</option>
-                            <option value="Génie Civil">Génie Civil</option>
-                            <option value="AEP">AEP</option>
+                        <select class="filter-select" v-model="overflowDepartmentFilter"
+                            @change="filterOverflowExpenses" style="max-width: 250px;">
+                            <option value="">Tous les secteurs</option>
+                            <option v-for="dept in uniqueDepartments" :key="dept" :value="dept">
+                                {{ dept }}
+                            </option>
+                        </select>
+                        <select class="filter-select" v-model="overflowLocationFilter"
+                            @change="filterOverflowExpenses" style="max-width: 250px;">
+                            <option value="">Tous les lieux</option>
+                            <option v-for="loc in uniqueOverflowLocations" :key="loc" :value="loc">
+                                {{ loc }}
+                            </option>
+                        </select>
+
                         </select>
                         <select class="filter-select" v-model="statusFilter" @change="filterExpenses"
                             style="max-width: 250px;">
@@ -1139,7 +1276,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                     <th>Montant</th>
                                     <th>Réalisation</th>
                                     <th>Statut</th>
-                                    <th>Document</th>
                                     <th v-if="canEdit" class="no-print">Actions</th>
                                 </tr>
                             </thead>
@@ -1152,24 +1288,16 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                     <td data-label="Description" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
                                         {{ expense.description || '-' }}
                                     </td>
-                                    <td data-label="Montant"><strong>{{ formatCurrency(expense.amount) }}</strong></td>
-                                    <td data-label="Réalisation">{{ formatCurrency(expense.spent) }}</td>
+                                    <td data-label="Montant"><strong>{{ formatCurrencyExact(expense.amount) }}</strong></td>
+                                    <td data-label="Réalisation">{{ formatCurrencyExact(expense.spent) }}</td>
                                     <td data-label="Statut">
                                         <span class="badge"
                                             :class="getBadgeClass(expense.remaining, expense.allocated_amount)">
                                             {{ getUsagePercentage(expense) }}%
                                         </span>
                                     </td>
-                                    <td data-label="Document">
-                                        <button v-if="expense.document" @click="viewDocument(expense)"
-                                            class="btn btn-sm btn-secondary">
-                                            <i :class="getDocumentIcon(expense.document)"
-                                                :style="{ color: getDocumentColor(expense.document) }"></i>
-                                        </button>
-                                        <span v-else style="color: var(--text-secondary);">-</span>
-                                    </td>
                                     <td v-if="canEdit" class="no-print" data-label="Actions">
-                                        <div class="action-buttons">
+                                        <div class="action-buttons" v-if="!isProjectLocked(expense.project_id)">
                                             <button @click="editExpense(expense)" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -1177,6 +1305,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
+                                        <span v-else class="badge badge-locked" title="Projet verrouillé">
+                                            <i class="fas fa-lock"></i> Verrouillé
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -1225,10 +1356,22 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         <p style="margin-bottom: 1rem; color: var(--text-secondary);">
                             Toutes les demandes de dépassement de budget ({{ adminValidations.length }} au total)
                         </p>
+
+                        <!-- Filtres pour dépassements -->
+                        <div class="filters">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" class="search-input" v-model="overflowSearchQuery"
+                                    @input="filterOverflowExpenses" style="max-width: 250px;"
+                                    placeholder="Rechercher...">
+                            </div>
+                        </div>
+
                         <div class="table-container">
-                            <table class="table" v-if="adminValidations.length > 0">
+                            <table class="table" v-if="paginatedAdminValidations.length > 0">
                                 <thead>
                                     <tr>
+                                        <th>Date</th>
                                         <th>Demandeur</th>
                                         <th>Projet</th>
                                         <th>Ligne Budgétaire</th>
@@ -1242,10 +1385,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                 <tbody>
                                     <tr v-for="validation in paginatedAdminValidations" :key="validation.validation_id"
                                         :class="validation.status === 'en attente' ? 'warning' : ''">
+                                        <td data-label="Date">{{ formatDate(validation.created_at) }}</td>
                                         <td data-label="Demandeur"><strong>{{ validation.user_name }}</strong></td>
                                         <td data-label="Projet">{{ reduceWord(validation.project_name) }}</td>
                                         <td data-label="Ligne Budgétaire">{{ validation.budget_line_name }}</td>
-                                        <td data-label="Montant Demandé"><strong>{{ formatCurrency(validation.requested_amount) }}</strong></td>
+                                        <td data-label="Montant Demandé"><strong>{{ formatCurrencyExact(validation.requested_amount) }}</strong></td>
                                         <td data-label="Description" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
                                             {{ validation.description || '-' }}
                                         </td>
@@ -1290,6 +1434,21 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                 <p>Aucune demande de dépassement</p>
                             </div>
                         </div>
+
+                        <!-- Pagination Admin -->
+                        <div class="pagination" v-if="totalAdminValidationsPages > 1">
+                            <button @click="adminValidationsCurrentPage--" :disabled="adminValidationsCurrentPage === 1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button v-for="page in totalAdminValidationsPages" :key="page"
+                                @click="adminValidationsCurrentPage = page"
+                                :class="{ active: adminValidationsCurrentPage === page }">
+                                {{ page }}
+                            </button>
+                            <button @click="adminValidationsCurrentPage++" :disabled="adminValidationsCurrentPage === totalAdminValidationsPages">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div v-else>
@@ -1300,6 +1459,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             <table class="table" v-if="userValidations.length > 0">
                                 <thead>
                                     <tr>
+                                        <th>Date</th>
                                         <th>Projet</th>
                                         <th>Ligne Budgétaire</th>
                                         <th>Montant Demandé</th>
@@ -1311,9 +1471,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                 <tbody>
                                     <tr v-for="validation in paginatedUserValidations" :key="validation.validation_id"
                                         :class="validation.status === 'en attente' ? 'warning' : ''">
+                                        <td data-label="Date">{{ formatDate(validation.created_at) }}</td>
                                         <td data-label="Projet">{{ reduceWord(validation.project_name) }}</td>
                                         <td data-label="Ligne Budgétaire">{{ validation.budget_line_name }}</td>
-                                        <td data-label="Montant Demandé"><strong>{{ formatCurrency(validation.requested_amount) }}</strong></td>
+                                        <td data-label="Montant Demandé"><strong>{{ formatCurrencyExact(validation.requested_amount) }}</strong></td>
                                         <td data-label="Description" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
                                             {{ validation.description || '-' }}
                                         </td>
@@ -1345,16 +1506,16 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             </div>
                         </div>
 
-                        <!-- Pagination -->
-                        <div class="pagination" v-if="totalValidationsPages > 1">
-                            <button @click="validationsCurrentPage--" :disabled="validationsCurrentPage === 1">
+                        <!-- Pagination User Validations -->
+                        <div class="pagination" v-if="totalUserValidationsPages > 1">
+                            <button @click="userValidationsCurrentPage--" :disabled="userValidationsCurrentPage === 1">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                            <button v-for="page in totalValidationsPages" :key="page" @click="validationsCurrentPage = page"
-                                :class="{ active: validationsCurrentPage === page }">
+                            <button v-for="page in totalUserValidationsPages" :key="page" @click="userValidationsCurrentPage = page"
+                                :class="{ active: userValidationsCurrentPage === page }">
                                 {{ page }}
                             </button>
-                            <button @click="validationsCurrentPage++" :disabled="validationsCurrentPage === totalValidationsPages">
+                            <button @click="userValidationsCurrentPage++" :disabled="userValidationsCurrentPage === totalUserValidationsPages">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
                         </div>
@@ -1362,6 +1523,27 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
             </div>
         </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-bottom">
+                    <div class="footer-info">
+                        © 2026 OrizonPlus • Gestion des Dépenses | Version 1.0.0 •
+                    </div>
+                    <div class="footer-stats">
+                        <div class="footer-info">
+                            <p class="text-center text-secondary small text-center mt-4"
+                                style="text-align: center">
+                                Built with Blood, Sweat and Tears by
+                                <a class="text text-secondary"
+                                    style="text-decoration: none; font-weight: bold; color: white;"
+                                    href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+        </footer>
 
         <!-- Modal Ajouter/Modifier Dépense -->
         <div class="modal-overlay" :class="{ active: modals.expense }" @click.self="closeExpenseModal">
@@ -1377,11 +1559,15 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
 
                 <div class="modal-body">
+                    <div v-if="expense.project_id && isProjectLocked(expense.project_id)" class="locked-project-notice">
+                        <i class="fas fa-lock"></i>
+                        <span>Ce projet est verrouillé. Les modifications ne sont pas autorisées.</span>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Projet *</label>
                         <select class="form-select" v-model="expense.project_id" @change="fetchLines" required>
                             <option value="">Sélectionner un projet</option>
-                            <option v-for="project in projects" :key="project.id" :value="project.id">
+                            <option v-for="project in unlockedProjects" :key="project.id" :value="project.id">
                                 {{ reduceWord(project.name) }}
                             </option>
                         </select>
@@ -1591,16 +1777,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
         </div>
     </div>
 
-    <div class="pagefooter">
-        <p class="text-center text-secondary small text-center mt-4"
-            style="text-align: center">
-            &copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
-            <a class="text text-secondary"
-                style="text-decoration: none; font-weight: bold; color: white;"
-                href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
-        </p>
-    </div>
-
     <script>
         const API_BASE_URL = 'api/index.php';
         const {
@@ -1638,15 +1814,21 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     isSaving: false,
                     searchQuery: '',
                     projectFilter: '',
+                    departmentFilter: '',
                     locationFilter: '',
-                    sectionFilter: '',
                     statusFilter: '',
                     dateFrom: '',
                     dateTo: '',
+                    overflowSearchQuery: '',
+                    overflowDepartmentFilter: '',
+                    overflowLocationFilter: '',
+                    filteredAdminValidations: [],
                     currentPage: 1,
                     itemsPerPage: 10,
                     validationsCurrentPage: 1,
                     validationsItemsPerPage: 10,
+                    adminValidationsCurrentPage: 1,
+                    userValidationsCurrentPage: 1,
                     showValidationsSection: false,
                     modals: {
                         expense: false,
@@ -1677,19 +1859,39 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 totalPages() {
                     return Math.ceil(this.filteredExpenses.length / this.itemsPerPage);
                 },
-                uniqueLocations() {
+                uniqueDepartments() {
+                    const departments = new Set();
+                    this.projects.forEach(p => {
+                        if (p.department) departments.add(p.department);
+                    });
+                    return Array.from(departments).sort();
+                },
+                uniqueLocationsFromProjects() {
                     const locations = new Set();
-                    this.expenses.forEach(e => {
-                        if (e.location) locations.add(e.location);
+                    this.projects.forEach(p => {
+                        if (p.location) locations.add(p.location);
                     });
                     return Array.from(locations).sort();
                 },
-                uniqueSections() {
-                    const sections = new Set();
-                    this.expenses.forEach(e => {
-                        if (e.section) sections.add(e.section);
+                uniqueOverflowLocations() {
+                    const locations = new Set();
+                    this.projects.forEach(p => {
+                        if (p.location) locations.add(p.location);
                     });
-                    return Array.from(sections).sort();
+                    return Array.from(locations).sort();
+                },
+                availableProjects() {
+                    let filtered = this.projects;
+                    if (this.departmentFilter) {
+                        filtered = filtered.filter(p => p.department === this.departmentFilter);
+                    }
+                    if (this.locationFilter) {
+                        filtered = filtered.filter(p => p.location === this.locationFilter);
+                    }
+                    return filtered;
+                },
+                unlockedProjects() {
+                    return this.projects.filter(p => p.status !== 'Verrouillé');
                 },
                 adminValidations() {
                     return this.expensesValidations;
@@ -1698,12 +1900,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     return this.expensesValidations.filter(v => v.user_id == this.user_id);
                 },
                 paginatedAdminValidations() {
-                    const start = (this.validationsCurrentPage - 1) * this.validationsItemsPerPage;
-                    return this.adminValidations.slice(start, start + this.validationsItemsPerPage);
+                    const start = (this.adminValidationsCurrentPage - 1) * this.validationsItemsPerPage;
+                    return this.filteredAdminValidations.slice(start, start + this.validationsItemsPerPage);
+                },
+                totalAdminValidationsPages() {
+                    return Math.ceil(this.filteredAdminValidations.length / this.validationsItemsPerPage);
                 },
                 paginatedUserValidations() {
-                    const start = (this.validationsCurrentPage - 1) * this.validationsItemsPerPage;
+                    const start = (this.userValidationsCurrentPage - 1) * this.validationsItemsPerPage;
                     return this.userValidations.slice(start, start + this.validationsItemsPerPage);
+                },
+                totalUserValidationsPages() {
+                    return Math.ceil(this.userValidations.length / this.validationsItemsPerPage);
                 },
                 totalValidationsPages() {
                     const validations = this.user_role === 'admin' ? this.adminValidations : this.userValidations;
@@ -1717,7 +1925,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             },
             methods: {
                 logout() {
-                    window.location.href = 'logout.php';
+                    window.location.href = 'api/index.php?action=logout';
                 },
                 closeMobileMenu() {
                     this.menuOpen = false;
@@ -1772,6 +1980,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
                         console.log('[v0] Server Response:', data);
                         this.expensesValidations = data.data || [];
+                        this.filterOverflowExpenses();
                         this.updateValidationStats();
                     } catch (error) {
                         console.error('[v0] Error fetching validations:', error);
@@ -2010,6 +2219,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 async saveExpense() {
                     if (!this.canEdit) return;
 
+                    if (this.isProjectLocked(this.expense.project_id)) {
+                        alert('Ce projet est verrouillé. Impossible d\'enregistrer la dépense.');
+                        return;
+                    }
+
                     if (
                         !this.expense.project_id ||
                         !this.expense.project_budget_line_id ||
@@ -2196,6 +2410,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 openExpenseModal() {
                     if (!this.canEdit) return;
 
+                    const unlockedProjects = this.projects.filter(p => p.status !== 'Verrouillé');
+                    if (unlockedProjects.length === 0) {
+                        alert('Tous les projets sont verrouillés. Impossible d\'ajouter une dépense.');
+                        return;
+                    }
+
                     this.isEditMode = false;
                     this.expense = {
                         id: null,
@@ -2214,6 +2434,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.modals.expense = true;
                 },
                 async editExpense(expense) {
+                    if (this.isProjectLocked(expense.project_id)) {
+                        alert('Ce projet est verrouillé. Impossible de modifier cette dépense.');
+                        return;
+                    }
+
                     this.isEditMode = true;
 
                     // Parser les documents JSON s'ils existent
@@ -2252,6 +2477,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 async deleteExpense(expense) {
                     if (!this.canEdit) return;
+
+                    if (this.isProjectLocked(expense.project_id)) {
+                        alert('Ce projet est verrouillé. Impossible de supprimer cette dépense.');
+                        return;
+                    }
 
                     if (!confirm(`Êtes-vous sûr de vouloir supprimer cette dépense de ${this.formatCurrency(expense.amount)} ?`)) {
                         return;
@@ -2301,6 +2531,14 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.modals.documentViewer = false;
                     this.viewingDocument = null;
                 },
+                isProjectLocked(projectId) {
+                    const project = this.projects.find(p => p.id == projectId);
+                    return project && project.status === 'Verrouillé';
+                },
+                getProjectName(projectId) {
+                    const project = this.projects.find(p => p.id == projectId);
+                    return project ? project.name : '';
+                },
                 filterExpenses() {
                     let filtered = this.expenses;
 
@@ -2316,12 +2554,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         filtered = filtered.filter(e => e.project_id == this.projectFilter);
                     }
 
-                    if (this.locationFilter) {
-                        filtered = filtered.filter(e => e.location == this.locationFilter);
+                    if (this.departmentFilter) {
+                        const projectIdsInDept = this.projects
+                            .filter(p => p.department === this.departmentFilter)
+                            .map(p => p.id);
+                        filtered = filtered.filter(e => projectIdsInDept.includes(e.project_id));
                     }
 
-                    if (this.sectionFilter) {
-                        filtered = filtered.filter(e => e.section == this.sectionFilter);
+                    if (this.locationFilter) {
+                        const projectIdsInLoc = this.projects
+                            .filter(p => p.location === this.locationFilter)
+                            .map(p => p.id);
+                        filtered = filtered.filter(e => projectIdsInLoc.includes(e.project_id));
                     }
 
                     if (this.statusFilter) {
@@ -2346,6 +2590,35 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
                     this.filteredExpenses = filtered;
                     this.currentPage = 1;
+                },
+                filterOverflowExpenses() {
+                    let filtered = this.adminValidations;
+
+                    if (this.overflowSearchQuery) {
+                        filtered = filtered.filter(v =>
+                            (v.user_name && v.user_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
+                            (v.project_name && v.project_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
+                            (v.budget_line_name && v.budget_line_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
+                            (v.description && v.description.toLowerCase().includes(this.overflowSearchQuery.toLowerCase()))
+                        );
+                    }
+
+                    if (this.overflowDepartmentFilter) {
+                        const projectIdsInDept = this.projects
+                            .filter(p => p.department === this.overflowDepartmentFilter)
+                            .map(p => p.id);
+                        filtered = filtered.filter(v => projectIdsInDept.includes(v.project_id));
+                    }
+
+                    if (this.overflowLocationFilter) {
+                        const projectIdsInLoc = this.projects
+                            .filter(p => p.location === this.overflowLocationFilter)
+                            .map(p => p.id);
+                        filtered = filtered.filter(v => projectIdsInLoc.includes(v.project_id));
+                    }
+
+                    this.filteredAdminValidations = filtered;
+                    this.adminValidationsCurrentPage = 1;
                 },
                 calculateStats() {
                     this.stats.totalExpenses = this.expenses.length;
@@ -2374,6 +2647,16 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         currency: 'XOF',
                         minimumFractionDigits: 0
                     }).format(value || 0);
+                },
+                formatCurrencyExact(value) {
+                    const num = parseFloat(value) || 0;
+                    return num.toLocaleString('fr-FR', {
+                        style: 'currency',
+                        currency: 'XOF',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                        useGrouping: true
+                    });
                 },
                 formatDate(date) {
                     return new Date(date).toLocaleDateString('fr-FR');

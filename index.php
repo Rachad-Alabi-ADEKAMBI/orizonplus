@@ -1070,7 +1070,9 @@ if (!isset($_SESSION['user_id'])) {
         <header class="header no-print">
             <div class="header-content">
                 <div class="logo">
-                    <img src="logo.png" alt="">
+                    <a href="index.php">
+                        <img src="logo.png" alt="">
+                    </a>
                 </div>
 
                 <button class="hamburger-btn" @click="toggleMobileMenu" aria-label="Toggle menu">
@@ -1094,11 +1096,19 @@ if (!isset($_SESSION['user_id'])) {
                         </a>
                     </li>
 
-                    <li v-if="user_role=='admin'">
+                    <li v-if="user_role=='admin' || user_role=='utilisateur'">
                         <a href="notifications.php" class="nav-link" @click="closeMobileMenu">
                             <i class="fas fa-bell"></i> Notifications
                         </a>
                     </li>
+
+                    <li v-if="user_role == 'utilisateur' || user_role == 'consultant'">
+                        <a href="parameters.php" class="nav-link" @click="closeMobileMenu">
+                            <i class="fas fa-cog"></i> Paramètres
+                        </a>
+                    </li>
+
+
 
 
                     <li>

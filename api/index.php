@@ -143,6 +143,14 @@ switch ($action) {
         getAllExpensesValidations();
         break;
 
+    case 'updatePassword':
+        updatePassword();
+        break;
+
+    case 'updateExpenseDocuments':
+        updateExpenseDocuments();
+        break;
+
     case 'unlockProject':
         unlockProject();
         break;
