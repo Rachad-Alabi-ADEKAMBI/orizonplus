@@ -231,6 +231,33 @@ $user_id = $_SESSION['user_id'] ?? null;
 			transition: all 0.3s ease;
 		}
 
+		.password-wrapper {
+			position: relative;
+			display: flex;
+			align-items: center;
+		}
+
+		.password-wrapper .form-input {
+			padding-right: 3rem;
+		}
+
+		.password-toggle {
+			position: absolute;
+			right: 0.85rem;
+			background: none;
+			border: none;
+			color: var(--text-secondary);
+			cursor: pointer;
+			font-size: 1rem;
+			padding: 0;
+			line-height: 1;
+			transition: color 0.2s ease;
+		}
+
+		.password-toggle:hover {
+			color: var(--text-primary);
+		}
+
 		.form-input:focus {
 			outline: none;
 			border-color: var(--accent-blue);
@@ -291,37 +318,47 @@ $user_id = $_SESSION['user_id'] ?? null;
 		}
 
 		.alert {
-			padding: 1rem;
+			padding: 1rem 1.5rem;
 			border-radius: var(--radius);
-			margin-bottom: 1.5rem;
 			display: flex;
 			align-items: flex-start;
 			gap: 1rem;
-			animation: slideIn 0.3s ease;
+			animation: slideDown 0.3s ease;
+
+			/* Toujours visible — fixé en haut de l'écran */
+			position: fixed;
+			top: 1.25rem;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 9999;
+			min-width: 320px;
+			max-width: 600px;
+			width: calc(100% - 2rem);
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 		}
 
-		@keyframes slideIn {
+		@keyframes slideDown {
 			from {
 				opacity: 0;
-				transform: translateY(-10px);
+				transform: translateX(-50%) translateY(-20px);
 			}
 
 			to {
 				opacity: 1;
-				transform: translateY(0);
+				transform: translateX(-50%) translateY(0);
 			}
 		}
 
 		.alert-success {
-			background: rgba(0, 230, 118, 0.15);
+			background: #0a3d20;
 			border: 1px solid var(--accent-green);
-			color: var(--accent-green);
+			color: #b8f5d0;
 		}
 
 		.alert-danger {
-			background: rgba(255, 59, 59, 0.15);
+			background: #3d0a0a;
 			border: 1px solid var(--accent-red);
-			color: var(--accent-red);
+			color: #f5b8b8;
 		}
 
 		.alert-icon {
@@ -489,7 +526,7 @@ $user_id = $_SESSION['user_id'] ?? null;
 
 			<!-- Alert Messages -->
 			<div v-if="alert.message" class="alert" :class="`alert-${alert.type}`">
-				<i class="fas" :class="alert.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'" class="alert-icon"></i>
+				<i :class="['fas', 'alert-icon', alert.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
 				<div class="alert-message">{{ alert.message }}</div>
 				<button class="alert-close" @click="closeAlert">
 					<i class="fas fa-times"></i>
@@ -515,41 +552,56 @@ $user_id = $_SESSION['user_id'] ?? null;
 							<label class="form-label" for="old_password">
 								<i class="fas fa-key"></i> Ancien Mot de Passe
 							</label>
-							<input
-								type="password"
-								id="old_password"
-								v-model="passwordForm.oldPassword"
-								class="form-input"
-								placeholder="Entrez votre mot de passe actuel"
-								required>
+							<div class="password-wrapper">
+								<input
+									:type="showOldPassword ? 'text' : 'password'"
+									id="old_password"
+									v-model="passwordForm.oldPassword"
+									class="form-input"
+									placeholder="Entrez votre mot de passe actuel"
+									required>
+								<button type="button" class="password-toggle" @click="showOldPassword = !showOldPassword" tabindex="-1">
+									<i class="fas" :class="showOldPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+								</button>
+							</div>
 						</div>
 
 						<div class="form-group">
 							<label class="form-label" for="new_password">
 								<i class="fas fa-lock-open"></i> Nouveau Mot de Passe
 							</label>
-							<input
-								type="password"
-								id="new_password"
-								v-model="passwordForm.newPassword"
-								@input="checkPasswordStrength"
-								class="form-input"
-								placeholder="Entrez votre nouveau mot de passe"
-								required>
+							<div class="password-wrapper">
+								<input
+									:type="showNewPassword ? 'text' : 'password'"
+									id="new_password"
+									v-model="passwordForm.newPassword"
+									@input="checkPasswordStrength"
+									class="form-input"
+									placeholder="Entrez votre nouveau mot de passe"
+									required>
+								<button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword" tabindex="-1">
+									<i class="fas" :class="showNewPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+								</button>
+							</div>
 						</div>
 
 						<div class="form-group">
 							<label class="form-label" for="confirm_password">
 								<i class="fas fa-check-circle"></i> Confirmer le Mot de Passe
 							</label>
-							<input
-								type="password"
-								id="confirm_password"
-								v-model="passwordForm.confirmPassword"
-								@input="checkPasswordStrength"
-								class="form-input"
-								placeholder="Confirmez votre nouveau mot de passe"
-								required>
+							<div class="password-wrapper">
+								<input
+									:type="showConfirmPassword ? 'text' : 'password'"
+									id="confirm_password"
+									v-model="passwordForm.confirmPassword"
+									@input="checkPasswordStrength"
+									class="form-input"
+									placeholder="Confirmez votre nouveau mot de passe"
+									required>
+								<button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1">
+									<i class="fas" :class="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+								</button>
+							</div>
 						</div>
 
 						<div class="password-requirements">
@@ -606,7 +658,10 @@ $user_id = $_SESSION['user_id'] ?? null;
 						message: '',
 						type: '' // success | danger
 					},
-					isSaving: false
+					isSaving: false,
+					showOldPassword: false,
+					showNewPassword: false,
+					showConfirmPassword: false
 				};
 			},
 			computed: {
@@ -674,6 +729,10 @@ $user_id = $_SESSION['user_id'] ?? null;
 							length: false,
 							match: false
 						};
+
+						this.showOldPassword = false;
+						this.showNewPassword = false;
+						this.showConfirmPassword = false;
 
 					} catch (error) {
 						this.showAlert("Erreur réseau.", "danger");
