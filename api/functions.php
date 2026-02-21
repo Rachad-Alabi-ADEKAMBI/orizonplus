@@ -197,72 +197,100 @@ function getProjectsData(PDO $pdo): array
 
 function createProject()
 {
-    $pdo = getPDO();
-
-    $name = $_POST['name'] ?? '';
-    $description = $_POST['description'] ?? null;
-    $department = $_POST['department'] ?? null;
-    $location = $_POST['location'] ?? null;
-    $date_of_creation = $_POST['date_of_creation'] ?? null;
-    $lines = json_decode($_POST['lines'] ?? '[]', true);
-    $status = "Déverouillé";
-
-    if (empty($name)) {
-        jsonError('Nom de projet manquant');
-    }
-
     try {
+        $pdo = getPDO();
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $name = trim($_POST['name'] ?? '');
+        $description = $_POST['description'] ?? null;
+        $department = $_POST['department'] ?? null;
+        $location = $_POST['location'] ?? null;
+        $date_of_creation = $_POST['date_of_creation'] ?? null;
+        $status = "Déverouillé";
+
+        $linesRaw = $_POST['lines'] ?? '[]';
+        $lines = json_decode($linesRaw, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            jsonError('Erreur JSON lines : ' . json_last_error_msg());
+        }
+
+        if ($name === '') {
+            jsonError('Nom de projet manquant');
+        }
+
+        $contract_number = $_POST['contract_number'] !== '' ? $_POST['contract_number'] : null;
+        $contract_amount_ht = $_POST['contract_amount_ht'] !== '' ? (float)$_POST['contract_amount_ht'] : null;
+        $execution_budget_ht = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
+        $collected_amount_ht = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
+
         $pdo->beginTransaction();
 
-        // 📁 Gestion upload fichiers
-        $uploadedFiles = [];
+        /* ================= UPLOAD ================= */
 
-        if (!empty($_FILES['documents']['name'][0])) {
+        $uploadedFiles = [];
+        if (!empty($_FILES['documents']) && !empty($_FILES['documents']['name'][0])) {
 
             $uploadDir = __DIR__ . '/../images/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
+            if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
+                throw new Exception("Impossible de créer le dossier upload");
             }
 
             foreach ($_FILES['documents']['tmp_name'] as $key => $tmpName) {
 
+                if ($_FILES['documents']['error'][$key] !== UPLOAD_ERR_OK) {
+                    throw new Exception("Erreur upload fichier : " . $_FILES['documents']['name'][$key]);
+                }
+
                 $originalName = $_FILES['documents']['name'][$key];
                 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-
-                // Autoriser seulement images et pdf
                 $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-                if (!in_array($extension, $allowed)) continue;
 
-                $newName = uniqid() . '.' . $extension;
+                if (!in_array($extension, $allowed)) {
+                    throw new Exception("Extension non autorisée : " . $originalName);
+                }
+
+                $newName = uniqid('doc_') . '.' . $extension;
                 $destination = $uploadDir . $newName;
 
-                move_uploaded_file($tmpName, $destination);
+                if (!move_uploaded_file($tmpName, $destination)) {
+                    throw new Exception("Échec déplacement fichier : " . $originalName);
+                }
 
                 $uploadedFiles[] = $newName;
             }
         }
 
-        // 🗂 Insertion projet
+        /* ================= INSERT PROJECT ================= */
+
         $stmt = $pdo->prepare("
-            INSERT INTO projects
-            (name, description, department, location, documents,  status, date_of_creation)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+           INSERT INTO projects
+(name, description, department, location, documents, project_status, date_of_creation,
+ contract_number, contract_amount_ht, execution_budget_ht, collected_amount_ht)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
-        $stmt->execute([
+        if (!$stmt->execute([
             $name,
             $description,
             $department,
             $location,
             json_encode($uploadedFiles),
             $status,
-            $date_of_creation
-        ]);
+            $date_of_creation,
+            $contract_number,
+            $contract_amount_ht,
+            $execution_budget_ht,
+            $collected_amount_ht
+        ])) {
+            throw new Exception("Erreur insertion projet : " . implode(' | ', $stmt->errorInfo()));
+        }
 
         $projectId = $pdo->lastInsertId();
 
-        // 💰 Lignes budgétaires
-        if (!empty($lines)) {
+        /* ================= INSERT LINES ================= */
+
+        if (!empty($lines) && is_array($lines)) {
 
             $stmtLine = $pdo->prepare("
                 INSERT INTO project_budget_lines
@@ -272,25 +300,35 @@ function createProject()
 
             foreach ($lines as $line) {
 
-                if (
-                    empty($line['budget_line_id']) ||
-                    !isset($line['allocated_amount'])
-                ) continue;
+                if (empty($line['budget_line_id']) || !isset($line['allocated_amount'])) {
+                    continue;
+                }
 
-                $stmtLine->execute([
+                if (!$stmtLine->execute([
                     $projectId,
                     (int)$line['budget_line_id'],
                     (float)$line['allocated_amount']
-                ]);
+                ])) {
+                    throw new Exception("Erreur insertion ligne : " . implode(' | ', $stmtLine->errorInfo()));
+                }
             }
         }
 
         $pdo->commit();
 
-        jsonSuccess(['id' => $projectId], 'Projet créé avec succès');
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        jsonError('Erreur création projet');
+        jsonSuccess(
+            ['id' => $projectId],
+            'Projet créé avec succès'
+        );
+    } catch (Throwable $e) {
+
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        jsonError(
+            'Erreur création projet : ' . $e->getMessage()
+        );
     }
 }
 
