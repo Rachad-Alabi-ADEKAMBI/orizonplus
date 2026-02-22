@@ -89,6 +89,10 @@ switch ($action) {
         getUsers();
         break;
 
+    case 'markNotificationsAsReaden':
+        markNotificationsAsReaden();
+        break;
+
     case 'removeExpenseDocument':
         removeExpenseDocument();
         break;

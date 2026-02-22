@@ -219,10 +219,18 @@ function createProject()
             jsonError('Nom de projet manquant');
         }
 
-        $contract_number = $_POST['contract_number'] !== '' ? $_POST['contract_number'] : null;
-        $contract_amount_ht = $_POST['contract_amount_ht'] !== '' ? (float)$_POST['contract_amount_ht'] : null;
-        $execution_budget_ht = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
-        $collected_amount_ht = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
+        $contract_number        = $_POST['contract_number'] !== '' ? $_POST['contract_number'] : null;
+        $contract_amount_ht     = $_POST['contract_amount_ht'] !== '' ? (float)$_POST['contract_amount_ht'] : null;
+        $execution_budget_ht    = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
+        $collected_amount_ht    = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
+
+        // Nouveaux champs – Engagement des fournisseurs
+        $amount_to_pay_to_suppliers = isset($_POST['amount_to_pay_to_suppliers']) && $_POST['amount_to_pay_to_suppliers'] !== ''
+            ? (float)$_POST['amount_to_pay_to_suppliers']
+            : null;
+        $amount_paid_to_suppliers = isset($_POST['amount_paid_to_suppliers']) && $_POST['amount_paid_to_suppliers'] !== ''
+            ? (float)$_POST['amount_paid_to_suppliers']
+            : null;
 
         $pdo->beginTransaction();
 
@@ -264,10 +272,11 @@ function createProject()
         /* ================= INSERT PROJECT ================= */
 
         $stmt = $pdo->prepare("
-           INSERT INTO projects
-(name, description, department, location, documents, project_status, date_of_creation,
- contract_number, contract_amount_ht, execution_budget_ht, collected_amount_ht)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO projects
+            (name, description, department, location, documents, project_status, date_of_creation,
+             contract_number, contract_amount_ht, execution_budget_ht, collected_amount_ht,
+             amount_to_pay_to_suppliers, amount_paid_to_suppliers)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         if (!$stmt->execute([
@@ -281,7 +290,9 @@ function createProject()
             $contract_number,
             $contract_amount_ht,
             $execution_budget_ht,
-            $collected_amount_ht
+            $collected_amount_ht,
+            $amount_to_pay_to_suppliers,
+            $amount_paid_to_suppliers
         ])) {
             throw new Exception("Erreur insertion projet : " . implode(' | ', $stmt->errorInfo()));
         }
@@ -331,6 +342,7 @@ function createProject()
         );
     }
 }
+
 
 function lockProject()
 {
@@ -415,20 +427,28 @@ function updateProject()
         $pdo = getPDO();
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $id = $_POST['id'] ?? null;
-        $name = trim($_POST['name'] ?? '');
-        $description = $_POST['description'] ?? null;
-        $department = $_POST['department'] ?? null;
-        $location = $_POST['location'] ?? null;
-        $date_of_creation = $_POST['date_of_creation'] ?? null;
-        $observation = $_POST['observation'] ?? null;
-        $contract_number = $_POST['contract_number'] !== '' ? $_POST['contract_number'] : null;
-        $contract_amount_ht = $_POST['contract_amount_ht'] !== '' ? (float)$_POST['contract_amount_ht'] : null;
+        $id                  = $_POST['id'] ?? null;
+        $name                = trim($_POST['name'] ?? '');
+        $description         = $_POST['description'] ?? null;
+        $department          = $_POST['department'] ?? null;
+        $location            = $_POST['location'] ?? null;
+        $date_of_creation    = $_POST['date_of_creation'] ?? null;
+        $observation         = $_POST['observation'] ?? null;
+        $contract_number     = $_POST['contract_number'] !== '' ? $_POST['contract_number'] : null;
+        $contract_amount_ht  = $_POST['contract_amount_ht'] !== '' ? (float)$_POST['contract_amount_ht'] : null;
         $execution_budget_ht = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
         $collected_amount_ht = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
 
-        $linesRaw = $_POST['lines'] ?? '[]';
-        $lines = json_decode($linesRaw, true);
+        // Nouveaux champs – Engagement des fournisseurs
+        $amount_to_pay_to_suppliers = isset($_POST['amount_to_pay_to_suppliers']) && $_POST['amount_to_pay_to_suppliers'] !== ''
+            ? (float)$_POST['amount_to_pay_to_suppliers']
+            : null;
+        $amount_paid_to_suppliers = isset($_POST['amount_paid_to_suppliers']) && $_POST['amount_paid_to_suppliers'] !== ''
+            ? (float)$_POST['amount_paid_to_suppliers']
+            : null;
+
+        $linesRaw    = $_POST['lines'] ?? '[]';
+        $lines       = json_decode($linesRaw, true);
         $updatedLines = json_decode($_POST['updated_lines'] ?? '[]', true);
         $deletedLines = json_decode($_POST['deleted_lines'] ?? '[]', true);
         $keptDocuments = json_decode($_POST['existing_documents'] ?? '[]', true);
@@ -459,13 +479,11 @@ function updateProject()
         |--------------------------------------------------------------------------
         */
 
-        $oldDocuments = json_decode($oldProject['documents'] ?? '[]', true);
-        $uploadDir = __DIR__ . '/../images/';
+        $oldDocuments  = json_decode($oldProject['documents'] ?? '[]', true);
+        $uploadDir     = __DIR__ . '/../images/';
 
-        // Sécuriser keptDocuments
         $keptDocuments = array_intersect($oldDocuments, $keptDocuments ?? []);
 
-        // Suppressions
         foreach ($oldDocuments as $oldFile) {
             if (!in_array($oldFile, $keptDocuments)) {
                 $filePath = $uploadDir . $oldFile;
@@ -478,7 +496,6 @@ function updateProject()
 
         $finalDocuments = $keptDocuments;
 
-        // Ajout nouveaux fichiers
         if (!empty($_FILES['documents']['name'][0])) {
 
             if (!is_dir($uploadDir)) {
@@ -492,14 +509,14 @@ function updateProject()
                 }
 
                 $originalName = $_FILES['documents']['name'][$key];
-                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                $extension    = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                $allowed      = ['jpg', 'jpeg', 'png', 'pdf'];
 
-                $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
                 if (!in_array($extension, $allowed)) {
                     throw new Exception("Extension non autorisée : " . $originalName);
                 }
 
-                $newName = uniqid('doc_') . '.' . $extension;
+                $newName     = uniqid('doc_') . '.' . $extension;
                 $destination = $uploadDir . $newName;
 
                 if (!move_uploaded_file($tmpName, $destination)) {
@@ -507,8 +524,7 @@ function updateProject()
                 }
 
                 $finalDocuments[] = $newName;
-
-                $changes[] = "Document ajouté : {$newName}";
+                $changes[]        = "Document ajouté : {$newName}";
             }
         }
 
@@ -519,24 +535,25 @@ function updateProject()
         */
 
         $fieldsToCheck = [
-            'name' => $name,
-            'description' => $description,
-            'department' => $department,
-            'location' => $location,
-            'date_of_creation' => $date_of_creation,
-            'observation' => $observation,
-            'contract_number' => $contract_number,
-            'contract_amount_ht' => $contract_amount_ht,
-            'execution_budget_ht' => $execution_budget_ht,
-            'collected_amount_ht' => $collected_amount_ht
+            'name'                       => $name,
+            'description'                => $description,
+            'department'                 => $department,
+            'location'                   => $location,
+            'date_of_creation'           => $date_of_creation,
+            'observation'                => $observation,
+            'contract_number'            => $contract_number,
+            'contract_amount_ht'         => $contract_amount_ht,
+            'execution_budget_ht'        => $execution_budget_ht,
+            'collected_amount_ht'        => $collected_amount_ht,
+            'amount_to_pay_to_suppliers' => $amount_to_pay_to_suppliers,
+            'amount_paid_to_suppliers'   => $amount_paid_to_suppliers,
         ];
 
         foreach ($fieldsToCheck as $field => $newValue) {
-
             $oldValue = $oldProject[$field] ?? null;
-
             if ((string)$oldValue !== (string)$newValue) {
-                $changes[] = ucfirst(str_replace('_', ' ', $field)) . " modifié : \"" . ($oldValue ?? '') . "\" → \"" . ($newValue ?? '') . "\"";
+                $changes[] = ucfirst(str_replace('_', ' ', $field))
+                    . " modifié : \"" . ($oldValue ?? '') . "\" → \"" . ($newValue ?? '') . "\"";
             }
         }
 
@@ -548,17 +565,19 @@ function updateProject()
 
         $stmtUpdateProject = $pdo->prepare("
             UPDATE projects SET
-                name = ?,
-                description = ?,
-                department = ?,
-                location = ?,
-                documents = ?,
-                date_of_creation = ?,
-                observation = ?,
-                contract_number = ?,
-                contract_amount_ht = ?,
-                execution_budget_ht = ?,
-                collected_amount_ht = ?
+                name                       = ?,
+                description                = ?,
+                department                 = ?,
+                location                   = ?,
+                documents                  = ?,
+                date_of_creation           = ?,
+                observation                = ?,
+                contract_number            = ?,
+                contract_amount_ht         = ?,
+                execution_budget_ht        = ?,
+                collected_amount_ht        = ?,
+                amount_to_pay_to_suppliers = ?,
+                amount_paid_to_suppliers   = ?
             WHERE id = ?
         ");
 
@@ -574,6 +593,8 @@ function updateProject()
             $contract_amount_ht,
             $execution_budget_ht,
             $collected_amount_ht,
+            $amount_to_pay_to_suppliers,
+            $amount_paid_to_suppliers,
             $id
         ]);
 
@@ -593,12 +614,8 @@ function updateProject()
 
             foreach ($updatedLines as $line) {
 
-                if (
-                    empty($line['project_budget_line_id']) ||
-                    !isset($line['allocated_amount'])
-                ) continue;
+                if (empty($line['project_budget_line_id']) || !isset($line['allocated_amount'])) continue;
 
-                // Récupérer infos ligne
                 $stmtLine = $pdo->prepare("
                     SELECT pbl.allocated_amount, bl.name
                     FROM project_budget_lines pbl
@@ -610,13 +627,9 @@ function updateProject()
 
                 if (!$lineData) continue;
 
-                $oldAmount = $lineData['allocated_amount'];
-                $lineName = $lineData['name'];
-
-                if ((float)$oldAmount !== (float)$line['allocated_amount']) {
-                    $changes[] = "Ligne \"{$lineName}\" modifiée : "
-                        . $oldAmount . " → "
-                        . $line['allocated_amount'];
+                if ((float)$lineData['allocated_amount'] !== (float)$line['allocated_amount']) {
+                    $changes[] = "Ligne \"{$lineData['name']}\" modifiée : "
+                        . $lineData['allocated_amount'] . " → " . $line['allocated_amount'];
                 }
 
                 $stmtUpdate->execute([
@@ -642,18 +655,13 @@ function updateProject()
 
             foreach ($lines as $line) {
 
-                if (
-                    empty($line['budget_line_id']) ||
-                    !isset($line['allocated_amount'])
-                ) continue;
+                if (empty($line['budget_line_id']) || !isset($line['allocated_amount'])) continue;
 
-                // Récupérer nom ligne
                 $stmtName = $pdo->prepare("SELECT name FROM budget_lines WHERE id = ?");
                 $stmtName->execute([(int)$line['budget_line_id']]);
                 $lineName = $stmtName->fetchColumn();
 
-                $changes[] = "Ligne ajoutée : \"{$lineName}\" ("
-                    . $line['allocated_amount'] . ")";
+                $changes[] = "Ligne ajoutée : \"{$lineName}\" (" . $line['allocated_amount'] . ")";
 
                 $stmtInsert->execute([
                     $id,
@@ -671,13 +679,10 @@ function updateProject()
 
         if (!empty($deletedLines)) {
 
-            $stmtDelete = $pdo->prepare("
-                DELETE FROM project_budget_lines WHERE id = ?
-            ");
+            $stmtDelete = $pdo->prepare("DELETE FROM project_budget_lines WHERE id = ?");
 
             foreach ($deletedLines as $lineId) {
 
-                // Récupérer nom avant suppression
                 $stmtName = $pdo->prepare("
                     SELECT bl.name
                     FROM project_budget_lines pbl
@@ -697,13 +702,14 @@ function updateProject()
 
         /*
         |--------------------------------------------------------------------------
-        | 🔔 Notification (détails exacts des changements, user_id = 1)
+        | 🔔 Notification
         |--------------------------------------------------------------------------
         */
 
         if (!empty($changes)) {
-            $notificationText = "Projet modifié : \"{$name}\" (ID {$id}). Détails des changements :\n\n" . implode("\n", $changes);
-            createNotification($notificationText, 1, 'Système');
+            $notificationText = "Projet modifié : \"{$name}\" (ID {$id}). Détails des changements :\n\n"
+                . implode("\n", $changes);
+            createNotification($notificationText, 1, 'admin');
         }
 
         $pdo->commit();
@@ -716,7 +722,6 @@ function updateProject()
         jsonError('Erreur mise à jour projet : ' . $e->getMessage());
     }
 }
-
 function createExpense()
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -1547,6 +1552,8 @@ function getAllExpensesValidations()
 }
 
 
+
+
 function updateExpense()
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -1573,6 +1580,19 @@ function updateExpense()
     if (!$id || !$projectId || !$projectBudgetLineId || $amount === null || !$expenseDate) {
         jsonError('Paramètres manquants', 400);
     }
+
+    // Helper : récupère le libellé d'une project_budget_line via jointure budget_lines
+    $getBudgetLineLabel = function (int $pblId) use ($pdo): string {
+        $stmt = $pdo->prepare("
+            SELECT bl.name
+            FROM project_budget_lines pbl
+            JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+            WHERE pbl.id = ?
+        ");
+        $stmt->execute([$pblId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['name'] ?? "Ligne #{$pblId}";
+    };
 
     try {
         $pdo->beginTransaction();
@@ -1644,16 +1664,21 @@ function updateExpense()
             }
         }
 
+        // Si user_id était NULL, on l'attribue à celui qui modifie
+        $previousUserId = $oldExpense['user_id'] ?? null;
+        $newUserId      = (empty($previousUserId)) ? $currentUserId : $previousUserId;
+
         // Update
         $stmtUpdate = $pdo->prepare("
             UPDATE expenses SET
-                project_id = ?,
+                project_id             = ?,
                 project_budget_line_id = ?,
-                amount = ?,
-                description = ?,
-                expense_date = ?,
-                documents = ?,
-                updated_at = NOW()
+                amount                 = ?,
+                description            = ?,
+                expense_date           = ?,
+                documents              = ?,
+                user_id                = ?,
+                updated_at             = NOW()
             WHERE id = ?
         ");
 
@@ -1664,47 +1689,75 @@ function updateExpense()
             $description,
             $expenseDate,
             json_encode($uploadedFiles),
-            $id
+            $newUserId,
+            $id,
         ]);
 
-        // Détection des changements
-
-        $stmtProject = $pdo->prepare("SELECT *
-         FROM projects WHERE id = ?");
+        // Récupération des infos projet
+        $stmtProject = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
         $stmtProject->execute([$projectId]);
         $project = $stmtProject->fetch(PDO::FETCH_ASSOC);
 
-        $projectName = $project['project_name'] ?? 'Projet inconnu';
+        $projectName = $project['name'] ?? ($project['project_name'] ?? 'Projet inconnu');
+        $contractNum = $project['contract_number'] ?? '-';
+
+        // Libellés des lignes budgétaires (via jointure budget_lines)
+        $budgetLineLabel = $getBudgetLineLabel($projectBudgetLineId);
+
+        // Détection des changements
         $changes = [];
+        $fmt     = fn($v) => number_format((float)$v, 0, ',', ' ') . ' FCFA';
 
         if ((float)$oldExpense['amount'] !== (float)$amount) {
-            $changes[] = "Montant : {$oldExpense['amount']} → {$amount}";
-        }
-
-        if ((int)$oldExpense['project_budget_line_id'] !== $projectBudgetLineId) {
-            $changes[] = "Ligne budgétaire modifiée";
+            $changes[] = "• Montant      : " . $fmt($oldExpense['amount']) . " → " . $fmt($amount);
         }
 
         if ((int)$oldExpense['project_id'] !== $projectId) {
-            $changes[] = "Projet modifié";
+            $changes[] = "• Projet       : modifié → {$projectName} (#{$projectId})";
+        }
+
+        if ((int)$oldExpense['project_budget_line_id'] !== $projectBudgetLineId) {
+            $oldLabel  = $getBudgetLineLabel((int)$oldExpense['project_budget_line_id']);
+            $changes[] = "• Ligne budg.  : {$oldLabel} → {$budgetLineLabel}";
         }
 
         if (($oldExpense['description'] ?? '') !== ($description ?? '')) {
-            $changes[] = "Description modifiée";
+            $oldDesc   = trim($oldExpense['description'] ?? '') ?: '(vide)';
+            $newDesc   = trim($description ?? '') ?: '(vide)';
+            $changes[] = "• Description  : \"{$oldDesc}\" → \"{$newDesc}\"";
         }
 
         if (($oldExpense['expense_date'] ?? '') !== $expenseDate) {
-            $changes[] = "Date modifiée";
+            $changes[] = "• Date         : {$oldExpense['expense_date']} → {$expenseDate}";
         }
 
         if (json_encode($existingDocuments) !== json_encode($uploadedFiles)) {
-            $changes[] = "Documents mis à jour (" . count($uploadedFiles) . " total)";
+            $added     = count($uploadedFiles) - count($existingDocuments);
+            $changes[] = "• Documents    : +{$added} fichier(s) ajouté(s) — total " . count($uploadedFiles);
+        }
+
+        if (empty($previousUserId)) {
+            $changes[] = "• Responsable  : attribué à {$currentUserName} (user #{$currentUserId})";
         }
 
         if (!empty($changes)) {
-            $message = "Projet : {$projectName}\n"
-                . "Dépense #{$id} modifiée par {$currentUserName} :\n"
-                . implode("\n", $changes);
+            $date    = date('d/m/Y à H:i');
+            $message = "════════════════════════════════\n"
+                . "  MODIFICATION DE DÉPENSE\n"
+                . "════════════════════════════════\n"
+                . "Projet       : {$projectName}\n"
+                . "Contrat      : {$contractNum}\n"
+                . "Dépense      : #{$id}\n"
+                . "Montant actuel : " . $fmt($amount) . "\n"
+                . "Date dépense : {$expenseDate}\n"
+                . "Ligne budg.  : {$budgetLineLabel}\n"
+                . "Modifié par  : {$currentUserName} (user #{$currentUserId})\n"
+                . "Le           : {$date}\n"
+                . "────────────────────────────────\n"
+                . "Modifications :\n"
+                . implode("\n", $changes) . "\n"
+                . "════════════════════════════════";
+
             createNotification($message, 1, 'admin');
         }
 
@@ -1717,7 +1770,18 @@ function updateExpense()
             $pdo->rollBack();
         }
 
-        jsonError('Erreur interne du serveur', 500);
+        $detail = sprintf(
+            '[%s] %s — dans %s ligne %d',
+            get_class($e),
+            $e->getMessage(),
+            str_replace(__DIR__, '', $e->getFile()),
+            $e->getLine()
+        );
+
+        $traceLines = array_slice(explode("\n", $e->getTraceAsString()), 0, 5);
+        $traceStr   = implode(' | ', $traceLines);
+
+        jsonError("Erreur serveur : {$detail} | Trace : {$traceStr}", 500);
     }
 }
 
@@ -1751,6 +1815,27 @@ function createNotification($description, $user_id, $user_name)
     }
 }
 
+function markNotificationsAsReaden($user_id = null)
+{
+    $pdo = getPDO();
+
+    try {
+        if ($user_id) {
+            // Utilisateur : marquer uniquement ses notifications
+            $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
+            $stmt->execute([(int)$user_id]);
+        } else {
+            // Admin : marquer toutes les notifications admin
+            $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_name = 'admin' AND is_read = 0");
+            $stmt->execute();
+        }
+
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 
 function deleteProject()
 {
@@ -1769,24 +1854,8 @@ function deleteProject()
     jsonSuccess([], 'Projet supprimé');
 }
 
-function getUsers()
-{
-    $pdo = getPDO();
 
-    try {
-        $stmt = $pdo->prepare("
-            SELECT *
-            FROM users
-            ORDER BY created_at DESC
-        ");
-        $stmt->execute();
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        jsonSuccess($users);
-    } catch (PDOException $e) {
-        jsonError('Erreur lors de la récupération des utilisateurs : ' . $e->getMessage(), 500);
-    }
-}
 
 
 function createUser()
@@ -1836,6 +1905,25 @@ function createUser()
         jsonError('Erreur PDO : ' . $e->getMessage(), 500);
     } catch (Exception $e) {
         jsonError('Erreur : ' . $e->getMessage(), 500);
+    }
+}
+
+function getUsers()
+{
+    $pdo = getPDO();
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM users
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute();
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        jsonSuccess($users);
+    } catch (PDOException $e) {
+        jsonError('Erreur lors de la récupération des utilisateurs : ' . $e->getMessage(), 500);
     }
 }
 
@@ -2150,11 +2238,13 @@ function deleteBudgetLine()
 /**
  * 💰 DÉPENSES
  */
+
 function getExpenses()
 {
     $pdo = getPDO();
 
-    $sqlWithCreatedBy = "
+    // Requête principale : LEFT JOIN users pour récupérer le nom via user_id
+    $sqlWithUserId = "
         SELECT 
             e.id,
             e.project_id,
@@ -2170,15 +2260,18 @@ function getExpenses()
             e.description,
             e.documents,
             e.user_id,
+            u.name AS user_name,
             e.created_at,
             e.updated_at
         FROM expenses e
         JOIN projects p ON p.id = e.project_id
         JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
         JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+        LEFT JOIN users u ON u.id = e.user_id
         ORDER BY e.created_at DESC
     ";
 
+    // Fallback si la colonne user_id n'existe pas encore dans la table expenses
     $sqlWithoutUserId = "
         SELECT 
             e.id,
@@ -2204,14 +2297,18 @@ function getExpenses()
     ";
 
     try {
-        $stmt = $pdo->query($sqlWithCreatedBy);
+        $stmt     = $pdo->query($sqlWithUserId);
         $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        if (strpos($e->getMessage(), 'user_id') !== false || strpos($e->getMessage(), 'created_by') !== false) {
-            $stmt = $pdo->query($sqlWithoutUserId);
+        if (
+            strpos($e->getMessage(), 'user_id')    !== false ||
+            strpos($e->getMessage(), 'created_by') !== false
+        ) {
+            $stmt     = $pdo->query($sqlWithoutUserId);
             $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($expenses as &$row) {
-                $row['user_id'] = null;
+                $row['user_id']   = null;
+                $row['user_name'] = null;
             }
             unset($row);
         } else {
@@ -2240,6 +2337,8 @@ function getNotifications()
             SELECT 
                 id,
                 user_id,
+                user_name,
+                is_read,
                 description,
                 created_at
             FROM notifications
