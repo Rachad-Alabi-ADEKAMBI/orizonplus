@@ -55,6 +55,60 @@ $user_id = $_SESSION['user_id'] ?? null;
 			line-height: 1.6;
 		}
 
+		.footer {
+			background: var(--bg-secondary);
+			border-top: 1px solid var(--border-color);
+			padding: 2rem;
+			margin-top: 3rem;
+			text-align: center;
+		}
+
+		.footer-content {
+			max-width: 1400px;
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.footer-top {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 2rem;
+			padding-bottom: 2rem;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.footer-section h4 {
+			font-size: 0.875rem;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			color: var(--text-secondary);
+			margin-bottom: 1rem;
+			font-weight: 600;
+		}
+
+		.footer-section p {
+			font-size: 0.875rem;
+			color: var(--text-secondary);
+			line-height: 1.6;
+		}
+
+		.footer-bottom {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 1rem;
+			padding-top: 2rem;
+		}
+
+		.footer-info {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+		}
+
+
 		.header {
 			background: var(--bg-secondary);
 			border-bottom: 1px solid var(--border-color);
@@ -439,6 +493,35 @@ $user_id = $_SESSION['user_id'] ?? null;
 			color: var(--accent-green);
 		}
 
+		.notif-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--accent-red);
+			color: #fff;
+			font-size: 0.65rem;
+			font-weight: 700;
+			min-width: 18px;
+			height: 18px;
+			border-radius: 999px;
+			padding: 0 4px;
+			margin-left: 4px;
+			line-height: 1;
+			animation: pulse-badge 2s infinite;
+		}
+
+		@keyframes pulse-badge {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0.65;
+			}
+		}
+
 		.grid-2-col {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -498,9 +581,10 @@ $user_id = $_SESSION['user_id'] ?? null;
 							<i class="fas fa-users"></i> Utilisateurs
 						</a>
 					</li>
-					<li v-if="user_role === 'admin' || user_role === 'utilisateur'">
+					<li>
 						<a href="notifications.php" class="nav-link" @click="closeMobileMenu">
 							<i class="fas fa-bell"></i> Notifications
+							<span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
 						</a>
 					</li>
 					<li v-if="user_role === 'utilisateur' || user_role === 'consultant'">
@@ -645,6 +729,7 @@ $user_id = $_SESSION['user_id'] ?? null;
 					user_id: <?php echo $user_id; ?>,
 					user_role: '<?php echo $_SESSION["user_role"] ?? "utilisateur"; ?>',
 					mobileMenuOpen: false,
+					unreadCount: 0,
 					passwordForm: {
 						oldPassword: '',
 						newPassword: '',
@@ -671,6 +756,9 @@ $user_id = $_SESSION['user_id'] ?? null;
 						this.passwordForm.oldPassword.length > 0;
 				}
 			},
+			mounted() {
+				this.fetchNotifications();
+			},
 			methods: {
 
 				toggleMobileMenu() {
@@ -679,6 +767,32 @@ $user_id = $_SESSION['user_id'] ?? null;
 
 				closeMobileMenu() {
 					this.mobileMenuOpen = false;
+				},
+
+				async fetchNotifications() {
+					try {
+						const response = await fetch(`${API_BASE_URL}?action=getNotifications`);
+						const data = await response.json();
+						if (!data.success) return;
+
+						const notifications = data.data || [];
+
+						if (this.user_role === 'admin') {
+							// Admin : notifications non lues avec user_name = 'admin'
+							this.unreadCount = notifications.filter(n =>
+								n.is_read == 0 && n.user_name === 'admin'
+							).length;
+						} else {
+							// Utilisateur : notifications non lues avec son propre user_id
+							this.unreadCount = notifications.filter(n =>
+								n.is_read == 0 && n.user_id == this.user_id
+							).length;
+						}
+
+						console.log(this.user_role);
+					} catch (error) {
+						console.error('[parameters] Erreur fetchNotifications:', error);
+					}
 				},
 
 				checkPasswordStrength() {

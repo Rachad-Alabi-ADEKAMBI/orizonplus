@@ -57,6 +57,24 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             line-height: 1.6;
         }
 
+        .notif-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-red);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            padding: 0 4px;
+            margin-left: 4px;
+            line-height: 1;
+            animation: pulse-badge 2s infinite;
+        }
+
+
         @media print {
             body {
                 background: white;
@@ -1105,11 +1123,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </a>
                     </li>
 
-                    <li v-if="user_role == 'admin' || user_role == 'utilisateur'">
-                        <a href="notifications.php" class="nav-link" @click="closeMobileMenu">
-                            <i class="fas fa-bell"></i> Notifications
-                        </a>
-                    </li>
+                    <li v-if="user_role=='admin' || user_role=='utilisateur'"><a href="notifications.php" class="nav-link" @click="closeMobileMenu"><i class="fas fa-bell"></i> Notifications
+                            <span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+                        </a></li>
 
                     <li v-if="user_role == 'utilisateur' || user_role == 'consultant'">
                         <a href="parameters.php" class="nav-link" @click="closeMobileMenu">
@@ -1237,22 +1253,6 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                 {{ reduceWord(project.name) }}
                             </option>
                         </select>
-
-                        <select class="filter-select" v-model="overflowDepartmentFilter"
-                            @change="filterOverflowExpenses" style="max-width: 250px;">
-                            <option value="">Tous les secteurs</option>
-                            <option v-for="dept in uniqueDepartments" :key="dept" :value="dept">
-                                {{ dept }}
-                            </option>
-                        </select>
-                        <select class="filter-select" v-model="overflowLocationFilter"
-                            @change="filterOverflowExpenses" style="max-width: 250px;">
-                            <option value="">Tous les lieux</option>
-                            <option v-for="loc in uniqueOverflowLocations" :key="loc" :value="loc">
-                                {{ loc }}
-                            </option>
-                        </select>
-
                         </select>
                         <select class="filter-select" v-model="statusFilter" @change="filterExpenses"
                             style="max-width: 250px;">
@@ -1274,8 +1274,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                     <th>Ligne Budgétaire</th>
                                     <th>Description</th>
                                     <th>Montant</th>
-                                    <th>Réalisation</th>
                                     <th>Statut</th>
+                                    <th>Enregistré par</th>
                                     <th>Documents</th>
                                     <th v-if="canEdit" class="no-print">Actions</th>
                                 </tr>
@@ -1295,12 +1295,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         {{ expense.description || '-' }}
                                     </td>
                                     <td data-label="Montant"><strong>{{ formatCurrencyExact(expense.amount) }}</strong></td>
-                                    <td data-label="Réalisation">{{ formatCurrencyExact(expense.spent) }}</td>
                                     <td data-label="Statut">
                                         <span class="badge"
                                             :class="getBadgeClass(expense.remaining, expense.allocated_amount)">
                                             {{ getUsagePercentage(expense) }}%
                                         </span>
+                                    </td>
+                                    <td data-label="Enregistré par">
+                                        <span v-if="expense.user_name" style="display:inline-flex;align-items:center;gap:0.35rem;">
+
+                                            {{ expense.user_name }}
+                                        </span>
+                                        <span v-else style="color:var(--text-secondary);font-size:0.85rem;">-</span>
                                     </td>
                                     <td data-label="Documents">
                                         <button v-if="getExpenseDocuments(expense).length > 0"
@@ -1311,7 +1317,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         <span v-else style="color: var(--text-secondary);">-</span>
                                     </td>
                                     <td v-if="canEdit" class="no-print" data-label="Actions">
-                                        <div class="action-buttons" v-if="!isProjectLocked(expense.project_id)">
+                                        <div class="action-buttons" v-if="canEditExpense(expense)">
                                             <button @click="editExpense(expense)" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -1319,8 +1325,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
-                                        <span v-else class="badge badge-locked" title="Projet verrouillé">
+                                        <span v-else-if="isProjectLocked(expense.project_id)" class="badge badge-locked" title="Projet verrouillé">
                                             <i class="fas fa-lock"></i> Verrouillé
+                                        </span>
+                                        <span v-else class="text-muted" style="font-size: 0.85rem;" title="Seul l'auteur de la dépense peut la modifier">
+                                            <i class="fas fa-user-lock"></i>
                                         </span>
                                     </td>
                                 </tr>
@@ -1554,7 +1563,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             <div class="footer-content">
                 <div class="footer-bottom">
                     <div class="footer-info">
-                        © 2026 OrizonPlus • Gestion des Dépenses | Version 1.0.0 •
+                        © 2026 OrizonPlus • système de gestion | Version 1.0.0 •
                     </div>
                     <div class="footer-stats">
                         <div class="footer-info">
@@ -1843,6 +1852,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     user_id: <?php echo $user_id; ?>,
                     user_name: '<?php echo $_SESSION["user_name"] ?>',
                     user_role: '<?php echo $_SESSION["user_role"] ?? "user"; ?>',
+                    unreadCount: 0,
                     menuOpen: false,
                     expenses: [],
                     filteredExpenses: [],
@@ -1980,6 +1990,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 this.fetchProjects();
                 this.fetchExpenses();
                 this.fetchExpensesValidations();
+                this.fetchNotifications();
             },
             methods: {
                 logout() {
@@ -2007,6 +2018,31 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         this.projects = data.data || [];
                     } catch (error) {
                         console.error('[v0] Error fetching projects:', error);
+                    }
+                },
+                async fetchNotifications() {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}?action=getNotifications`);
+                        const data = await response.json();
+                        if (!data.success) return;
+
+                        const notifications = data.data || [];
+
+                        if (this.user_role === 'admin') {
+                            // Admin : notifications non lues avec user_name = 'admin'
+                            this.unreadCount = notifications.filter(n =>
+                                n.is_read == 0 && n.user_name === 'admin'
+                            ).length;
+                        } else {
+                            // Utilisateur : notifications non lues avec son propre user_id
+                            this.unreadCount = notifications.filter(n =>
+                                n.is_read == 0 && n.user_id == this.user_id
+                            ).length;
+                        }
+
+                        console.log(this.user_role);
+                    } catch (error) {
+                        console.error('[parameters] Erreur fetchNotifications:', error);
                     }
                 },
                 async fetchExpenses() {
@@ -2492,6 +2528,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.modals.expense = true;
                 },
                 async editExpense(expense) {
+                    if (!this.canEditExpense(expense)) {
+                        alert('Vous ne pouvez modifier que les dépenses que vous avez insérées.');
+                        return;
+                    }
                     if (this.isProjectLocked(expense.project_id)) {
                         alert('Ce projet est verrouillé. Impossible de modifier cette dépense.');
                         return;
@@ -2535,7 +2575,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 async deleteExpense(expense) {
                     if (!this.canEdit) return;
-
+                    if (!this.canEditExpense(expense)) {
+                        alert('Vous ne pouvez supprimer que les dépenses que vous avez insérées.');
+                        return;
+                    }
                     if (this.isProjectLocked(expense.project_id)) {
                         alert('Ce projet est verrouillé. Impossible de supprimer cette dépense.');
                         return;
@@ -2648,6 +2691,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     const project = this.projects.find(p => p.id == projectId);
                     return project && project.project_status === 'Verrouillé';
                 },
+                /** true si l'utilisateur peut modifier/supprimer cette dépense (admin peut tout faire, sinon créateur ou dépense sans user_id) */
+                canEditExpense(expense) {
+                    if (!this.canEdit || !expense) return false;
+                    if (this.isProjectLocked(expense.project_id)) return false;
+                    if (this.user_role === 'admin') return true;
+                    const raw = expense.user_id != null ? expense.user_id : expense.created_by;
+                    const hasCreator = raw !== null && raw !== undefined && raw !== '';
+                    const creatorId = hasCreator ? Number(raw) : null;
+                    const myId = Number(this.user_id);
+                    if (!Number.isFinite(myId)) return creatorId === null;
+                    return creatorId === null || creatorId === myId;
+                },
                 getProjectName(projectId) {
                     const project = this.projects.find(p => p.id == projectId);
                     return project ? project.name : '';
@@ -2659,7 +2714,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         filtered = filtered.filter(e =>
                             (e.description && e.description.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
                             (e.project_name && e.project_name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                            (e.budget_line_name && e.budget_line_name.toLowerCase().includes(this.searchQuery.toLowerCase()))
+                            (e.budget_line_name && e.budget_line_name.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (e.user_name && e.user_name.toLowerCase().includes(this.searchQuery.toLowerCase()))
                         );
                     }
 

@@ -1,13 +1,19 @@
 <?php
 session_start();
 
-// s'il n'y a pas de session ou user non correct, rediriger vers login.php
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+// s'il n'y a pas de session, rediriger vers login.php
+if (
+	!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin' &&
+	($_SESSION['user_role'] ?? '') !== 'utilisateur'
+) {
 	header("Location: login.php");
 	exit;
 }
-?>
 
+$user_role = $_SESSION['user_role']  ?? null;
+$user_id = $_SESSION['user_id'] ?? null;
+$user_name = $_SESSION['user_name'] ?? null;
+?>
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -51,6 +57,60 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 			color: var(--text-primary);
 			line-height: 1.6;
 		}
+
+		.footer {
+			background: var(--bg-secondary);
+			border-top: 1px solid var(--border-color);
+			padding: 2rem;
+			margin-top: 3rem;
+			text-align: center;
+		}
+
+		.footer-content {
+			max-width: 1400px;
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.footer-top {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 2rem;
+			padding-bottom: 2rem;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.footer-section h4 {
+			font-size: 0.875rem;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			color: var(--text-secondary);
+			margin-bottom: 1rem;
+			font-weight: 600;
+		}
+
+		.footer-section p {
+			font-size: 0.875rem;
+			color: var(--text-secondary);
+			line-height: 1.6;
+		}
+
+		.footer-bottom {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 1rem;
+			padding-top: 2rem;
+		}
+
+		.footer-info {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+		}
+
 
 		.header {
 			background: var(--bg-secondary);
@@ -514,14 +574,22 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 					OrizonPlus
 				</div>
 				<ul class="nav-menu" :class="{ active: menuOpen }">
-					<li><a href="index.php" class="nav-link"><i class="fas fa-home"></i> Tableau de bord</a></li>
+					<li><a href="index.php" class="nav-link"><i class="fas fa-folder-open"></i> Projets</a></li>
 					<li><a href="expenses.php" class="nav-link"><i class="fas fa-wallet"></i> Dépenses</a></li>
 					<li v-if="user_role=='admin'">
 						<a href="users.php" class="nav-link" @click="closeMobileMenu">
 							<i class="fas fa-users"></i> Utilisateurs
 						</a>
 					</li>
-					<li><a href="notifications.php" class="nav-link active"><i class="fas fa-bell"></i> Notifications</a></li>
+					<li><a href="notifications.php" class="nav-link active"><i class="fas fa-bell"></i> Notifications
+						</a></li>
+
+
+					<li v-if="user_role=='utilisateur' || user_role=='consultant'">
+						<a href="parameters.php" class="nav-link" @click="closeMobileMenu"><i class="fas fa-cog"></i> Paramètres</a>
+					</li>
+
+
 					<li>
 						<a href="api/index.php?action=logout" class="nav-link" @click="closeMobileMenu" style="color: var(--accent-red);">
 							<i class="fas fa-sign-out-alt"></i> Déconnexion
@@ -582,7 +650,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 
 					<!-- Table -->
 					<div v-else-if="paginatedNotifications.length > 0" class="table-container">
-						<table class="table">
+						<table class="table" v-if="user_role == 'admin'">
 							<thead>
 								<tr>
 									<th @click="sortBy('id')">
@@ -604,6 +672,31 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 									<td data-label="ID">
 										<span class="notification-id">#{{ notification.id }}</span>
 									</td>
+									<td data-label="Description">
+										<div class="notification-description">{{ notification.description }}</div>
+									</td>
+									<td data-label="Date">
+										<span class="notification-date">{{ formatDate(notification.created_at) }}</span>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+
+						<table class="table" v-else>
+							<thead>
+								<tr>
+									<th @click="sortBy('description')">
+										Description
+										<i class="fas" :class="getSortIcon('description')"></i>
+									</th>
+									<th @click="sortBy('created_at')">
+										Date
+										<i class="fas" :class="getSortIcon('created_at')"></i>
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="notification in paginatedNotifications" :key="notification.id">
 									<td data-label="Description">
 										<div class="notification-description">{{ notification.description }}</div>
 									</td>
@@ -666,15 +759,27 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 		</div>
 	</div>
 
-	<div class="pagefooter">
-		<p class="text-center text-secondary small text-center mt-4"
-			style="text-align: center">
-			&copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
-			<a class="text text-secondary"
-				style="text-decoration: none; font-weight: bold; color: white;"
-				href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
-		</p>
-	</div>
+	<!-- Footer -->
+	<footer class="footer">
+		<div class="footer-content">
+			<div class="footer-bottom">
+				<div class="footer-info">
+					© 2026 OrizonPlus • système de gestion | Version 1.0.0 •
+				</div>
+				<div class="footer-stats">
+					<div class="footer-info">
+						<p class="text-center text-secondary small text-center mt-4"
+							style="text-align: center">
+							Built with Blood, Sweat and Tears by
+							<a class="text text-secondary"
+								style="text-decoration: none; font-weight: bold; color: white;"
+								href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+						</p>
+					</div>
+				</div>
+			</div>
+	</footer>
+
 
 	<script>
 		const {
@@ -791,12 +896,32 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 				}
 			},
 			methods: {
+				async markNotificationsAsReaden() {
+					try {
+						const params = new URLSearchParams({
+							action: 'markNotificationsAsReaden'
+						});
+						if (this.user_role !== 'admin') {
+							params.append('user_id', '<?php echo $_SESSION["user_id"]; ?>');
+						}
+						await fetch(`${API_BASE_URL}?${params.toString()}`);
+					} catch (err) {
+						console.error('Erreur markNotificationsAsReaden:', err);
+					}
+				},
+
 				async fetchNotifications() {
 					this.loading = true;
 					this.error = null;
 
 					try {
-						const response = await fetch(`${API_BASE_URL}?action=getNotifications`);
+						const params = new URLSearchParams({
+							action: 'getNotifications'
+						});
+						if (this.user_role !== 'admin') {
+							params.append('user_id', '<?php echo $_SESSION["user_id"]; ?>');
+						}
+						const response = await fetch(`${API_BASE_URL}?${params.toString()}`);
 						const result = await response.json();
 
 						if (result.success) {
@@ -870,6 +995,7 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
 				}
 			},
 			mounted() {
+				this.markNotificationsAsReaden();
 				this.fetchNotifications();
 
 				// Auto-refresh every 30 seconds

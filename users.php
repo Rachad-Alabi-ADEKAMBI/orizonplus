@@ -55,6 +55,77 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 			line-height: 1.6;
 		}
 
+		.notif-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--accent-red);
+			color: #fff;
+			font-size: 0.65rem;
+			font-weight: 700;
+			min-width: 18px;
+			height: 18px;
+			border-radius: 999px;
+			padding: 0 4px;
+			margin-left: 4px;
+			line-height: 1;
+			animation: pulse-badge 2s infinite;
+		}
+
+		.footer {
+			background: var(--bg-secondary);
+			border-top: 1px solid var(--border-color);
+			padding: 2rem;
+			margin-top: 3rem;
+			text-align: center;
+		}
+
+		.footer-content {
+			max-width: 1400px;
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.footer-top {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 2rem;
+			padding-bottom: 2rem;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		.footer-section h4 {
+			font-size: 0.875rem;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			color: var(--text-secondary);
+			margin-bottom: 1rem;
+			font-weight: 600;
+		}
+
+		.footer-section p {
+			font-size: 0.875rem;
+			color: var(--text-secondary);
+			line-height: 1.6;
+		}
+
+		.footer-bottom {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 1rem;
+			padding-top: 2rem;
+		}
+
+		.footer-info {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+		}
+
+
 		.header {
 			background: var(--bg-secondary);
 			border-bottom: 1px solid var(--border-color);
@@ -695,8 +766,8 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 				</div>
 				<nav class="nav-menu" :class="{ active: menuOpen }">
 					<a href="index.php" class="nav-link">
-						<i class="fas fa-home"></i>
-						<span>Tableau de bord</span>
+						<i class="fas fa-folder-open"></i>
+						<span>Projets</span>
 					</a>
 					<a href="expenses.php" class="nav-link">
 						<i class="fas fa-receipt"></i>
@@ -710,6 +781,7 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 					<li v-if="user_role=='admin'">
 						<a href="notifications.php" class="nav-link" @click="closeMobileMenu">
 							<i class="fas fa-bell"></i> Notifications
+							<span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
 						</a>
 					</li>
 					<li>
@@ -958,15 +1030,26 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 		</div>
 	</div>
 
-	<div class="pagefooter">
-		<p class="text-center text-secondary small text-center mt-4"
-			style="text-align: center">
-			&copy; OrizonPlus 2026 <br> Built with Blood, Sweat and Tears by
-			<a class="text text-secondary"
-				style="text-decoration: none; font-weight: bold; color: white;"
-				href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
-		</p>
-	</div>
+	<!-- Footer -->
+	<footer class="footer">
+		<div class="footer-content">
+			<div class="footer-bottom">
+				<div class="footer-info">
+					© 2026 OrizonPlus • système de gestion | Version 1.0.0 •
+				</div>
+				<div class="footer-stats">
+					<div class="footer-info">
+						<p class="text-center text-secondary small text-center mt-4"
+							style="text-align: center">
+							Built with Blood, Sweat and Tears by
+							<a class="text text-secondary"
+								style="text-decoration: none; font-weight: bold; color: white;"
+								href="https://rachad-alabi-adekambi.github.io/portfolio/">RA</a>
+						</p>
+					</div>
+				</div>
+			</div>
+	</footer>
 
 	<script>
 		const {
@@ -980,10 +1063,12 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 					baseUrl: 'api/index.php?action=', // Modifiez cette URL selon votre configuration
 					user_name: '<?php echo $_SESSION["user_name"] ?>',
 					user_role: '<?php echo $_SESSION["user_role"] ?? "user"; ?>',
-
+					user_id: <?php echo intval($_SESSION["user_id"] ?? 0); ?>,
 
 					// Menu mobile
 					menuOpen: false,
+
+					unreadCount: 0,
 
 					// Users data
 					users: [],
@@ -1041,6 +1126,7 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 					return this.users.filter(u => u.status === 'Banni').length;
 				}
 			},
+
 			methods: {
 				async fetchUsers() {
 					try {
@@ -1059,6 +1145,32 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 						this.showAlert('error', 'Erreur de connexion au serveur');
 					} finally {
 						this.isLoading = false;
+					}
+				},
+
+				async fetchNotifications() {
+					try {
+						const response = await fetch(this.baseUrl + 'getNotifications');
+						const data = await response.json();
+						if (!data.success) return;
+
+						const notifications = data.data || [];
+
+						if (this.user_role === 'admin') {
+							// Admin : notifications non lues avec user_name = 'admin'
+							this.unreadCount = notifications.filter(n =>
+								n.is_read == 0 && n.user_name === 'admin'
+							).length;
+						} else {
+							// Utilisateur : notifications non lues avec son propre user_id
+							this.unreadCount = notifications.filter(n =>
+								n.is_read == 0 && n.user_id == this.user_id
+							).length;
+						}
+
+						console.log(this.user_role);
+					} catch (error) {
+						console.error('[parameters] Erreur fetchNotifications:', error);
 					}
 				},
 
@@ -1352,6 +1464,7 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 			},
 			mounted() {
 				this.fetchUsers();
+				this.fetchNotifications();
 			}
 		}).mount('#app');
 	</script>
