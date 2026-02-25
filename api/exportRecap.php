@@ -916,179 +916,238 @@ function dateFr(string $format): string
 
 function exportExcel(): void
 {
-    $pdo      = getPDO();
-    $projects = fetchProjects($pdo);
+    try {
+        $pdo         = getPDO();
+        $projects    = fetchProjects($pdo);
+        $expenseMap  = fetchExpensesByProject($pdo);   // ← données agrégées fournisseurs
 
-    $spreadsheet = new Spreadsheet();
-    $sheet       = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('Etat des Chantiers');
+        $spreadsheet = new Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Etat des Chantiers');
 
-    $navyDark   = '1E2A5E';
-    $navyHeader = '2E3A8C';
-    $navyAlt    = 'F0F2FA';
-    $white      = 'FFFFFF';
-    $numFormat  = '#,##0';
+        $navyDark   = '1E2A5E';
+        $navyHeader = '2E3A8C';
+        $navyAlt    = 'F0F2FA';
+        $white      = 'FFFFFF';
+        $yellow     = 'FFD966';   // jaune highlight colonnes engagement fournisseurs
+        $numFormat  = '#,##0';
 
-    // Ligne 1 – Logo + date
-    $logoPath = dirname(__DIR__) . '/images/logo_kamus.png';
-    if (file_exists($logoPath)) {
-        $drawing = new Drawing();
-        $drawing->setName('KAM US')->setDescription('Logo KAM US')
-            ->setPath($logoPath)->setHeight(55)
-            ->setCoordinates('A1')->setOffsetX(4)->setOffsetY(2)
-            ->setWorksheet($sheet);
-    } else {
-        $sheet->setCellValue('A1', 'KAM US');
-        $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FF' . $navyDark]],
+        // Ligne 1 – Logo + date
+        $logoPath = dirname(__DIR__) . '/images/logo_kamus.png';
+        if (file_exists($logoPath)) {
+            $drawing = new Drawing();
+            $drawing->setName('KAM US')->setDescription('Logo KAM US')
+                ->setPath($logoPath)->setHeight(55)
+                ->setCoordinates('A1')->setOffsetX(4)->setOffsetY(2)
+                ->setWorksheet($sheet);
+        } else {
+            $sheet->setCellValue('A1', 'KAM US');
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FF' . $navyDark]],
+            ]);
+        }
+        $sheet->setCellValue('O1', dateFr('d F Y'));
+        $sheet->getStyle('O1')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => 'FF' . $navyDark]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
-    }
-    $sheet->setCellValue('O1', dateFr('d F Y'));
-    $sheet->getStyle('O1')->applyFromArray([
-        'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => 'FF' . $navyDark]],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
-    ]);
-    $sheet->getRowDimension(1)->setRowHeight(55);
+        $sheet->getRowDimension(1)->setRowHeight(55);
 
-    // Ligne 2 – Titre principal sur toute la largeur
-    $sheet->mergeCells('A2:O2');
-    $sheet->setCellValue('A2', 'ETAT DES CHANTIERS ENCOURS');
-    $sheet->getStyle('A2')->applyFromArray([
-        'font'      => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FF' . $white]],
-        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyDark]],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-    ]);
-    $sheet->getRowDimension(2)->setRowHeight(28);
-
-    // Ligne 3 – En-têtes
-    $headers = [
-        'A' => 'N°',
-        'B' => "BON DE COMMANDE /CONTRAT",
-        'C' => 'SECTION',
-        'D' => 'OBJET',
-        'E' => 'CHANTIER',
-        'F' => 'DATE DE CONTRAT',
-        'G' => 'MONTANT HT DU MARCHE',
-        'H' => "BUDGET D'EXECUTION HT",
-        'I' => 'ENCAISSEMENT HT',
-        'J' => 'REALISATION',
-        'K' => "% DE DECAISSEMENT PAR RAPPORT AU BUDGET D'EXECUTION",
-        'L' => "TAUX D'EXECUTION PHYSIQUE",
-        'M' => 'PART DU MARCHE NON EXECUTEE',
-        'N' => 'RESTE A ENCAISSER HT',
-        'O' => 'OBSERVATION',
-    ];
-    foreach ($headers as $col => $label) {
-        $sheet->setCellValue($col . '3', $label);
-        $sheet->getStyle($col . '3')->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 9, 'color' => ['argb' => 'FF' . $white]],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyHeader]],
+        // Ligne 2 – Titre principal (colonnes A→O) + bandeau jaune ENGAGEMENTS (P→R)
+        $sheet->mergeCells('A2:O2');
+        $sheet->setCellValue('A2', 'ETAT DES CHANTIERS ENCOURS');
+        $sheet->getStyle('A2')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FF' . $white]],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyDark]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+        ]);
+        $sheet->mergeCells('P2:R2');
+        $sheet->setCellValue('P2', 'ENGAGEMENTS AUPRES DES FOURNISSEURS / PRESTATAIRES');
+        $sheet->getStyle('P2')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 9, 'color' => ['argb' => 'FF1A1A2E']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $yellow]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFAAAAAA']]],
         ]);
-    }
-    $sheet->getRowDimension(3)->setRowHeight(50);
+        $sheet->getRowDimension(2)->setRowHeight(28);
 
-    // Lignes de données
-    $row = 4;
-    foreach ($projects as $i => $p) {
-        $bgMain = ($i % 2 === 0) ? $white : $navyAlt;
+        // Ligne 3 – En-têtes
+        $headers = [
+            'A' => 'N°',
+            'B' => "BON DE COMMANDE /CONTRAT",
+            'C' => 'SECTION',
+            'D' => 'OBJET',
+            'E' => 'CHANTIER',
+            'F' => 'DATE DE CONTRAT',
+            'G' => 'MONTANT HT DU MARCHE',
+            'H' => "BUDGET D'EXECUTION HT",
+            'I' => 'ENCAISSEMENT HT',
+            'J' => 'REALISATION',
+            'K' => "% DE DECAISSEMENT PAR RAPPORT AU BUDGET D'EXECUTION",
+            'L' => "TAUX D'EXECUTION PHYSIQUE",
+            'M' => 'PART DU MARCHE NON EXECUTEE',
+            'N' => 'RESTE A ENCAISSER HT',
+            'O' => 'OBSERVATION',
+            'P' => 'MONTANT TOTAL PAIEMENT EFFECTUE',
+            'Q' => 'PAIEMENT EFFECTUE',
+            'R' => 'RESTE A PAYER',
+        ];
+        foreach ($headers as $col => $label) {
+            $sheet->setCellValue($col . '3', $label);
+            // Colonnes jaunes P Q R
+            $isYellow = in_array($col, ['P', 'Q', 'R']);
+            $sheet->getStyle($col . '3')->applyFromArray([
+                'font'      => ['bold' => true, 'size' => 9, 'color' => ['argb' => $isYellow ? 'FF1A1A2E' : 'FF' . $white]],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => $isYellow ? 'FF' . $yellow : 'FF' . $navyHeader]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFAAAAAA']]],
+            ]);
+        }
+        $sheet->getRowDimension(3)->setRowHeight(50);
 
-        $sheet->setCellValue('A' . $row, $i + 1);
-        $sheet->setCellValue('B' . $row, $p['contract_number'] ?? '');
-        $sheet->setCellValue('C' . $row, $p['department'] ?? '');
-        $sheet->setCellValue('D' . $row, $p['name'] ?? '');
-        $sheet->setCellValue('E' . $row, $p['location'] ?? '');
-        $sheet->setCellValue('F' . $row, $p['date_of_creation'] ?? '');
+        // Lignes de données
+        $row = 4;
+        foreach ($projects as $i => $p) {
+            $bgMain = ($i % 2 === 0) ? $white : $navyAlt;
 
-        $sheet->setCellValue('G' . $row, $p['contract_amount_ht'] ?? 0);
-        $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode($numFormat);
-        $sheet->setCellValue('H' . $row, $p['execution_budget_ht'] ?? 0);
-        $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode($numFormat);
-        $sheet->setCellValue('I' . $row, $p['collected_amount_ht'] ?? 0);
-        $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode($numFormat);
-        $sheet->setCellValue('J' . $row, $p['realisation'] ?? 0);
-        $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('A' . $row, $i + 1);
+            $sheet->setCellValue('B' . $row, $p['contract_number'] ?? '');
+            $sheet->setCellValue('C' . $row, $p['department'] ?? '');
+            $sheet->setCellValue('D' . $row, $p['name'] ?? '');
+            $sheet->setCellValue('E' . $row, $p['location'] ?? '');
+            $sheet->setCellValue('F' . $row, $p['date_of_creation'] ?? '');
 
-        // K = % de décaissement (encaissement / budget)
-        $sheet->setCellValue('K' . $row, "=IF(H{$row}<>0,I{$row}/H{$row},\"-\")");
-        $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('0%');
+            $sheet->setCellValue('G' . $row, $p['contract_amount_ht'] ?? 0);
+            $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('H' . $row, $p['execution_budget_ht'] ?? 0);
+            $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('I' . $row, $p['collected_amount_ht'] ?? 0);
+            $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('J' . $row, $p['realisation'] ?? 0);
+            $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode($numFormat);
 
-        // L = taux d'exécution physique (depuis la DB)
-        $execRate = $p['execution_rate'];
-        if ($execRate !== null && $execRate !== '') {
-            $sheet->setCellValue('L' . $row, (float)$execRate / 100);
-            $sheet->getStyle('L' . $row)->getNumberFormat()->setFormatCode('0%');
-        } else {
-            $sheet->setCellValue('L' . $row, '-');
+            // K = % de décaissement (encaissement / budget)
+            $sheet->setCellValue('K' . $row, "=IF(H{$row}<>0,I{$row}/H{$row},\"-\")");
+            $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('0%');
+
+            // L = taux d'exécution physique (depuis la DB)
+            $execRate = $p['execution_rate'];
+            if ($execRate !== null && $execRate !== '') {
+                $sheet->setCellValue('L' . $row, (float)$execRate / 100);
+                $sheet->getStyle('L' . $row)->getNumberFormat()->setFormatCode('0%');
+            } else {
+                $sheet->setCellValue('L' . $row, '-');
+            }
+
+            $sheet->setCellValue('M' . $row, "=IF(H{$row}<>0,H{$row}-J{$row},\"-\")");
+            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode($numFormat);
+
+            $sheet->setCellValue('N' . $row, "=IF(H{$row}<>0,H{$row}-I{$row},\"-\")");
+            $sheet->getStyle('N' . $row)->getNumberFormat()->setFormatCode($numFormat);
+
+            $sheet->setCellValue('O' . $row, $p['observation'] ?? '');
+
+            // ── Colonnes jaunes : engagement fournisseurs ──
+            $pid        = (int)($p['id'] ?? 0);
+            $expAgg     = $expenseMap[$pid] ?? ['montant_total' => 0, 'montant_paye' => 0, 'reste_a_payer' => 0];
+            $sheet->setCellValue('P' . $row, $expAgg['montant_total']);
+            $sheet->getStyle('P' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('Q' . $row, $expAgg['montant_paye']);
+            $sheet->getStyle('Q' . $row)->getNumberFormat()->setFormatCode($numFormat);
+            $sheet->setCellValue('R' . $row, $expAgg['reste_a_payer']);
+            $sheet->getStyle('R' . $row)->getNumberFormat()->setFormatCode($numFormat);
+
+            $sheet->getStyle("A{$row}:O{$row}")->applyFromArray([
+                'font'      => ['name' => 'Arial', 'size' => 9, 'color' => ['argb' => 'FF1A1A2E']],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $bgMain]],
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFCCCCCC']]],
+            ]);
+            // Fond jaune sur les 3 colonnes engagement
+            $sheet->getStyle("P{$row}:R{$row}")->applyFromArray([
+                'font'      => ['name' => 'Arial', 'size' => 9, 'color' => ['argb' => 'FF1A1A2E']],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFFFF2CC']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFCCCCCC']]],
+            ]);
+            foreach (['A', 'C', 'F', 'K', 'L'] as $c) {
+                $sheet->getStyle($c . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+            $sheet->getRowDimension($row)->setRowHeight(40);
+            $row++;
         }
 
-        $sheet->setCellValue('M' . $row, "=IF(H{$row}<>0,H{$row}-J{$row},\"-\")");
-        $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode($numFormat);
-
-        $sheet->setCellValue('N' . $row, "=IF(H{$row}<>0,H{$row}-I{$row},\"-\")");
-        $sheet->getStyle('N' . $row)->getNumberFormat()->setFormatCode($numFormat);
-
-        $sheet->setCellValue('O' . $row, $p['observation'] ?? '');
-
-        $sheet->getStyle("A{$row}:O{$row}")->applyFromArray([
-            'font'      => ['name' => 'Arial', 'size' => 9, 'color' => ['argb' => 'FF1A1A2E']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $bgMain]],
-            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFCCCCCC']]],
+        // Ligne totaux
+        $lastDataRow = $row - 1;
+        $totalRow    = $row;
+        $sheet->mergeCells("A{$totalRow}:F{$totalRow}");
+        $sheet->setCellValue("A{$totalRow}", 'TOTAUX');
+        foreach (['G', 'H', 'I', 'J'] as $col) {
+            $sheet->setCellValue("{$col}{$totalRow}", "=SUM({$col}4:{$col}{$lastDataRow})");
+            $sheet->getStyle("{$col}{$totalRow}")->getNumberFormat()->setFormatCode($numFormat);
+        }
+        foreach (['P', 'Q', 'R'] as $col) {
+            $sheet->setCellValue("{$col}{$totalRow}", "=SUM({$col}4:{$col}{$lastDataRow})");
+            $sheet->getStyle("{$col}{$totalRow}")->getNumberFormat()->setFormatCode($numFormat);
+        }
+        $sheet->getStyle("A{$totalRow}:O{$totalRow}")->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => 'FF' . $white]],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyDark]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFAAAAAA']]],
         ]);
-        foreach (['A', 'C', 'F', 'K', 'L'] as $c) {
-            $sheet->getStyle($c . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Totaux P Q R en jaune foncé
+        $sheet->getStyle("P{$totalRow}:R{$totalRow}")->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => 'FF1A1A2E']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $yellow]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFAAAAAA']]],
+        ]);
+        $sheet->getRowDimension($totalRow)->setRowHeight(25);
+
+        // Largeurs colonnes
+        $colWidths = [
+            'A' => 5,
+            'B' => 28,
+            'C' => 13,
+            'D' => 38,
+            'E' => 20,
+            'F' => 14,
+            'G' => 18,
+            'H' => 18,
+            'I' => 18,
+            'J' => 14,
+            'K' => 13,
+            'L' => 13,
+            'M' => 17,
+            'N' => 17,
+            'O' => 38,
+            'P' => 18,
+            'Q' => 18,
+            'R' => 18,
+        ];
+        foreach ($colWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
         }
-        $sheet->getRowDimension($row)->setRowHeight(40);
-        $row++;
-    }
+        $sheet->freezePane('A4');
 
-    // Ligne totaux
-    $lastDataRow = $row - 1;
-    $totalRow    = $row;
-    $sheet->mergeCells("A{$totalRow}:F{$totalRow}");
-    $sheet->setCellValue("A{$totalRow}", 'TOTAUX');
-    foreach (['G', 'H', 'I', 'J'] as $col) {
-        $sheet->setCellValue("{$col}{$totalRow}", "=SUM({$col}4:{$col}{$lastDataRow})");
-        $sheet->getStyle("{$col}{$totalRow}")->getNumberFormat()->setFormatCode($numFormat);
+        $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+    } catch (\Throwable $e) {
+        // Affichage de l'erreur exacte pour debug
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "=== ERREUR exportExcel ===\n";
+        var_dump([
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'trace'   => $e->getTraceAsString(),
+        ]);
+        exit;
     }
-    $sheet->getStyle("A{$totalRow}:O{$totalRow}")->applyFromArray([
-        'font'      => ['bold' => true, 'size' => 10, 'color' => ['argb' => 'FF' . $white]],
-        'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyDark]],
-        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-        'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFAAAAAA']]],
-    ]);
-    $sheet->getRowDimension($totalRow)->setRowHeight(25);
-
-    // Largeurs colonnes
-    $colWidths = [
-        'A' => 5,
-        'B' => 28,
-        'C' => 13,
-        'D' => 38,
-        'E' => 20,
-        'F' => 14,
-        'G' => 18,
-        'H' => 18,
-        'I' => 18,
-        'J' => 14,
-        'K' => 13,
-        'L' => 13,
-        'M' => 17,
-        'N' => 17,
-        'O' => 38,
-    ];
-    foreach ($colWidths as $col => $width) {
-        $sheet->getColumnDimension($col)->setWidth($width);
-    }
-    $sheet->freezePane('A4');
-
-    $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.xlsx';
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
-    (new Xlsx($spreadsheet))->save('php://output');
 }
 
 
@@ -1097,44 +1156,55 @@ function exportExcel(): void
 // ============================================================
 function exportPDF(): void
 {
-    $pdo      = getPDO();
-    $projects = fetchProjects($pdo);
-    $dateStr  = dateFr('d F Y');
-    $numFmt   = fn($v) => number_format((float)$v, 0, ',', ' ');
+    try {
+        $pdo        = getPDO();
+        $projects   = fetchProjects($pdo);
+        $expenseMap = fetchExpensesByProject($pdo);   // ← données agrégées fournisseurs
+        $dateStr    = dateFr('d F Y');
+        $numFmt     = fn($v) => number_format((float)$v, 0, ',', ' ');
 
-    // Logo en base64 (embarqué dans le HTML pour Dompdf)
-    // Le dossier images est au même niveau que le dossier parent de ce fichier
-    $logoPath = dirname(__DIR__) . '/images/logo_kamus.png';
-    $logoTag  = file_exists($logoPath)
-        ? '<img src="data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) . '" alt="KAM US" style="height:60px;"/>'
-        : '<span style="font-size:15px;font-weight:bold;color:#1E2A5E;">KAM US</span>';
+        // Logo en base64 (embarqué dans le HTML pour Dompdf)
+        // Le dossier images est au même niveau que le dossier parent de ce fichier
+        $logoPath = dirname(__DIR__) . '/images/logo_kamus.png';
+        $logoTag  = file_exists($logoPath)
+            ? '<img src="data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) . '" alt="KAM US" style="height:60px;"/>'
+            : '<span style="font-size:15px;font-weight:bold;color:#1E2A5E;">KAM US</span>';
 
-    // ── Lignes de données ──
-    $rows = '';
-    $totalContrat = $totalBudget = $totalEnc = $totalReal = 0;
+        // ── Lignes de données ──
+        $rows = '';
+        $totalContrat = $totalBudget = $totalEnc = $totalReal = 0;
+        $totalMontantTotal = $totalPaye = $totalReste = 0;
 
-    foreach ($projects as $i => $p) {
-        $bg = ($i % 2 === 0) ? '#ffffff' : '#f0f2fa';
+        foreach ($projects as $i => $p) {
+            $bg = ($i % 2 === 0) ? '#ffffff' : '#f0f2fa';
 
-        $contrat      = (float)($p['contract_amount_ht']  ?? 0);
-        $budgetExec   = (float)($p['execution_budget_ht'] ?? 0);
-        $encaissement = (float)($p['collected_amount_ht'] ?? 0);
-        $realisation  = (float)($p['realisation']         ?? 0);
+            $contrat      = (float)($p['contract_amount_ht']  ?? 0);
+            $budgetExec   = (float)($p['execution_budget_ht'] ?? 0);
+            $encaissement = (float)($p['collected_amount_ht'] ?? 0);
+            $realisation  = (float)($p['realisation']         ?? 0);
 
-        // % de décaissement = encaissement / budget (comme l'ancien tauxExec)
-        $tauxDecaiss  = $budgetExec > 0 ? round(($encaissement / $budgetExec) * 100) . '%' : '-';
-        // Taux d'exécution physique récupéré directement depuis la DB
-        $tauxExecPhys = ($p['execution_rate'] !== null && $p['execution_rate'] !== '')
-            ? round((float)$p['execution_rate']) . '%' : '-';
-        $partNonExec  = $budgetExec > 0 ? $numFmt($budgetExec - $realisation)  : '-';
-        $resteEnc     = $budgetExec > 0 ? $numFmt($budgetExec - $encaissement) : '-';
+            $tauxDecaiss  = $budgetExec > 0 ? round(($encaissement / $budgetExec) * 100) . '%' : '-';
+            $tauxExecPhys = ($p['execution_rate'] !== null && $p['execution_rate'] !== '')
+                ? round((float)$p['execution_rate']) . '%' : '-';
+            $partNonExec  = $budgetExec > 0 ? $numFmt($budgetExec - $realisation)  : '-';
+            $resteEnc     = $budgetExec > 0 ? $numFmt($budgetExec - $encaissement) : '-';
 
-        $totalContrat += $contrat;
-        $totalBudget  += $budgetExec;
-        $totalEnc     += $encaissement;
-        $totalReal    += $realisation;
+            $totalContrat += $contrat;
+            $totalBudget  += $budgetExec;
+            $totalEnc     += $encaissement;
+            $totalReal    += $realisation;
 
-        $rows .= '<tr style="background:' . $bg . ';height:28px;">
+            // Colonnes engagement fournisseurs
+            $pid     = (int)($p['id'] ?? 0);
+            $expAgg  = $expenseMap[$pid] ?? ['montant_total' => 0, 'montant_paye' => 0, 'reste_a_payer' => 0];
+            $mtTotal = $expAgg['montant_total'];
+            $mtPaye  = $expAgg['montant_paye'];
+            $mtReste = $expAgg['reste_a_payer'];
+            $totalMontantTotal += $mtTotal;
+            $totalPaye         += $mtPaye;
+            $totalReste        += $mtReste;
+
+            $rows .= '<tr style="background:' . $bg . ';height:28px;">
             <td class="c">' . ($i + 1) . '</td>
             <td>' . htmlspecialchars($p['contract_number'] ?? '') . '</td>
             <td class="c">' . htmlspecialchars($p['department'] ?? '') . '</td>
@@ -1150,25 +1220,27 @@ function exportPDF(): void
             <td class="r">' . $partNonExec  . '</td>
             <td class="r">' . $resteEnc     . '</td>
             <td class="obs">' . htmlspecialchars($p['observation'] ?? '') . '</td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td class="r yellow">' . ($mtTotal > 0 ? $numFmt($mtTotal) : '-') . '</td>
+            <td class="r yellow">' . ($mtPaye  > 0 ? $numFmt($mtPaye)  : '-') . '</td>
+            <td class="r yellow">' . ($mtReste != 0 ? $numFmt($mtReste) : '-') . '</td>
         </tr>';
-    }
+        }
 
-    // Ligne totaux
-    $rows .= '<tr class="totals">
+        // Ligne totaux
+        $rows .= '<tr class="totals">
         <td colspan="6" style="text-align:left;padding-left:6px;">TOTAUX</td>
         <td class="r">' . $numFmt($totalContrat) . '</td>
         <td class="r">' . $numFmt($totalBudget)  . '</td>
         <td class="r">' . $numFmt($totalEnc)     . '</td>
         <td class="r">' . $numFmt($totalReal)    . '</td>
         <td></td><td></td><td></td><td></td><td></td>
-        <td></td><td></td><td></td>
+        <td class="r" style="background:#FFD966;color:#1a1a2e;">' . $numFmt($totalMontantTotal) . '</td>
+        <td class="r" style="background:#FFD966;color:#1a1a2e;">' . $numFmt($totalPaye)         . '</td>
+        <td class="r" style="background:#FFD966;color:#1a1a2e;">' . $numFmt($totalReste)        . '</td>
     </tr>';
 
-    // ── HTML complet ──
-    $html = '<!DOCTYPE html>
+        // ── HTML complet ──
+        $html = '<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
@@ -1266,6 +1338,15 @@ function exportPDF(): void
     tbody td.r   { text-align: right; }
     tbody td.obs { font-size: 5pt; }
 
+    /* Colonnes engagement fournisseurs – fond jaune */
+    tbody td.yellow {
+        background: #FFF2CC !important;
+    }
+    thead th.yellow-th {
+        background: #FFD966 !important;
+        color: #1a1a2e !important;
+    }
+
     /* Ligne totaux */
     tr.totals td {
         background: #1E2A5E;
@@ -1334,6 +1415,10 @@ function exportPDF(): void
     </colgroup>
     <thead>
         <tr>
+            <th colspan="15" style="background:#1E2A5E;color:#fff;font-size:8pt;font-weight:bold;text-align:center;padding:4px;">ETAT DES CHANTIERS ENCOURS</th>
+            <th colspan="3" class="yellow-th" style="font-size:7pt;font-weight:bold;text-align:center;padding:4px;">ENGAGEMENTS AUPRES DES FOURNISSEURS / PRESTATAIRES</th>
+        </tr>
+        <tr>
             <th>N°</th>
             <th>BON DE COMMANDE /<br/>CONTRAT</th>
             <th>SECTION</th>
@@ -1349,9 +1434,9 @@ function exportPDF(): void
             <th>PART DU<br/>MARCHE NON<br/>EXECUTEE</th>
             <th>RESTE A<br/>ENCAISSER HT</th>
             <th>OBSERVATION</th>
-            <th></th>
-            <th></th>
-            <th></th>
+            <th class="yellow-th">MONTANT<br/>TOTAL<br/>PAIEMENT</th>
+            <th class="yellow-th">PAIEMENT<br/>EFFECTUE</th>
+            <th class="yellow-th">RESTE A<br/>PAYER</th>
         </tr>
     </thead>
     <tbody>' . $rows . '</tbody>
@@ -1365,20 +1450,75 @@ function exportPDF(): void
 </body>
 </html>';
 
-    $options = new Options();
-    $options->set('isRemoteEnabled', false);
-    $options->set('defaultFont', 'DejaVu Sans');
-    $options->set('isHtml5ParserEnabled', true);
+        $options = new Options();
+        $options->set('isRemoteEnabled', false);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isHtml5ParserEnabled', true);
 
-    $dompdf = new Dompdf($options);
-    $dompdf->loadHtml($html);
-    $dompdf->setPaper('A3', 'landscape');
-    $dompdf->render();
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A3', 'landscape');
+        $dompdf->render();
 
-    $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.pdf';
-    $dompdf->stream($filename, ['Attachment' => true]);
+        $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.pdf';
+        $dompdf->stream($filename, ['Attachment' => true]);
+    } catch (\Throwable $e) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "=== ERREUR exportPDF ===\n";
+        var_dump([
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'trace'   => $e->getTraceAsString(),
+        ]);
+        exit;
+    }
 }
 
+
+// ============================================================
+// AGRÉGATION DES DÉPENSES PAR PROJET (requête directe en base)
+// ============================================================
+function fetchExpensesByProject(PDO $pdo): array
+{
+    try {
+        // montant_total  = somme de toutes les dépenses engagées (amount)
+        // montant_paye   = somme des montants réellement payés (paid_amount)
+        // reste_a_payer  = montant_total - montant_paye
+        $rows = $pdo->query("
+            SELECT
+                e.project_id,
+                IFNULL(SUM(e.amount),      0) AS montant_total,
+                IFNULL(SUM(e.paid_amount), 0) AS montant_paye
+            FROM expenses e
+            GROUP BY e.project_id
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $ex) {
+        // Fallback si paid_amount absent de la table
+        $rows = $pdo->query("
+            SELECT
+                e.project_id,
+                IFNULL(SUM(e.amount), 0) AS montant_total,
+                0                        AS montant_paye
+            FROM expenses e
+            GROUP BY e.project_id
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $byProject = [];
+    foreach ($rows as $row) {
+        $pid   = (int)$row['project_id'];
+        $total = (float)$row['montant_total'];
+        $paye  = (float)$row['montant_paye'];
+        $byProject[$pid] = [
+            'montant_total' => $total,
+            'montant_paye'  => $paye,
+            'reste_a_payer' => $total - $paye,
+        ];
+    }
+
+    return $byProject;
+}
 
 // ============================================================
 // REQUÊTE COMMUNE
@@ -1398,6 +1538,7 @@ function fetchProjects(PDO $pdo): array
 
     $stmt = $pdo->prepare("
         SELECT
+            p.id,
             p.contract_number, p.name, p.department, p.description,
             p.date_of_creation, p.contract_amount_ht, p.execution_budget_ht,
             p.collected_amount_ht, p.observation,

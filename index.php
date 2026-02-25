@@ -3551,6 +3551,30 @@ if (!isset($_SESSION['user_id'])) {
                 }
             }
         }).mount('#app');
+
+        // ===== PRINT: fix Chart.js label colors (white → black) =====
+        function setChartColorForPrint(dark) {
+            const color = dark ? '#ededed' : '#111111';
+            Chart.defaults.color = color;
+            // Re-update all active charts
+            Chart.instances && Object.values(Chart.instances).forEach(chart => {
+                // Update scales ticks
+                if (chart.options.scales) {
+                    Object.values(chart.options.scales).forEach(scale => {
+                        if (scale.ticks) scale.ticks.color = color;
+                        if (scale.grid) scale.grid.color = dark ? '#2a2a2a' : '#cccccc';
+                    });
+                }
+                // Update legend labels
+                if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                    chart.options.plugins.legend.labels.color = color;
+                }
+                chart.update('none');
+            });
+        }
+
+        window.addEventListener('beforeprint', () => setChartColorForPrint(false));
+        window.addEventListener('afterprint',  () => setChartColorForPrint(true));
     </script>
 </body>
 

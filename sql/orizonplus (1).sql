@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : dim. 22 fév. 2026 à 19:26
+-- Généré le : mer. 25 fév. 2026 à 21:37
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -63,56 +63,31 @@ CREATE TABLE `expenses` (
   `id` int(11) NOT NULL,
   `project_id` int(11) NOT NULL,
   `project_budget_line_id` int(11) NOT NULL,
-  `amount` decimal(15,2) NOT NULL,
+  `amount` int(11) NOT NULL,
+  `paid_amount` int(11) DEFAULT NULL,
   `expense_date` date NOT NULL,
   `description` text DEFAULT NULL,
   `documents` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL
+  `user_id` int(11) DEFAULT NULL,
+  `supplier_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Déchargement des données de la table `expenses`
 --
 
-INSERT INTO `expenses` (`id`, `project_id`, `project_budget_line_id`, `amount`, `expense_date`, `description`, `documents`, `created_at`, `updated_at`, `user_id`) VALUES
-(254, 37, 94, 6038346.00, '2026-02-09', 'Achat de tuyaux OPT de 45 et 80 - BIIC 3705054 G.I.C - Avce/Achat', NULL, '2026-02-13 07:14:47', '2026-02-13 08:14:47', NULL),
-(255, 37, 94, 151188.00, '2026-02-09', 'Achat de grillage et colle tangits_BIIC 3705055_CTPS', NULL, '2026-02-13 07:14:47', '2026-02-13 08:14:47', NULL),
-(256, 37, 98, 50000.00, '2026-02-09', 'Divers dépenes Semaine 1_Frais de mission sur Bohicon_BIIC 3657156', NULL, '2026-02-13 07:14:47', '2026-02-13 08:14:47', NULL),
-(257, 37, 98, 13000.00, '2026-02-09', 'Diverses dépenses semaine 1 _déplacement RT avec ouvriers_BIIC 3857157', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(258, 37, 95, 150000.00, '2026-02-09', 'Diverse dépense_Semaine1_Paiement chef chantier_BIIC 3657158', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(259, 37, 99, 47000.00, '2026-02-09', 'Diverses Dépenses_Semaine1_PMT carburant_Déplac mat_COT PAR_BIIC 3657159', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(260, 37, 98, 30000.00, '2026-02-09', 'Diverses Dépenses_PMT frais mission_BIIC3657160', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(261, 37, 98, 50000.00, '2026-02-09', 'Diverses dépenses_PMT carburant du RE_mission_BIIC3657101', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(262, 37, 101, 138000.00, '2026-02-09', 'Diverses dépenses_BIIC 3657162', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(263, 37, 98, 50000.00, '2026-02-09', 'PMT_déplacement _facilitation_réception materiels_BIIC3657163', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(264, 37, 99, 20000.00, '2026-02-09', 'PMT_ Réparation moto_Chef chantier_BIIC 3657164', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(265, 37, 99, 22000.00, '2026-02-09', 'PMT_Réparation camion grue_BIIC 3657165', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(266, 37, 99, 30000.00, '2026-02-09', 'PMT_carburant camionnette_BIIC 3657166', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(267, 37, 94, 2587862.00, '2026-02-09', 'Solde _Achat tuyau OPT de 45 et 80_BIIC 3705066_GIC_FAC01303815', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(268, 37, 101, 400000.00, '2026-02-09', 'PMT_Personnels chantier_BIIC 3703456', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(269, 37, 97, 78000.00, '2026-02-09', 'PMT_Magasinier_BIIC 370356', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(270, 37, 98, 150000.00, '2026-02-09', 'Frais de mission du resp_BIIC 3703456', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(271, 37, 99, 50000.00, '2026-02-09', 'PMT_Gasoil pour engin_BIIC 3703456', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(272, 37, 96, 100000.00, '2026-02-09', 'PMT_Relai HSE_CR 048_FAC01684290-1', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(273, 37, 101, 226000.00, '2026-02-09', 'PMT_ Personnel_08-09_13-09-25_SGB 7666998', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(274, 37, 97, 54000.00, '2026-02-09', 'PMT_Chauffeur_01-09_13-09-25_CR 0585', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(275, 37, 101, 120000.00, '2026-02-09', 'PMT_Manoeuvres_ 16-09_20-09-25_BIII 7744779', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(276, 37, 101, 274000.00, '2026-02-09', 'PMT_Personnels_22-09_27-09-25_BIIC7744784', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(277, 37, 101, 308000.00, '2026-02-09', 'PMT_Personnels_29-09_05-10-25_BIIC 7744789', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(278, 37, 97, 34920.00, '2026-02-09', 'PMT_Chauffeur_22-09_04-10-25_CR 0619', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(279, 37, 96, 100000.00, '2026-02-09', 'PMT_HSE_22-08_22-09-25_CR 0623_FAC01684290-3', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(280, 37, 95, 150000.00, '2026-02-09', 'PMT_Chef chantier_30-08_01-10-25_BIIC 7744788_FAC01171962-51_52', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(281, 37, 98, 64500.00, '2026-02-09', 'Mission Bohicon', NULL, '2026-02-13 07:14:48', '2026-02-13 08:14:48', NULL),
-(282, 35, 90, 77000.00, '2026-02-12', '', '[\"6999a71a9986e_1771677466.png\"]', '2026-02-13 07:14:48', '2026-02-21 13:37:46', NULL),
-(285, 35, 90, 500000.00, '2026-02-20', 'test', '[\"6997b383bd901.pdf\",\"6997b383bdc68.pdf\"]', '2026-02-20 14:31:50', NULL, 1),
-(289, 39, 102, 2241000.00, '2026-02-21', 'pour utilisateur 1', '[\"699a2552b3549_1771709778.png\",\"699a2552b4114_1771709778.png\"]', '2026-02-21 17:00:05', '2026-02-22 12:12:24', 6),
-(290, 39, 102, 500000.00, '2026-02-21', 'a faire', '[\"699a2742de0a6.pdf\"]', '2026-02-21 21:46:58', NULL, 5),
-(291, 40, 106, 50000.00, '2026-02-22', '', '[]', '2026-02-22 11:37:18', '2026-02-22 12:38:27', 6),
-(292, 40, 106, 350000.00, '2025-01-01', '', '[]', '2026-02-22 13:35:45', '2026-02-22 14:36:30', 6),
-(293, 42, 110, 1000000.00, '2026-02-22', 'la description', '[\"699b28f4d6397_1771776244.png\",\"699b28f4d7122_1771776244.png\"]', '2026-02-22 16:04:04', '2026-02-22 17:04:04', 2),
-(294, 42, 110, 999999.99, '2026-02-22', '', '[\"699b295a7c46c.png\"]', '2026-02-22 16:07:43', NULL, 2);
+INSERT INTO `expenses` (`id`, `project_id`, `project_budget_line_id`, `amount`, `paid_amount`, `expense_date`, `description`, `documents`, `created_at`, `updated_at`, `user_id`, `supplier_id`) VALUES
+(282, 35, 90, 77000, 77000, '2026-02-12', '', '[\"6999a71a9986e_1771677466.png\"]', '2026-02-13 07:14:48', '2026-02-25 21:13:39', 2, NULL),
+(285, 35, 90, 500000, NULL, '2026-02-20', 'test', '[\"6997b383bd901.pdf\",\"6997b383bdc68.pdf\"]', '2026-02-20 14:31:50', '2026-02-25 11:52:48', 1, 5),
+(289, 39, 102, 2241000, NULL, '2026-02-21', 'pour utilisateur 1', '[\"699a2552b3549_1771709778.png\",\"699a2552b4114_1771709778.png\"]', '2026-02-21 17:00:05', '2026-02-25 11:52:15', 6, 5),
+(290, 39, 102, 500000, NULL, '2026-02-21', 'a faire', '[\"699a2742de0a6.pdf\"]', '2026-02-21 21:46:58', NULL, 5, 0),
+(291, 40, 106, 50000, NULL, '2026-02-22', '', '[]', '2026-02-22 11:37:18', '2026-02-25 11:51:45', 6, 2),
+(292, 40, 106, 350000, NULL, '2025-01-01', '', '[]', '2026-02-22 13:35:45', '2026-02-22 14:36:30', 6, 0),
+(293, 42, 110, 1000000, NULL, '2026-02-22', 'la description', '[\"699b28f4d6397_1771776244.png\",\"699b28f4d7122_1771776244.png\"]', '2026-02-22 16:04:04', '2026-02-22 17:04:04', 2, 0),
+(294, 42, 110, 1000000, 500000, '2026-02-22', '', '[\"699b295a7c46c.png\"]', '2026-02-22 16:07:43', '2026-02-25 11:33:04', 2, 1),
+(295, 38, 105, 200000, 150000, '2026-02-25', 'test', '[\"699ed19e22911_1772016030.png\",\"699ed19e22f32_1772016030.png\"]', '2026-02-25 10:40:30', '2026-02-25 11:51:16', 2, 3);
 
 -- --------------------------------------------------------
 
@@ -125,24 +100,27 @@ CREATE TABLE `expenses_validations` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `project_id` int(11) NOT NULL,
   `project_budget_line_id` int(11) NOT NULL,
-  `amount` decimal(8,2) NOT NULL,
+  `amount` int(11) NOT NULL,
   `description` text DEFAULT NULL,
   `expense_date` date NOT NULL,
   `documents` text DEFAULT NULL,
   `status` varchar(15) NOT NULL,
-  `user_id` int(11) NOT NULL
+  `user_id` int(11) NOT NULL,
+  `paid_amount` int(11) DEFAULT NULL,
+  `supplier_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Déchargement des données de la table `expenses_validations`
 --
 
-INSERT INTO `expenses_validations` (`id`, `created_at`, `project_id`, `project_budget_line_id`, `amount`, `description`, `expense_date`, `documents`, `status`, `user_id`) VALUES
-(1, '2026-02-18 12:46:22', 35, 90, 999999.99, 'yufgh', '2026-02-18', '[\"6995a68ed7431.pdf\",\"6995a68ed8e9b.pdf\"]', 'en attente', 1),
-(4, '2026-02-20 02:06:11', 35, 90, 500000.00, 'test', '2026-02-20', '[\"6997b383bd901.pdf\",\"6997b383bdc68.pdf\"]', 'acceptée', 1),
-(7, '2026-02-21 22:44:34', 39, 102, 500000.00, 'a faire', '2026-02-21', '[\"699a2742de0a6.pdf\"]', 'acceptée', 5),
-(8, '2026-02-22 12:13:37', 40, 106, 500000.00, '', '2026-02-22', NULL, 'acceptée', 6),
-(9, '2026-02-22 17:05:46', 42, 110, 999999.99, '', '2026-02-22', '[\"699b295a7c46c.png\"]', 'acceptée', 2);
+INSERT INTO `expenses_validations` (`id`, `created_at`, `project_id`, `project_budget_line_id`, `amount`, `description`, `expense_date`, `documents`, `status`, `user_id`, `paid_amount`, `supplier_id`) VALUES
+(1, '2026-02-18 12:46:22', 35, 90, 1000000, 'yufgh', '2026-02-18', '[\"6995a68ed7431.pdf\",\"6995a68ed8e9b.pdf\"]', 'en attente', 1, 0, 0),
+(4, '2026-02-20 02:06:11', 35, 90, 500000, 'test', '2026-02-20', '[\"6997b383bd901.pdf\",\"6997b383bdc68.pdf\"]', 'acceptée', 1, 0, 0),
+(7, '2026-02-21 22:44:34', 39, 102, 500000, 'a faire', '2026-02-21', '[\"699a2742de0a6.pdf\"]', 'acceptée', 5, 0, 0),
+(8, '2026-02-22 12:13:37', 40, 106, 500000, '', '2026-02-22', NULL, 'acceptée', 6, 0, 0),
+(9, '2026-02-22 17:05:46', 42, 110, 1000000, '', '2026-02-22', '[\"699b295a7c46c.png\"]', 'acceptée', 2, 0, 0),
+(10, '2026-02-25 12:11:19', 42, 111, 2000000, 'gy7g7ygn', '2026-02-25', '[\"699ed8d72699a.png\",\"699ed8d7275cd.png\"]', 'en attente', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -239,7 +217,21 @@ INSERT INTO `notifications` (`id`, `user_id`, `user_name`, `description`, `is_re
 (73, 2, 'rachad', 'Nouvelle dépense enregistrée par rachad pour le projet \"projet test\":\nLigne budgétaire: Relai QHSE\nMontant: 1000000 FCFA\nDescription: la description\nDocuments joints: 2', 0, '2026-02-22 17:04:04'),
 (74, 2, 'rachad', 'Nouvelle demande de validation\n\nUtilisateur : rachad\nProjet : projet test\nLigne budgétaire : Relai QHSE\nMontant : 2000000 FCFA\nDate : 2026-02-22\nDocuments : 699b295a7c46c.png\n\nAction requise : Confirmer ou refuser.', 0, '2026-02-22 17:05:46'),
 (75, 2, 'rachad', 'Votre demande de validation a été enregistrée.\n\nProjet : projet test\nLigne budgétaire : Relai QHSE\nMontant : 2000000 FCFA\nStatut : en attente\n\nVous serez notifié après décision.', 0, '2026-02-22 17:05:46'),
-(76, 2, 'rachad', 'Bonjour rachad,\n\nVotre demande de validation a été acceptée.\n\nProjet : projet test\nLigne budgétaire : Relai QHSE\nMontant : 1 000 000 FCFA\nDate : 2026-02-22\n\nLa dépense a été enregistrée dans le système.', 0, '2026-02-22 17:07:43');
+(76, 2, 'rachad', 'Bonjour rachad,\n\nVotre demande de validation a été acceptée.\n\nProjet : projet test\nLigne budgétaire : Relai QHSE\nMontant : 1 000 000 FCFA\nDate : 2026-02-22\n\nLa dépense a été enregistrée dans le système.', 0, '2026-02-22 17:07:43'),
+(77, 1, 'admin', 'Projet modifié : \"chantier AA\" (ID 39). Détails des changements :\n\nExecution rate modifié : \"\" → \"50\"', 1, '2026-02-25 09:20:55'),
+(78, 1, 'admin', 'Nouvelle dépense enregistrée par rachad pour le projet \"projet  Calavi\":\nLigne budgétaire: Chef chantier\nMontant: 200000 FCFA\nMontant payé: 150000 FCFA\nDescription: test\nDocuments joints: 2', 1, '2026-02-25 11:40:30'),
+(79, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : projet  Calavi\nContrat      : bc new 2026\nDépense      : #295\nMontant actuel : 200 000 FCFA\nMontant payé : 150 000 FCFA\nFournisseur  : rey\nDate dépense : 2026-02-25\nLigne budg.  : Chef chantier\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 11:51\n────────────────────────────────\nModifications :\n• Fournisseur  : (aucun) → rey\n════════════════════════════════', 1, '2026-02-25 11:51:16'),
+(80, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : Pariskaa\nContrat      : 96 po 054/9\nDépense      : #291\nMontant actuel : 50 000 FCFA\nFournisseur  : ui rouge\nDate dépense : 2026-02-22\nLigne budg.  : Magasinier\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 11:51\n────────────────────────────────\nModifications :\n• Fournisseur  : (aucun) → ui rouge\n════════════════════════════════', 1, '2026-02-25 11:51:45'),
+(81, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : chantier AA\nContrat      : yghui hihu \nDépense      : #289\nMontant actuel : 2 241 000 FCFA\nFournisseur  : ui black\nDate dépense : 2026-02-21\nLigne budg.  : Transport\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 11:52\n────────────────────────────────\nModifications :\n• Fournisseur  : (aucun) → ui black\n════════════════════════════════', 1, '2026-02-25 11:52:15'),
+(82, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : Chantier Cotonou\nContrat      : BC cot 256\nDépense      : #285\nMontant actuel : 500 000 FCFA\nFournisseur  : ui black\nDate dépense : 2026-02-20\nLigne budg.  : Transport\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 11:52\n────────────────────────────────\nModifications :\n• Fournisseur  : (aucun) → ui black\n════════════════════════════════', 1, '2026-02-25 11:52:48'),
+(83, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : TRAVAUX PROVISOIRES DE DEPLACEMENT DE RESEAUX TELECOM BOHICON TINDJI ZAKPOTA\nContrat      : BC 2824 RB\nDépense      : #261\nMontant actuel : 50 000 FCFA\nFournisseur  : parco\nDate dépense : 2026-02-09\nLigne budg.  : Mission et déplacements\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 12:00\n────────────────────────────────\nModifications :\n• Fournisseur  : (aucun) → parco\n• Responsable  : attribué à jolydon (user #1)\n════════════════════════════════', 1, '2026-02-25 12:00:12'),
+(84, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : TRAVAUX PROVISOIRES DE DEPLACEMENT DE RESEAUX TELECOM BOHICON TINDJI ZAKPOTA\nContrat      : BC 2824 RB\nDépense      : #261\nMontant actuel : 50 000 FCFA\nMontant payé : 45 000 FCFA\nFournisseur  : parco\nDate dépense : 2026-02-09\nLigne budg.  : Mission et déplacements\nModifié par  : jolydon (user #1)\nLe           : 25/02/2026 à 12:00\n────────────────────────────────\nModifications :\n• Montant payé : (non renseigné) → 45 000 FCFA\n════════════════════════════════', 1, '2026-02-25 12:00:32'),
+(85, 1, 'jolydon', 'Nouvelle demande de validation\n\nUtilisateur : jolydon\nProjet : projet test\nLigne budgétaire : autres\nMontant : 2 000 000 FCFA\nDate : 2026-02-25\nDescription : gy7g7ygn\nDocuments : 2 fichier(s) joint(s)\n⚠ Dépassement : 500 000 FCFA\n\nAction requise : Confirmer ou refuser.', 0, '2026-02-25 12:11:19'),
+(86, 1, 'jolydon', 'Votre demande de validation a été enregistrée.\n\nProjet : projet test\nLigne budgétaire : autres\nMontant : 2 000 000 FCFA\nStatut : en attente\n\nVous serez notifié après décision.', 0, '2026-02-25 12:11:19'),
+(87, 2, 'rachad', 'Nouvelle demande de validation\n\nUtilisateur : rachad\nProjet : test\nLigne budgétaire : test\nMontant : 2 100 000 FCFA\nMontant payé : 450 000 FCFA\nFournisseur : Lucas  travaux\nDate : 2026-02-25\nDescription :  izi\n⚠ Dépassement : 600 000 FCFA\n\nAction requise : Confirmer ou refuser.', 0, '2026-02-25 12:17:19'),
+(88, 2, 'rachad', 'Votre demande de validation a été enregistrée.\n\nProjet : test\nLigne budgétaire : test\nMontant : 2 100 000 FCFA\nMontant payé : 450 000 FCFA\nFournisseur : Lucas  travaux\nStatut : en attente\n\nVous serez notifié après décision.', 0, '2026-02-25 12:17:19'),
+(89, 2, 'rachad', 'Bonjour rachad,\n\nVotre demande de validation a été acceptée.\n\nProjet : test\nLigne budgétaire : test\nMontant : 2 100 000 FCFA\nMontant payé : 450 000 FCFA\nFournisseur : Lucas  travaux\nDate : 2026-02-25\nDescription :  izi\n\nLa dépense a été enregistrée dans le système.', 0, '2026-02-25 16:57:10'),
+(90, 1, 'admin', '════════════════════════════════\n  MODIFICATION DE DÉPENSE\n════════════════════════════════\nProjet       : Chantier Cotonou\nContrat      : BC cot 256\nDépense      : #282\nMontant actuel : 77 000 FCFA\nMontant payé : 77 000 FCFA\nDate dépense : 2026-02-12\nLigne budg.  : Transport\nModifié par  : rachad (user #2)\nLe           : 25/02/2026 à 21:13\n────────────────────────────────\nModifications :\n• Montant payé : (non renseigné) → 77 000 FCFA\n• Responsable  : attribué à rachad (user #2)\n════════════════════════════════', 1, '2026-02-25 21:13:39');
 
 -- --------------------------------------------------------
 
@@ -262,8 +254,7 @@ CREATE TABLE `projects` (
   `location` varchar(255) DEFAULT NULL,
   `documents` text DEFAULT NULL,
   `project_status` varchar(30) DEFAULT NULL,
-  `amount_to_pay_to_suppliers` int(12) DEFAULT NULL,
-  `amount_paid_to_suppliers` int(12) DEFAULT NULL,
+  `execution_rate` decimal(5,2) DEFAULT NULL,
   `date_of_creation` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -271,14 +262,13 @@ CREATE TABLE `projects` (
 -- Déchargement des données de la table `projects`
 --
 
-INSERT INTO `projects` (`id`, `name`, `contract_number`, `contract_amount_ht`, `execution_budget_ht`, `collected_amount_ht`, `total_payment_made`, `observation`, `description`, `created_at`, `department`, `location`, `documents`, `project_status`, `amount_to_pay_to_suppliers`, `amount_paid_to_suppliers`, `date_of_creation`) VALUES
-(35, 'Chantier Cotonou', 'BC cot 256', 60000000, 50000000, 4000000, 0.00, 'à faire avant decembre', 'un projet de cotonou', '2026-02-13 07:14:47', 'Electricité', 'Cotonou', '[\"6999b2177b71e.png\",\"6999b2177ba8b.png\"]', 'Déverrouillé', NULL, NULL, '2025-02-20'),
-(37, 'TRAVAUX PROVISOIRES DE DEPLACEMENT DE RESEAUX TELECOM BOHICON TINDJI ZAKPOTA', 'BC 2824 RB', 20000000, 13675000, 11000000, 0.00, 'difficile comme projet', 'nouveaux travaux', '2026-02-13 07:14:47', 'Génie Civil', 'Parakou', '[\"doc_699b02d2c6dca.png\",\"doc_699b02d2c72e4.pdf\"]', 'Déverrouillé', 4500000, 1000000, '2025-01-01'),
-(38, 'projet  Calavi', 'bc new 2026', 1000000, 500000, 200000, 0.00, 'urgent', 'Calavi SBEE', '2026-02-21 14:42:29', 'Electricité', 'Calavi', '[]', 'Déverrouillé', NULL, NULL, '2026-01-01'),
-(39, 'chantier AA', 'yghui hihu ', 1500000, 1000000, 700000, 0.00, 'une observation', 'nouvelle description', '2026-02-21 16:53:42', 'Electricité', 'Accra', '[\"doc_6999e316c431d.png\",\"doc_6999e316c4ac7.png\",\"doc_6999e316c4de5.png\"]', 'Déverrouillé', 450000, 25000, '2026-02-15'),
-(40, 'Pariskaa', '96 po 054/9', 8000000, 6000000, 2500000, 0.00, 'le commentaire', 'ouch', '2026-02-22 02:07:25', 'AEP', 'France', '[\"doc_699a64dd033ca.png\",\"doc_699a668c03676.png\",\"doc_699a668c039bc.png\"]', 'Déverrouillé', 2000000, 346000, '2026-02-22'),
-(41, 'projet test dimanche', 'BC DIM 002', 5000000, 3500000, 2700000, 0.00, NULL, 'une description', '2026-02-22 15:53:04', 'Electricité', 'Cotonou', '[\"doc_699b2660101d4.png\",\"doc_699b2660106f9.png\"]', 'Verrouillé', 2000000, 400000, '2026-02-22'),
-(42, 'projet test', 'BC 2026', 5000000, 3500000, 2700000, 0.00, 'une observation', 'une description', '2026-02-22 16:00:13', 'Electricité', 'Cotonou', '[\"doc_699b280d418c1.png\",\"doc_699b280d420c0.png\"]', 'Déverrouillé', 400000, 250000, '2026-02-22');
+INSERT INTO `projects` (`id`, `name`, `contract_number`, `contract_amount_ht`, `execution_budget_ht`, `collected_amount_ht`, `total_payment_made`, `observation`, `description`, `created_at`, `department`, `location`, `documents`, `project_status`, `execution_rate`, `date_of_creation`) VALUES
+(35, 'Chantier Cotonou', 'BC cot 256', 60000000, 50000000, 4000000, 0.00, 'à faire avant decembre', 'un projet de cotonou', '2026-02-13 07:14:47', 'Electricité', 'Cotonou', '[\"6999b2177b71e.png\",\"6999b2177ba8b.png\"]', 'Déverrouillé', NULL, '2025-02-20'),
+(38, 'projet  Calavi', 'bc new 2026', 1000000, 500000, 200000, 0.00, 'urgent', 'Calavi SBEE', '2026-02-21 14:42:29', 'Electricité', 'Calavi', '[]', 'Déverrouillé', NULL, '2026-01-01'),
+(39, 'chantier AA', 'yghui hihu ', 1500000, 1000000, 700000, 0.00, 'une observation', 'nouvelle description', '2026-02-21 16:53:42', 'Electricité', 'Accra', '[\"doc_6999e316c431d.png\",\"doc_6999e316c4ac7.png\",\"doc_6999e316c4de5.png\"]', 'Déverrouillé', 50.00, '2026-02-15'),
+(40, 'Pariskaa', '96 po 054/9', 8000000, 6000000, 2500000, 0.00, 'le commentaire', 'ouch', '2026-02-22 02:07:25', 'AEP', 'France', '[\"doc_699a64dd033ca.png\",\"doc_699a668c03676.png\",\"doc_699a668c039bc.png\"]', 'Déverrouillé', NULL, '2026-02-22'),
+(41, 'projet test dimanche', 'BC DIM 002', 5000000, 3500000, 2700000, 0.00, NULL, 'une description', '2026-02-22 15:53:04', 'Electricité', 'Cotonou', '[\"doc_699b2660101d4.png\",\"doc_699b2660106f9.png\"]', 'Verrouillé', NULL, '2026-02-22'),
+(42, 'projet test', 'BC 2026', 5000000, 3500000, 2700000, 0.00, 'une observation', 'une description', '2026-02-22 16:00:13', 'Electricité', 'Cotonou', '[\"doc_699b280d418c1.png\",\"doc_699b280d420c0.png\"]', 'Déverrouillé', NULL, '2026-02-22');
 
 -- --------------------------------------------------------
 
@@ -300,15 +290,6 @@ CREATE TABLE `project_budget_lines` (
 
 INSERT INTO `project_budget_lines` (`id`, `project_id`, `budget_line_id`, `allocated_amount`, `created_at`) VALUES
 (90, 35, 9, 50000000.00, '2026-02-13 07:14:47'),
-(93, 37, 12, 1020000.00, '2026-02-13 07:14:47'),
-(94, 37, 13, 8855000.00, '2026-02-13 07:14:47'),
-(95, 37, 14, 300000.00, '2026-02-13 07:14:47'),
-(96, 37, 15, 200000.00, '2026-02-13 07:14:47'),
-(97, 37, 16, 200000.00, '2026-02-13 07:14:47'),
-(98, 37, 17, 500000.00, '2026-02-13 07:14:47'),
-(99, 37, 18, 200000.00, '2026-02-13 07:14:47'),
-(100, 37, 19, 200000.00, '2026-02-13 07:14:47'),
-(101, 37, 20, 2200000.00, '2026-02-13 07:14:47'),
 (102, 39, 9, 400000.00, '2026-02-21 16:53:42'),
 (103, 39, 10, 200000.00, '2026-02-21 16:53:42'),
 (104, 35, 19, 2000000.00, '2026-02-21 21:39:18'),
@@ -319,6 +300,28 @@ INSERT INTO `project_budget_lines` (`id`, `project_id`, `budget_line_id`, `alloc
 (109, 41, 16, 1500000.00, '2026-02-22 15:53:04'),
 (110, 42, 15, 2000000.00, '2026-02-22 16:00:13'),
 (111, 42, 21, 1500000.00, '2026-02-22 16:00:13');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `suppliers`
+--
+
+CREATE TABLE `suppliers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(250) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `suppliers`
+--
+
+INSERT INTO `suppliers` (`id`, `name`) VALUES
+(1, 'Lucas  travauxX'),
+(2, 'ui rouge'),
+(3, 'rey'),
+(4, 'parco'),
+(5, 'ui black');
 
 -- --------------------------------------------------------
 
@@ -397,6 +400,12 @@ ALTER TABLE `project_budget_lines`
   ADD KEY `budget_line_id` (`budget_line_id`);
 
 --
+-- Index pour la table `suppliers`
+--
+ALTER TABLE `suppliers`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Index pour la table `users`
 --
 ALTER TABLE `users`
@@ -417,31 +426,37 @@ ALTER TABLE `budget_lines`
 -- AUTO_INCREMENT pour la table `expenses`
 --
 ALTER TABLE `expenses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=295;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=297;
 
 --
 -- AUTO_INCREMENT pour la table `expenses_validations`
 --
 ALTER TABLE `expenses_validations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT pour la table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT pour la table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT pour la table `project_budget_lines`
 --
 ALTER TABLE `project_budget_lines`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=113;
+
+--
+-- AUTO_INCREMENT pour la table `suppliers`
+--
+ALTER TABLE `suppliers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT pour la table `users`
