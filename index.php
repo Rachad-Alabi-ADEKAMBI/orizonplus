@@ -1185,6 +1185,8 @@ if (!isset($_SESSION['user_id'])) {
                     <li><a href="index.php" class="nav-link active" @click="closeMobileMenu"><i class="fas fa-folder-open"></i> Projets</a></li>
                     <li><a href="expenses.php" class="nav-link" @click="closeMobileMenu"><i class="fas fa-receipt"></i> Dépenses</a></li>
                     <li v-if="user_role=='admin'"><a href="users.php" class="nav-link" @click="closeMobileMenu"><i class="fas fa-users"></i> Utilisateurs</a></li>
+                    <li><a href="suppliers.php" class="nav-link"> <i class="fas fa-truck"></i> Fournisseurs</a></li>
+
                     <li v-if="user_role=='admin' || user_role=='utilisateur'"><a href="notifications.php" class="nav-link" @click="closeMobileMenu"><i class="fas fa-bell"></i> Notifications
                     <span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
                 </a></li>
@@ -1510,30 +1512,29 @@ if (!isset($_SESSION['user_id'])) {
                         </div>
                     </div>
 
-                    <!-- ── Engagement des fournisseurs ── -->
+                    <!-- ── Evolution du projet ── -->
                     <hr style="border-color:var(--border-color);margin:1.5rem 0;">
                     <div style="margin-bottom:1.5rem;">
-                        <h4 style="font-size:0.95rem;font-weight:700;color:var(--accent-yellow);display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-                            <i class="fas fa-handshake"></i> Engagement des fournisseurs
-                        </h4>
+
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
                             <div class="form-group" style="margin-bottom:0;">
-                                <label class="form-label"><i class="fas fa-file-invoice-dollar" style="margin-right:0.5rem;"></i> Montant à payer aux fournisseurs</label>
-                                <input type="number" class="form-input" v-model.number="newProject.amount_to_pay_to_suppliers" placeholder="0" min="0" />
-                            </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                                <label class="form-label"><i class="fas fa-check-circle" style="margin-right:0.5rem;"></i> Paiement effectué</label>
-                                <input type="number" class="form-input" v-model.number="newProject.amount_paid_to_suppliers" placeholder="0" min="0" />
+                                <label class="form-label"><i class="fas fa-tasks" style="margin-right:0.5rem;"></i> Taux d'exécution physique (%)</label>
+                                <input type="number" class="form-input" v-model.number="newProject.execution_rate" placeholder="0" min="0" max="100" step="0.1" />
                             </div>
                         </div>
-                        <!-- Reste à payer calculé automatiquement -->
-                        <div v-if="newProject.amount_to_pay_to_suppliers > 0 || newProject.amount_paid_to_suppliers > 0"
-                             style="margin-top:0.75rem;padding:0.75rem 1rem;background:var(--bg-tertiary);border-radius:var(--radius);border:1px solid var(--border-color);display:flex;align-items:center;gap:0.5rem;">
-                            <i class="fas fa-info-circle" style="color:var(--accent-cyan);"></i>
-                            <span style="font-size:0.875rem;color:var(--text-secondary);">Reste à payer :</span>
-                            <strong :style="{color: (newProject.amount_to_pay_to_suppliers||0)-(newProject.amount_paid_to_suppliers||0) < 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">
-                                {{ formatCurrency((newProject.amount_to_pay_to_suppliers||0) - (newProject.amount_paid_to_suppliers||0)) }}
-                            </strong>
+                        <!-- Barre de progression du taux d'exécution -->
+                        <div v-if="newProject.execution_rate > 0"
+                             style="margin-top:0.75rem;padding:0.75rem 1rem;background:var(--bg-tertiary);border-radius:var(--radius);border:1px solid var(--border-color);">
+                            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.4rem;">
+                                <span>Taux d'exécution physique</span>
+                                <span>{{ newProject.execution_rate }}%</span>
+                            </div>
+                            <div class="progress" style="height:8px;">
+                                <div class="progress-bar"
+                                     :class="newProject.execution_rate >= 100 ? '' : newProject.execution_rate >= 80 ? 'warning' : ''"
+                                     :style="{width: Math.min(newProject.execution_rate, 100) + '%', background: newProject.execution_rate >= 100 ? 'var(--accent-green)' : ''}">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1655,44 +1656,30 @@ if (!isset($_SESSION['user_id'])) {
                         </div>
 
                         <!-- ── Engagements auprès des fournisseurs ── -->
-                        <div v-if="selectedProject.amount_to_pay_to_suppliers > 0 || selectedProject.amount_paid_to_suppliers > 0"
+                        <div v-if="selectedProject.execution_rate > 0 || selectedProject.execution_rate === 0"
                              style="margin-bottom:1.5rem;">
                             <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
                                 <div style="flex:1;height:1px;background:var(--border-color);"></div>
-                                <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--accent-yellow);white-space:nowrap;">
-                                    <i class="fas fa-handshake" style="margin-right:0.4rem;"></i>Engagements auprès des fournisseurs
-                                </span>
+                               
                                 <div style="flex:1;height:1px;background:var(--border-color);"></div>
                             </div>
                             <div class="info-grid" style="margin-bottom:0;">
-                                <div class="info-box" v-if="selectedProject.amount_to_pay_to_suppliers > 0">
-                                    <div class="info-box-label"><i class="fas fa-file-invoice-dollar" style="margin-right:0.3rem;"></i> Montant à payer</div>
-                                    <div class="info-box-value" style="color:var(--accent-yellow);">{{ formatCurrency(selectedProject.amount_to_pay_to_suppliers) }}</div>
-                                </div>
-                                <div class="info-box" v-if="selectedProject.amount_paid_to_suppliers > 0">
-                                    <div class="info-box-label"><i class="fas fa-check-circle" style="margin-right:0.3rem;"></i> Paiement effectué</div>
-                                    <div class="info-box-value" style="color:var(--accent-green);">
-                                        {{ formatCurrency(selectedProject.amount_paid_to_suppliers) }}
-                                        <div style="font-size:0.75rem;color:var(--text-secondary);">
-                                            {{ selectedProject.amount_to_pay_to_suppliers > 0 ? ((selectedProject.amount_paid_to_suppliers / selectedProject.amount_to_pay_to_suppliers) * 100).toFixed(1) : 0 }}% payé
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="info-box" v-if="selectedProject.amount_to_pay_to_suppliers > 0">
-                                    <div class="info-box-label"><i class="fas fa-clock" style="margin-right:0.3rem;"></i> Reste à payer</div>
-                                    <div class="info-box-value" :style="{color: (selectedProject.amount_to_pay_to_suppliers - (selectedProject.amount_paid_to_suppliers||0)) <= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
-                                        {{ formatCurrency(selectedProject.amount_to_pay_to_suppliers - (selectedProject.amount_paid_to_suppliers || 0)) }}
+                                <div class="info-box" v-if="selectedProject.execution_rate != null">
+                                    <div class="info-box-label"><i class="fas fa-tasks" style="margin-right:0.3rem;"></i> Taux d'exécution physique</div>
+                                    <div class="info-box-value" :style="{color: selectedProject.execution_rate >= 100 ? 'var(--accent-green)' : selectedProject.execution_rate >= 80 ? 'var(--accent-yellow)' : 'var(--accent-cyan)'}">
+                                        {{ parseFloat(selectedProject.execution_rate || 0).toFixed(1) }}%
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="selectedProject.amount_to_pay_to_suppliers > 0" style="margin-top:0.75rem;">
+                            <div v-if="selectedProject.execution_rate != null" style="margin-top:0.75rem;">
                                 <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.3rem;">
-                                    <span>Progression du paiement</span>
-                                    <span>{{ ((selectedProject.amount_paid_to_suppliers||0) / selectedProject.amount_to_pay_to_suppliers * 100).toFixed(1) }}%</span>
+                                    <span>Taux d'exécution physique</span>
+                                    <span>{{ parseFloat(selectedProject.execution_rate || 0).toFixed(1) }}%</span>
                                 </div>
                                 <div class="progress" style="height:8px;">
                                     <div class="progress-bar"
-                                         :style="{width: Math.min(((selectedProject.amount_paid_to_suppliers||0)/selectedProject.amount_to_pay_to_suppliers*100), 100) + '%', background: ((selectedProject.amount_paid_to_suppliers||0)/selectedProject.amount_to_pay_to_suppliers*100) >= 100 ? 'var(--accent-green)' : ''}">
+                                         :class="(selectedProject.execution_rate||0) >= 100 ? '' : (selectedProject.execution_rate||0) >= 80 ? 'warning' : ''"
+                                         :style="{width: Math.min(parseFloat(selectedProject.execution_rate||0), 100) + '%', background: (selectedProject.execution_rate||0) >= 100 ? 'var(--accent-green)' : ''}">
                                     </div>
                                 </div>
                             </div>
@@ -1712,7 +1699,7 @@ if (!isset($_SESSION['user_id'])) {
                             <button class="tab-btn" :class="{active:detailTab==='lines'}" @click="detailTab='lines'"><i class="fas fa-list"></i> Lignes Budgétaires</button>
                             <button class="tab-btn" :class="{active:detailTab==='expenses'}" @click="detailTab='expenses'"><i class="fas fa-receipt"></i> Réalisations ({{ projectExpenses.length }})</button>
                             <button class="tab-btn" :class="{active:detailTab==='documents'}" @click="detailTab='documents'"><i class="fas fa-file-alt"></i> Documents projet</button>
-                            <button class="tab-btn" :class="{active:detailTab==='charts'}" @click="detailTab='charts';$nextTick(()=>{renderProjectChart();renderProjectLinesChart();renderProjectExpensesByLineChart();renderProjectTimelineChart();})"><i class="fas fa-chart-pie"></i> Graphiques</button>
+                            <button class="tab-btn" :class="{active:detailTab==='charts'}" @click="detailTab='charts';$nextTick(()=>{setTimeout(()=>{renderProjectChart();renderProjectLinesChart();renderProjectExpensesByLineChart();renderProjectTimelineChart();},50)})"><i class="fas fa-chart-pie"></i> Graphiques</button>
                             <button class="tab-btn" :class="{active:detailTab==='summary'}" @click="detailTab='summary'"><i class="fas fa-file-alt"></i> Résumé</button>
                         </div>
 
@@ -2509,8 +2496,7 @@ if (!isset($_SESSION['user_id'])) {
                         execution_budget_ht: null,
                         collected_amount_ht: null,
                         observation: '',
-                        amount_to_pay_to_suppliers: null,
-                        amount_paid_to_suppliers: null
+                        execution_rate: null
                     };
                     this.projectLines = [];
                     this.currentProjectLines = [];
@@ -2582,12 +2568,12 @@ if (!isset($_SESSION['user_id'])) {
                         alert('Veuillez entrer un nom de projet');
                         return;
                     }
-
+                
                     const action = this.isEditMode ? 'updateProject' : 'createProject';
                     const url = `${API_BASE_URL}?action=${action}`;
-
+                
                     const formData = new FormData();
-
+                
                     if (this.isEditMode) formData.append('id', this.newProject.id);
                     formData.append('name', this.newProject.name || '');
                     formData.append('description', this.newProject.description || '');
@@ -2599,82 +2585,55 @@ if (!isset($_SESSION['user_id'])) {
                     formData.append('execution_budget_ht', this.newProject.execution_budget_ht ?? '');
                     formData.append('collected_amount_ht', this.newProject.collected_amount_ht ?? '');
                     formData.append('observation', this.newProject.observation || '');
-                    formData.append('amount_to_pay_to_suppliers', this.newProject.amount_to_pay_to_suppliers ?? '');
-                    formData.append('amount_paid_to_suppliers', this.newProject.amount_paid_to_suppliers ?? '');
-                    formData.append('amount_to_pay_to_suppliers', this.newProject.amount_to_pay_to_suppliers ?? '');
-                    formData.append('amount_paid_to_suppliers', this.newProject.amount_paid_to_suppliers ?? '');
-
+                    formData.append('execution_rate', this.newProject.execution_rate ?? '');
+                
                     const filteredLines = this.projectLines.filter(
                         l => l.budget_line_id && l.allocated_amount > 0
                     );
-
+                
                     formData.append('lines', JSON.stringify(filteredLines));
-
+                
                     if (this.isEditMode) {
                         formData.append('updated_lines', JSON.stringify(this.currentProjectLines || []));
                         formData.append('deleted_lines', JSON.stringify(this.deletedProjectLines || []));
                     }
-
+                
                     const existingDocs = (this.newProject.documents || [])
                         .filter(d => typeof d === 'string');
-
+                
                     formData.append('existing_documents', JSON.stringify(existingDocs));
-
+                
                     (this.newProject.documents || [])
-                    .filter(d => d instanceof File)
+                        .filter(d => d instanceof File)
                         .forEach(f => formData.append('documents[]', f));
-
-                    /* ================= DEBUG ================= */
-
-                    console.log('=== ROUTE ===');
-                    console.log(url);
-
-                    console.log('=== ACTION ===');
-                    console.log(action);
-
-                    console.log('=== PAYLOAD (FormData) ===');
-                    for (let [key, value] of formData.entries()) {
-                        console.log(key, value);
-                    }
-
-                    /* ========================================= */
-
+                
                     try {
                         const resp = await fetch(url, {
                             method: 'POST',
                             body: formData
                         });
-
-                        console.log('=== RESPONSE STATUS ===');
-                        console.log(resp.status);
-
+                
                         const rawText = await resp.text();
-                        console.log('=== RAW RESPONSE ===');
-                        console.log(rawText);
-
+                
                         let data;
                         try {
                             data = JSON.parse(rawText);
                         } catch (e) {
-                            console.error('Erreur JSON.parse:', e);
-                            throw new Error('Réponse non JSON');
+                            throw new Error('Réponse invalide du serveur : ' + rawText.substring(0, 200));
                         }
-
-                        console.log('=== PARSED RESPONSE ===');
-                        console.log(data);
-
-                        if (!resp.ok) throw new Error(data.message || 'Erreur serveur');
-
+                
+                        if (!resp.ok || !data.success) {
+                            throw new Error(data.message || `Erreur serveur (${resp.status})`);
+                        }
+                
                         alert(data.message);
-
                         this.closeProjectModal();
                         await this.fetchProjects();
                         await this.fetchAllProjectLines();
-
+                
                     } catch (e) {
-                        console.error('=== ERROR ===');
-                        console.error(e);
-                        alert('Erreur lors de la sauvegarde');
+                        console.error('[saveProject]', e);
+                        alert('Erreur : ' + e.message);
                     }
                 },
                 async deleteProject(id) {
@@ -3341,12 +3300,18 @@ if (!isset($_SESSION['user_id'])) {
                 // ==================== GRAPHIQUES DETAIL ====================
                 renderProjectChart() {
                     try {
-                        this.projectDetailChart && this.projectDetailChart.destroy();
+                        if (this.projectDetailChart) {
+                            this.projectDetailChart.destroy();
+                            this.projectDetailChart = null;
+                        }
                     } catch (e) {}
-                    if (!this.$refs.projectChart) return;
+                    const canvas = this.$refs.projectChart;
+                    if (!canvas) return;
+                    // Reset canvas to clear any stale state
+                    canvas.width = canvas.width;
                     const allocated = this.selectedProjectLinesAllocatedTotal;
                     const spent = this.selectedProjectLinesSpentTotal;
-                    this.projectDetailChart = new Chart(this.$refs.projectChart, {
+                    this.projectDetailChart = new Chart(canvas, {
                         type: 'doughnut',
                         data: {
                             labels: ['Dépensé', 'Restant'],
@@ -3379,11 +3344,16 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 renderProjectLinesChart() {
                     try {
-                        this.projectLinesChart && this.projectLinesChart.destroy();
+                        if (this.projectLinesChart) {
+                            this.projectLinesChart.destroy();
+                            this.projectLinesChart = null;
+                        }
                     } catch (e) {}
-                    if (!this.$refs.projectLinesChart || !this.selectedProjectLines.length) return;
+                    const canvas = this.$refs.projectLinesChart;
+                    if (!canvas || !this.selectedProjectLines.length) return;
+                    canvas.width = canvas.width;
                     const colors = ['#0070f3', '#00d4ff', '#00e676', '#ffb800', '#7c3aed', '#ff3b3b', '#ff6b9d', '#10b981'];
-                    this.projectLinesChart = new Chart(this.$refs.projectLinesChart, {
+                    this.projectLinesChart = new Chart(canvas, {
                         type: 'pie',
                         data: {
                             labels: this.selectedProjectLines.map(l => l.name || l.line_name),
@@ -3416,10 +3386,15 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 renderProjectExpensesByLineChart() {
                     try {
-                        this.projectExpensesByLineChart && this.projectExpensesByLineChart.destroy();
+                        if (this.projectExpensesByLineChart) {
+                            this.projectExpensesByLineChart.destroy();
+                            this.projectExpensesByLineChart = null;
+                        }
                     } catch (e) {}
-                    if (!this.$refs.projectExpensesByLineChart || !this.selectedProjectLines.length) return;
-                    this.projectExpensesByLineChart = new Chart(this.$refs.projectExpensesByLineChart, {
+                    const canvas = this.$refs.projectExpensesByLineChart;
+                    if (!canvas || !this.selectedProjectLines.length) return;
+                    canvas.width = canvas.width;
+                    this.projectExpensesByLineChart = new Chart(canvas, {
                         type: 'bar',
                         data: {
                             labels: this.selectedProjectLines.map(l => l.name || l.line_name),
@@ -3471,9 +3446,14 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 renderProjectTimelineChart() {
                     try {
-                        this.projectTimelineChart && this.projectTimelineChart.destroy();
+                        if (this.projectTimelineChart) {
+                            this.projectTimelineChart.destroy();
+                            this.projectTimelineChart = null;
+                        }
                     } catch (e) {}
-                    if (!this.$refs.projectTimelineChart || !this.projectExpenses.length) return;
+                    const canvas = this.$refs.projectTimelineChart;
+                    if (!canvas || !this.projectExpenses.length) return;
+                    canvas.width = canvas.width;
                     const grouped = {};
                     let cumul = 0;
                     [...this.projectExpenses].sort((a, b) => new Date(a.expense_date) - new Date(b.expense_date)).forEach(exp => {
@@ -3481,7 +3461,7 @@ if (!isset($_SESSION['user_id'])) {
                         cumul += parseFloat(exp.amount || 0);
                         grouped[d] = cumul;
                     });
-                    this.projectTimelineChart = new Chart(this.$refs.projectTimelineChart, {
+                    this.projectTimelineChart = new Chart(canvas, {
                         type: 'line',
                         data: {
                             labels: Object.keys(grouped),

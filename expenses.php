@@ -838,26 +838,31 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
         .pagination {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.35rem;
             margin-top: 1.5rem;
             justify-content: center;
+            align-items: center;
             flex-wrap: wrap;
         }
 
         .pagination button {
-            padding: 0.5rem 0.75rem;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 0.6rem;
             border: 1px solid var(--border-color);
             background: var(--bg-tertiary);
             color: var(--text-primary);
             border-radius: var(--radius);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             font-weight: 600;
+            font-size: 0.85rem;
         }
 
         .pagination button:hover:not(:disabled) {
             border-color: var(--accent-blue);
             background: var(--accent-blue);
+            color: white;
         }
 
         .pagination button.active {
@@ -867,8 +872,56 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
         }
 
         .pagination button:disabled {
-            opacity: 0.5;
+            opacity: 0.35;
             cursor: not-allowed;
+        }
+
+        .pagination .pg-ellipsis {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0 0.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination .pg-info {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 0 0.5rem;
+            white-space: nowrap;
+        }
+
+        .pagination .pg-goto {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .pagination .pg-goto input {
+            width: 52px;
+            height: 36px;
+            padding: 0 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .pagination .pg-goto input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .pagination .pg-goto button {
+            min-width: unset;
+            padding: 0 0.7rem;
+            background: var(--bg-tertiary);
+            font-size: 0.8rem;
         }
 
         .file-count-info {
@@ -925,6 +978,216 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
         .locked-project-notice i {
             font-size: 1.25rem;
         }
+
+        /* ── Supplier combo (select + input) ── */
+        .supplier-combo {
+            display: flex;
+            gap: 0;
+            align-items: stretch;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: var(--bg-tertiary);
+        }
+
+        .supplier-combo-select {
+            flex: 1;
+            padding: 0.75rem;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .supplier-combo-new {
+            flex: 1;
+            padding: 0.75rem;
+        }
+
+        .supplier-combo-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .supplier-combo-sep {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.25rem;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .supplier-combo-sep span {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+
+        .supplier-combo .form-select {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            font-size: 0.82rem;
+        }
+
+        .supplier-combo .supplier-wrap input {
+            background: var(--bg-secondary);
+        }
+
+        /* ── Success toast fournisseur ── */
+        .supplier-success-toast {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            background: rgba(0, 230, 118, 0.12);
+            border: 1px solid rgba(0, 230, 118, 0.4);
+            border-left: 3px solid var(--accent-green);
+            border-radius: var(--radius);
+            color: var(--accent-green);
+            font-size: 0.875rem;
+            font-weight: 600;
+            animation: toast-in 0.3s ease;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Supplier autocomplete ── */
+        .supplier-wrap {
+            position: relative;
+        }
+
+        .supplier-wrap input {
+            width: 100%;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .supplier-wrap input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .supplier-clear-btn {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .supplier-clear-btn:hover {
+            color: var(--accent-red);
+        }
+
+        .supplier-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            z-index: 300;
+            max-height: 220px;
+            overflow-y: auto;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .supplier-item {
+            padding: 0.65rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.15s;
+        }
+
+        .supplier-item:hover,
+        .supplier-item.active {
+            background: var(--bg-tertiary);
+            color: var(--accent-blue);
+        }
+
+        .supplier-item.add-new {
+            color: var(--accent-green);
+            font-weight: 600;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .supplier-item.add-new:hover {
+            background: rgba(0, 230, 118, 0.07);
+            color: var(--accent-green);
+        }
+
+        .supplier-item.empty {
+            color: var(--text-secondary);
+            cursor: default;
+            font-style: italic;
+        }
+
+        .supplier-selected {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.8rem;
+            background: rgba(0, 112, 243, 0.12);
+            border: 1px solid rgba(0, 112, 243, 0.3);
+            border-radius: 20px;
+            font-size: 0.82rem;
+            color: var(--accent-blue);
+            margin-top: 0.4rem;
+        }
+
+        .supplier-selected button {
+            background: none;
+            border: none;
+            color: var(--accent-blue);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0;
+            opacity: 0.7;
+        }
+
+        .supplier-selected button:hover {
+            opacity: 1;
+            color: var(--accent-red);
+        }
+
 
         .footer {
             background: var(--bg-secondary);
@@ -1117,6 +1380,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 <ul class="nav-menu" :class="{ active: menuOpen }">
                     <li><a href="index.php" class="nav-link"><i class="fas fa-home"></i> Accueil</a></li>
                     <li><a href="expenses.php" class="nav-link active"><i class="fas fa-wallet"></i> Dépenses</a></li>
+                    <li><a href="suppliers.php" class="nav-link"> <i class="fas fa-truck"></i> Fournisseurs</a></li>
                     <li v-if="user_role=='admin'">
                         <a href="users.php" class="nav-link" @click="closeMobileMenu">
                             <i class="fas fa-users"></i> Utilisateurs
@@ -1253,6 +1517,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                 {{ reduceWord(project.name) }}
                             </option>
                         </select>
+                        <select class="filter-select" v-model="supplierFilter" @change="filterExpenses"
+                            style="max-width: 250px;">
+                            <option value="">Tous les fournisseurs</option>
+                            <option v-for="s in availableSuppliers" :key="s.id" :value="s.id">
+                                {{ s.name }}
+                            </option>
                         </select>
                         <select class="filter-select" v-model="statusFilter" @change="filterExpenses"
                             style="max-width: 250px;">
@@ -1274,6 +1544,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                     <th>Ligne Budgétaire</th>
                                     <th>Description</th>
                                     <th>Montant</th>
+                                    <th>Montant payé</th>
                                     <th>Statut</th>
                                     <th>Enregistré par</th>
                                     <th>Documents</th>
@@ -1295,6 +1566,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         {{ expense.description || '-' }}
                                     </td>
                                     <td data-label="Montant"><strong>{{ formatCurrencyExact(expense.amount) }}</strong></td>
+                                    <td data-label="Montant payé">
+                                        <span v-if="expense.paid_amount !== null && expense.paid_amount !== ''">
+                                            {{ formatCurrencyExact(expense.paid_amount) }}
+                                        </span>
+                                        <span v-else style="color:var(--text-secondary);">-</span>
+                                    </td>
                                     <td data-label="Statut">
                                         <span class="badge"
                                             :class="getBadgeClass(expense.remaining, expense.allocated_amount)">
@@ -1317,20 +1594,25 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         <span v-else style="color: var(--text-secondary);">-</span>
                                     </td>
                                     <td v-if="canEdit" class="no-print" data-label="Actions">
-                                        <div class="action-buttons" v-if="canEditExpense(expense)">
-                                            <button @click="editExpense(expense)" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-edit"></i>
+                                        <div class="action-buttons">
+                                            <button @click="openExpenseDetail(expense)" class="btn btn-sm btn-secondary" title="Voir les détails">
+                                                <i class="fas fa-eye"></i>
                                             </button>
-                                            <button @click="deleteExpense(expense)" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            <template v-if="canEditExpense(expense)">
+                                                <button @click="editExpense(expense)" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deleteExpense(expense)" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </template>
+                                            <span v-else-if="isProjectLocked(expense.project_id)" class="badge badge-locked" title="Projet verrouillé">
+                                                <i class="fas fa-lock"></i> Verrouillé
+                                            </span>
+                                            <span v-else class="text-muted" style="font-size: 0.85rem;" title="Seul l'auteur de la dépense peut la modifier">
+                                                <i class="fas fa-user-lock"></i>
+                                            </span>
                                         </div>
-                                        <span v-else-if="isProjectLocked(expense.project_id)" class="badge badge-locked" title="Projet verrouillé">
-                                            <i class="fas fa-lock"></i> Verrouillé
-                                        </span>
-                                        <span v-else class="text-muted" style="font-size: 0.85rem;" title="Seul l'auteur de la dépense peut la modifier">
-                                            <i class="fas fa-user-lock"></i>
-                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -1343,16 +1625,30 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     </div>
 
                     <div class="pagination" v-if="totalPages > 1">
+                        <!-- Précédent -->
                         <button @click="prevPage" :disabled="currentPage === 1">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <button v-for="page in totalPages" :key="page" @click="currentPage = page"
-                            :class="{ active: currentPage === page }">
-                            {{ page }}
-                        </button>
+                        <!-- Pages visibles -->
+                        <template v-for="p in getVisiblePages(currentPage, totalPages)" :key="p">
+                            <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                            <button v-else @click="currentPage = p" :class="{ active: currentPage === p }">{{ p }}</button>
+                        </template>
+                        <!-- Suivant -->
                         <button @click="nextPage" :disabled="currentPage === totalPages">
                             <i class="fas fa-chevron-right"></i>
                         </button>
+                        <!-- Info + aller à -->
+                        <span class="pg-info">{{ currentPage }} / {{ totalPages }}</span>
+                        <span class="pg-goto">
+                            Aller à
+                            <input type="number" v-model="goToPageExpenses" :min="1" :max="totalPages"
+                                @keydown.enter="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })"
+                                placeholder="n°" />
+                            <button @click="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -1437,6 +1733,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         </td>
                                         <td class="no-print" data-label="Actions">
                                             <div class="action-buttons">
+                                                <button @click="openValidationDetail(validation)" class="btn btn-sm btn-secondary" title="Voir les détails">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
                                                 <button v-if="validation.status === 'en attente'"
                                                     @click="acceptValidation(validation)"
                                                     class="btn btn-sm btn-success">
@@ -1463,14 +1762,23 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             <button @click="adminValidationsCurrentPage--" :disabled="adminValidationsCurrentPage === 1">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                            <button v-for="page in totalAdminValidationsPages" :key="page"
-                                @click="adminValidationsCurrentPage = page"
-                                :class="{ active: adminValidationsCurrentPage === page }">
-                                {{ page }}
-                            </button>
+                            <template v-for="p in getVisiblePages(adminValidationsCurrentPage, totalAdminValidationsPages)" :key="p">
+                                <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                                <button v-else @click="adminValidationsCurrentPage = p" :class="{ active: adminValidationsCurrentPage === p }">{{ p }}</button>
+                            </template>
                             <button @click="adminValidationsCurrentPage++" :disabled="adminValidationsCurrentPage === totalAdminValidationsPages">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
+                            <span class="pg-info">{{ adminValidationsCurrentPage }} / {{ totalAdminValidationsPages }}</span>
+                            <span class="pg-goto">
+                                Aller à
+                                <input type="number" v-model="goToPageAdmin" :min="1" :max="totalAdminValidationsPages"
+                                    @keydown.enter="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })"
+                                    placeholder="n°" />
+                                <button @click="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </span>
                         </div>
                     </div>
 
@@ -1500,6 +1808,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         <th>Description</th>
                                         <th>Statut</th>
                                         <th>Documents</th>
+                                        <th class="no-print">Détail</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1531,6 +1840,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                             </button>
                                             <span v-else style="color: var(--text-secondary);">-</span>
                                         </td>
+                                        <td class="no-print" data-label="Détail">
+                                            <button @click="openValidationDetail(validation)" class="btn btn-sm btn-secondary" title="Voir les détails">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1545,13 +1859,23 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             <button @click="userValidationsCurrentPage--" :disabled="userValidationsCurrentPage === 1">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                            <button v-for="page in totalUserValidationsPages" :key="page" @click="userValidationsCurrentPage = page"
-                                :class="{ active: userValidationsCurrentPage === page }">
-                                {{ page }}
-                            </button>
+                            <template v-for="p in getVisiblePages(userValidationsCurrentPage, totalUserValidationsPages)" :key="p">
+                                <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                                <button v-else @click="userValidationsCurrentPage = p" :class="{ active: userValidationsCurrentPage === p }">{{ p }}</button>
+                            </template>
                             <button @click="userValidationsCurrentPage++" :disabled="userValidationsCurrentPage === totalUserValidationsPages">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
+                            <span class="pg-info">{{ userValidationsCurrentPage }} / {{ totalUserValidationsPages }}</span>
+                            <span class="pg-goto">
+                                Aller à
+                                <input type="number" v-model="goToPageUser" :min="1" :max="totalUserValidationsPages"
+                                    @keydown.enter="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })"
+                                    placeholder="n°" />
+                                <button @click="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1602,7 +1926,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         <select class="form-select" v-model="expense.project_id" @change="fetchLines" required>
                             <option value="">Sélectionner un projet</option>
                             <option v-for="project in unlockedProjects" :key="project.id" :value="project.id">
-                                {{ reduceWord(project.name) }}
+                                {{ project.name }}
                             </option>
                         </select>
                     </div>
@@ -1625,15 +1949,109 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-input" v-model="expense.description"
+                            placeholder="Description de la dépense">
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Montant (FCFA) *</label>
                         <input type="number" class="form-input" v-model="expense.amount" step="0.01" required
                             placeholder="0.00">
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <input type="text" class="form-input" v-model="expense.description"
-                            placeholder="Description de la dépense">
+                        <label class="form-label"><i class="fas fa-check-circle" style="margin-right:0.4rem;color:var(--accent-green);"></i>Montant payé (FCFA)</label>
+                        <input type="number" class="form-input" v-model="expense.paid_amount" step="0.01" min="0"
+                            placeholder="0.00">
+                        <!-- Reste à payer calculé automatiquement -->
+                        <div v-if="expense.paid_amount !== null && expense.paid_amount !== '' && expense.amount"
+                            style="margin-top:0.5rem;padding:0.6rem 0.9rem;background:var(--bg-tertiary);border-radius:var(--radius);border:1px solid var(--border-color);display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;">
+                            <i class="fas fa-info-circle" style="color:var(--accent-cyan);"></i>
+                            <span style="color:var(--text-secondary);">Reste à payer :</span>
+                            <strong :style="{color: (Number(expense.amount) - Number(expense.paid_amount)) <= 0 ? 'var(--accent-green)' : 'var(--accent-yellow)'}">
+                                {{ formatCurrencyExact(Number(expense.amount) - Number(expense.paid_amount)) }}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <!-- ── Fournisseur : select + saisie libre ── -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-truck" style="margin-right:0.4rem;color:var(--accent-cyan);"></i>
+                            Fournisseur
+                        </label>
+
+                        <!-- Toast succès création fournisseur -->
+                        <div v-if="supplierSuccessMsg" class="supplier-success-toast">
+                            <i class="fas fa-check-circle"></i>
+                            {{ supplierSuccessMsg }}
+                        </div>
+
+                        <!-- Badge fournisseur sélectionné -->
+                        <div v-if="expense.supplier_id" class="supplier-selected">
+                            <i class="fas fa-check-circle"></i>
+                            {{ expense.supplier_name }}
+                            <button type="button" @click="clearSupplier" title="Retirer">&times;</button>
+                        </div>
+
+                        <!-- Panneau select + saisie libre -->
+                        <div v-else class="supplier-combo">
+                            <!-- Colonne gauche : select liste existante -->
+                            <div class="supplier-combo-select">
+                                <div class="supplier-combo-label"><i class="fas fa-list"></i> Choisir un existant</div>
+                                <select class="form-select" @change="onSupplierSelectChange" v-model="supplierSelectVal">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                </select>
+                            </div>
+
+                            <!-- Séparateur -->
+                            <div class="supplier-combo-sep"><span>ou</span></div>
+
+                            <!-- Colonne droite : saisie nouveau -->
+                            <div class="supplier-combo-new">
+                                <div class="supplier-combo-label"><i class="fas fa-plus"></i> Nouveau fournisseur</div>
+                                <div class="supplier-wrap" v-click-outside="closeSupplierDropdown">
+                                    <input
+                                        type="text"
+                                        v-model="supplierSearch"
+                                        @input="onSupplierInput"
+                                        @focus="showSupplierDropdown = true"
+                                        @keydown.down.prevent="highlightNext"
+                                        @keydown.up.prevent="highlightPrev"
+                                        @keydown.enter.prevent="pickHighlighted"
+                                        @keydown.esc="closeSupplierDropdown"
+                                        placeholder="Taper un nom..."
+                                        autocomplete="off" />
+                                    <button v-if="supplierSearch" class="supplier-clear-btn" type="button"
+                                        @click="supplierSearch=''; showSupplierDropdown=false">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+
+                                    <!-- Dropdown suggestions + ajout -->
+                                    <div class="supplier-dropdown" v-if="showSupplierDropdown && (filteredSuppliers.length > 0 || canAddNewSupplier)">
+                                        <div
+                                            v-for="(s, idx) in filteredSuppliers"
+                                            :key="s.id"
+                                            class="supplier-item"
+                                            :class="{ active: supplierHighlight === idx }"
+                                            @mousedown.prevent="pickSupplier(s)">
+                                            <i class="fas fa-building" style="font-size:0.7rem;opacity:0.5;"></i>
+                                            {{ s.name }}
+                                        </div>
+                                        <div
+                                            v-if="canAddNewSupplier"
+                                            class="supplier-item add-new"
+                                            :class="{ active: supplierHighlight === filteredSuppliers.length }"
+                                            @mousedown.prevent="createAndPickSupplier">
+                                            <i class="fas fa-plus-circle"></i>
+                                            Enregistrer "{{ supplierSearch.trim() }}"
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -1837,6 +2255,169 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
             </div>
         </div>
+
+        <!-- Modal Détail Dépense -->
+        <div class="modal-overlay" :class="{ active: modals.expenseDetail }" @click.self="closeExpenseDetail">
+            <div class="modal" style="max-width:640px;">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-receipt" style="color:var(--accent-blue);margin-right:0.5rem;"></i>Détail de la Dépense</h3>
+                    <button class="modal-close" @click="closeExpenseDetail"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" v-if="detailExpense">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+                        <div>
+                            <div class="form-label">Projet</div>
+                            <div style="font-weight:600;">{{ detailExpense.project_name }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Ligne Budgétaire</div>
+                            <div>{{ detailExpense.budget_line_name }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Date</div>
+                            <div>{{ formatDate(detailExpense.expense_date) }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Enregistré par</div>
+                            <div>{{ detailExpense.user_name || '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Montant</div>
+                            <div style="font-weight:700;font-size:1.1rem;color:var(--accent-yellow);">{{ formatCurrencyExact(detailExpense.amount) }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Montant payé</div>
+                            <div :style="{fontWeight:'600',color:detailExpense.paid_amount?'var(--accent-green)':'var(--text-secondary)'}">
+                                {{ detailExpense.paid_amount ? formatCurrencyExact(detailExpense.paid_amount) : '-' }}
+                            </div>
+                        </div>
+                        <div v-if="detailExpense.paid_amount !== null && detailExpense.paid_amount !== '' && detailExpense.amount">
+                            <div class="form-label">Reste à payer</div>
+                            <div :style="{fontWeight:'600',color:(Number(detailExpense.amount)-Number(detailExpense.paid_amount))<=0?'var(--accent-green)':'var(--accent-red)'}">
+                                {{ formatCurrencyExact(Number(detailExpense.amount) - Number(detailExpense.paid_amount)) }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-label">Fournisseur</div>
+                            <div>
+                                <i v-if="detailExpense.supplier_name" class="fas fa-building" style="color:var(--accent-cyan);margin-right:0.3rem;font-size:0.85rem;"></i>
+                                {{ detailExpense.supplier_name || '-' }}
+                            </div>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <div class="form-label">Description</div>
+                            <div style="color:var(--text-secondary);">{{ detailExpense.description || '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Budget Alloué (ligne)</div>
+                            <div>{{ formatCurrencyExact(detailExpense.allocated_amount) }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Total Dépensé (ligne)</div>
+                            <div :style="{color:parseFloat(detailExpense.spent)>parseFloat(detailExpense.allocated_amount)?'var(--accent-red)':'var(--text-primary)'}">
+                                {{ formatCurrencyExact(detailExpense.spent) }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-label">Utilisation Budget</div>
+                            <span class="badge" :class="getBadgeClass(detailExpense.remaining, detailExpense.allocated_amount)">
+                                {{ getUsagePercentage(detailExpense) }}%
+                            </span>
+                        </div>
+                        <div>
+                            <div class="form-label">Créé le</div>
+                            <div style="color:var(--text-secondary);font-size:0.875rem;">{{ detailExpense.created_at ? formatDate(detailExpense.created_at) : '-' }}</div>
+                        </div>
+                        <div v-if="getExpenseDocuments(detailExpense).length > 0" style="grid-column:1/-1;">
+                            <div class="form-label">Documents</div>
+                            <button @click="viewExpenseDocuments(detailExpense); closeExpenseDetail();" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-file"></i> Voir {{ getExpenseDocuments(detailExpense).length }} document(s)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeExpenseDetail" class="btn btn-secondary">Fermer</button>
+                    <button v-if="detailExpense && canEditExpense(detailExpense)" @click="editExpense(detailExpense); closeExpenseDetail();" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Modifier
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Détail Dépassement de Budget -->
+        <div class="modal-overlay" :class="{ active: modals.validationDetail }" @click.self="closeValidationDetail">
+            <div class="modal" style="max-width:580px;">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-exclamation-triangle" style="color:var(--accent-yellow);margin-right:0.5rem;"></i>Détail du Dépassement</h3>
+                    <button class="modal-close" @click="closeValidationDetail"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" v-if="detailValidation">
+                    <div style="margin-bottom:1rem;">
+                        <span class="validation-badge" v-if="detailValidation.status === 'en attente'"><i class="fas fa-hourglass-half"></i> En attente</span>
+                        <span class="badge badge-success" v-else-if="detailValidation.status === 'acceptée'"><i class="fas fa-check"></i> Acceptée</span>
+                        <span class="badge badge-danger" v-else><i class="fas fa-times"></i> Refusée</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+                        <div>
+                            <div class="form-label">Demandeur</div>
+                            <div style="font-weight:600;">{{ detailValidation.user_name || '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Date de la demande</div>
+                            <div>{{ formatDate(detailValidation.created_at) }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Projet</div>
+                            <div style="font-weight:600;">{{ detailValidation.project_name }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Ligne Budgétaire</div>
+                            <div>{{ detailValidation.budget_line_name }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Montant Demandé</div>
+                            <div style="font-weight:700;font-size:1.1rem;color:var(--accent-red);">{{ formatCurrencyExact(detailValidation.requested_amount) }}</div>
+                        </div>
+                        <div>
+                            <div class="form-label">Fournisseur</div>
+                            <div>
+                                <i v-if="detailValidation.supplier_name" class="fas fa-building" style="color:var(--accent-cyan);margin-right:0.3rem;font-size:0.85rem;"></i>
+                                {{ detailValidation.supplier_name || '-' }}
+                            </div>
+                        </div>
+                        <div v-if="detailValidation.paid_amount !== null && detailValidation.paid_amount !== undefined">
+                            <div class="form-label">Montant payé</div>
+                            <div :style="{fontWeight:'600',color:detailValidation.paid_amount?'var(--accent-green)':'var(--text-secondary)'}">
+                                {{ detailValidation.paid_amount ? formatCurrencyExact(detailValidation.paid_amount) : '-' }}
+                            </div>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <div class="form-label">Description</div>
+                            <div style="color:var(--text-secondary);">{{ detailValidation.description || '-' }}</div>
+                        </div>
+                        <div v-if="getValidationDocuments(detailValidation).length > 0" style="grid-column:1/-1;">
+                            <div class="form-label">Documents</div>
+                            <button @click="viewValidationDocuments(detailValidation); closeValidationDetail();" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-file"></i> Voir {{ getValidationDocuments(detailValidation).length }} document(s)
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="user_role === 'admin' && detailValidation.status === 'en attente'" style="margin-top:1.5rem;display:flex;gap:1rem;">
+                        <button @click="acceptValidation(detailValidation); closeValidationDetail();" class="btn btn-success" style="flex:1;">
+                            <i class="fas fa-check"></i> Accepter
+                        </button>
+                        <button @click="rejectValidation(detailValidation); closeValidationDetail();" class="btn btn-danger" style="flex:1;">
+                            <i class="fas fa-times"></i> Refuser
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeValidationDetail" class="btn btn-secondary">Fermer</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -1860,11 +2441,20 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     projects: [],
                     lines: [],
                     selectedLine: null,
+                    suppliers: [],
+                    supplierSearch: '',
+                    showSupplierDropdown: false,
+                    supplierHighlight: 0,
+                    supplierSuccessMsg: '',
+                    supplierSelectVal: '',
                     expense: {
                         id: null,
                         project_id: '',
                         project_budget_line_id: '',
                         amount: 0,
+                        paid_amount: null,
+                        supplier_id: null,
+                        supplier_name: '',
                         expense_date: new Date().toISOString().split('T')[0],
                         description: '',
                         document: null,
@@ -1877,6 +2467,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     isSaving: false,
                     searchQuery: '',
                     projectFilter: '',
+                    supplierFilter: '',
                     departmentFilter: '',
                     locationFilter: '',
                     statusFilter: '',
@@ -1894,14 +2485,21 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     validationsItemsPerPage: 10,
                     adminValidationsCurrentPage: 1,
                     userValidationsCurrentPage: 1,
+                    goToPageExpenses: '',
+                    goToPageAdmin: '',
+                    goToPageUser: '',
                     showValidationsSection: false,
                     modals: {
                         expense: false,
                         documentViewer: false,
                         validation: false,
                         validationDocuments: false,
-                        expenseDocuments: false
+                        expenseDocuments: false,
+                        expenseDetail: false,
+                        validationDetail: false
                     },
+                    detailExpense: null,
+                    detailValidation: null,
                     viewingDocument: null,
                     viewingValidationDocuments: null,
                     viewingExpenseDocuments: null,
@@ -1920,6 +2518,16 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 };
             },
             computed: {
+                filteredSuppliers() {
+                    const q = this.supplierSearch.trim().toLowerCase();
+                    if (!q) return this.suppliers;
+                    return this.suppliers.filter(s => s.name.toLowerCase().includes(q));
+                },
+                canAddNewSupplier() {
+                    const q = this.supplierSearch.trim().toLowerCase();
+                    if (!q) return false;
+                    return !this.suppliers.some(s => s.name.toLowerCase() === q);
+                },
                 paginatedExpenses() {
                     const start = (this.currentPage - 1) * this.itemsPerPage;
                     return this.filteredExpenses.slice(start, start + this.itemsPerPage);
@@ -1947,6 +2555,18 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         if (p.location) locations.add(p.location);
                     });
                     return Array.from(locations).sort();
+                },
+                availableSuppliers() {
+                    const seen = new Map();
+                    this.expenses.forEach(e => {
+                        if (e.supplier_id && e.supplier_name && !seen.has(e.supplier_id)) {
+                            seen.set(e.supplier_id, {
+                                id: e.supplier_id,
+                                name: e.supplier_name
+                            });
+                        }
+                    });
+                    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
                 },
                 availableProjects() {
                     let filtered = this.projects;
@@ -1991,10 +2611,27 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 this.fetchExpenses();
                 this.fetchExpensesValidations();
                 this.fetchNotifications();
+                this.fetchSuppliers();
             },
             methods: {
                 logout() {
                     window.location.href = 'api/index.php?action=logout';
+                },
+                openExpenseDetail(expense) {
+                    this.detailExpense = expense;
+                    this.modals.expenseDetail = true;
+                },
+                closeExpenseDetail() {
+                    this.modals.expenseDetail = false;
+                    this.detailExpense = null;
+                },
+                openValidationDetail(validation) {
+                    this.detailValidation = validation;
+                    this.modals.validationDetail = true;
+                },
+                closeValidationDetail() {
+                    this.modals.validationDetail = false;
+                    this.detailValidation = null;
                 },
                 closeMobileMenu() {
                     this.menuOpen = false;
@@ -2386,6 +3023,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         formData.append('project_id', Number(this.expense.project_id));
                         formData.append('project_budget_line_id', Number(this.expense.project_budget_line_id));
                         formData.append('amount', Number(this.expense.amount));
+                        formData.append('paid_amount', this.expense.paid_amount !== null && this.expense.paid_amount !== '' ? Number(this.expense.paid_amount) : '');
+                        formData.append('supplier_id', this.expense.supplier_id ?? '');
                         formData.append('expense_date', this.expense.expense_date);
                         formData.append('description', this.expense.description || '');
 
@@ -2451,6 +3090,8 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         formData.append('project_id', Number(this.expense.project_id));
                         formData.append('project_budget_line_id', Number(this.expense.project_budget_line_id));
                         formData.append('amount', Number(this.expense.amount));
+                        formData.append('paid_amount', this.expense.paid_amount !== null && this.expense.paid_amount !== '' ? Number(this.expense.paid_amount) : '');
+                        formData.append('supplier_id', this.expense.supplier_id ?? '');
                         formData.append('expense_date', this.expense.expense_date);
                         formData.append('description', this.expense.description || '');
 
@@ -2516,6 +3157,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         project_id: '',
                         project_budget_line_id: '',
                         amount: '',
+                        paid_amount: null,
+                        supplier_id: null,
+                        supplier_name: '',
                         expense_date: new Date().toISOString().split('T')[0],
                         description: '',
                         document: null,
@@ -2525,6 +3169,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.selectedFiles = [];
                     this.selectedLine = null;
                     this.lines = [];
+                    this.supplierSearch = '';
+                    this.showSupplierDropdown = false;
+                    this.supplierHighlight = 0;
+                    this.supplierSelectVal = '';
+                    this.supplierSuccessMsg = '';
                     this.modals.expense = true;
                 },
                 async editExpense(expense) {
@@ -2557,6 +3206,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         project_id: expense.project_id,
                         project_budget_line_id: expense.project_budget_line_id,
                         amount: expense.amount,
+                        paid_amount: expense.paid_amount ?? null,
+                        supplier_id: expense.supplier_id ?? null,
+                        supplier_name: expense.supplier_name ?? '',
                         expense_date: expense.expense_date,
                         description: expense.description,
                         document: expense.document,
@@ -2564,6 +3216,11 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     };
                     this.selectedFile = null;
                     this.selectedFiles = [];
+                    this.supplierSearch = '';
+                    this.showSupplierDropdown = false;
+                    this.supplierHighlight = 0;
+                    this.supplierSelectVal = '';
+                    this.supplierSuccessMsg = '';
 
                     await this.fetchLines();
 
@@ -2723,6 +3380,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         filtered = filtered.filter(e => e.project_id == this.projectFilter);
                     }
 
+                    if (this.supplierFilter) {
+                        filtered = filtered.filter(e => String(e.supplier_id) === String(this.supplierFilter));
+                    }
+
                     if (this.departmentFilter) {
                         const projectIdsInDept = this.projects
                             .filter(p => p.department === this.departmentFilter)
@@ -2819,6 +3480,27 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
 
                     this.stats.overBudget = this.expenses.filter(e => parseFloat(e.remaining || 0) < 0).length;
                 },
+                getVisiblePages(current, total) {
+                    const pages = [];
+                    if (total <= 1) return pages;
+                    // Always first
+                    pages.push(1);
+                    // Ellipsis before window
+                    if (current - 1 > 2) pages.push('...');
+                    // Window: prev, current, next
+                    for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+                        pages.push(p);
+                    }
+                    // Ellipsis after window
+                    if (current + 1 < total - 1) pages.push('...');
+                    // Always last
+                    if (total > 1) pages.push(total);
+                    return pages;
+                },
+                handleGoToPage(pageStr, total, setter) {
+                    const n = parseInt(pageStr);
+                    if (!isNaN(n) && n >= 1 && n <= total) setter(n);
+                },
                 prevPage() {
                     if (this.currentPage > 1) this.currentPage--;
                 },
@@ -2834,11 +3516,13 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 },
                 formatCurrencyExact(value) {
                     const num = parseFloat(value) || 0;
+                    // Détecter si la valeur a des décimales significatives
+                    const hasDecimals = num !== Math.floor(num);
                     return num.toLocaleString('fr-FR', {
                         style: 'currency',
                         currency: 'XOF',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
+                        minimumFractionDigits: hasDecimals ? 2 : 0,
+                        maximumFractionDigits: hasDecimals ? 2 : 0,
                         useGrouping: true
                     });
                 },
@@ -2922,6 +3606,83 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     const ext = filename.toLowerCase();
                     return ext.endsWith('.png') || ext.endsWith('.jpg') || ext.endsWith('.jpeg');
                 },
+                // ── Supplier methods ──────────────────────────────
+                async fetchSuppliers() {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}?action=getSuppliers`);
+                        const data = await res.json();
+                        this.suppliers = data.data || [];
+                    } catch (e) {
+                        console.error('[v0] fetchSuppliers error:', e);
+                    }
+                },
+                onSupplierInput() {
+                    this.showSupplierDropdown = true;
+                    this.supplierHighlight = 0;
+                },
+                closeSupplierDropdown() {
+                    this.showSupplierDropdown = false;
+                },
+                highlightNext() {
+                    const max = this.filteredSuppliers.length + (this.canAddNewSupplier ? 1 : 0) - 1;
+                    this.supplierHighlight = Math.min(this.supplierHighlight + 1, max);
+                },
+                highlightPrev() {
+                    this.supplierHighlight = Math.max(this.supplierHighlight - 1, 0);
+                },
+                pickHighlighted() {
+                    if (this.supplierHighlight < this.filteredSuppliers.length) {
+                        this.pickSupplier(this.filteredSuppliers[this.supplierHighlight]);
+                    } else if (this.canAddNewSupplier) {
+                        this.createAndPickSupplier();
+                    }
+                },
+                pickSupplier(s) {
+                    this.expense.supplier_id = s.id;
+                    this.expense.supplier_name = s.name;
+                    this.supplierSearch = '';
+                    this.showSupplierDropdown = false;
+                },
+                clearSupplier() {
+                    this.expense.supplier_id = null;
+                    this.expense.supplier_name = '';
+                    this.supplierSearch = '';
+                },
+                onSupplierSelectChange(e) {
+                    const id = this.supplierSelectVal;
+                    if (!id) return;
+                    const found = this.suppliers.find(s => String(s.id) === String(id));
+                    if (found) this.pickSupplier(found);
+                    this.supplierSelectVal = '';
+                },
+                async createAndPickSupplier() {
+                    const name = this.supplierSearch.trim();
+                    if (!name) return;
+                    try {
+                        const fd = new FormData();
+                        fd.append('name', name);
+                        const res = await fetch(`${API_BASE_URL}?action=createSupplier`, {
+                            method: 'POST',
+                            body: fd
+                        });
+                        const data = await res.json();
+                        if (!data.success) {
+                            alert(data.message || 'Erreur création fournisseur');
+                            return;
+                        }
+                        this.suppliers.push(data.data);
+                        this.pickSupplier(data.data);
+                        // Toast succès
+                        this.supplierSuccessMsg = `✓ Fournisseur "${data.data.name}" enregistré avec succès !`;
+                        setTimeout(() => {
+                            this.supplierSuccessMsg = '';
+                        }, 4000);
+                    } catch (e) {
+                        console.error('[v0] createAndPickSupplier:', e);
+                        alert('Erreur lors de la création du fournisseur');
+                    }
+                },
+                // ────────────────────────────────────────────────────
                 renderCharts() {
                     if (this.isRenderingCharts) {
                         console.log('[v0] Render already in progress, skipping...');
@@ -3079,6 +3840,17 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         });
                     }, 100);
                 }
+            }
+            // Directive v-click-outside pour fermer le dropdown fournisseur
+        }).directive('click-outside', {
+            mounted(el, binding) {
+                el._clickOutsideHandler = (event) => {
+                    if (!el.contains(event.target)) binding.value();
+                };
+                document.addEventListener('mousedown', el._clickOutsideHandler);
+            },
+            unmounted(el) {
+                document.removeEventListener('mousedown', el._clickOutsideHandler);
             }
         }).mount('#app');
     </script>

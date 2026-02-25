@@ -778,6 +778,9 @@ $user_role = $_SESSION['user_role'] ?? 'consultant';
 						<span>Utilisateurs</span>
 					</a>
 
+					<li><a href="suppliers.php" class="nav-link"> <i class="fas fa-truck"></i> Fournisseurs</a></li>
+
+
 					<li v-if="user_role=='admin'">
 						<a href="notifications.php" class="nav-link" @click="closeMobileMenu">
 							<i class="fas fa-bell"></i> Notifications

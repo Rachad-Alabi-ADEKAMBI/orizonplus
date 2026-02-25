@@ -581,6 +581,8 @@ $user_name = $_SESSION['user_name'] ?? null;
 							<i class="fas fa-users"></i> Utilisateurs
 						</a>
 					</li>
+					<li><a href="suppliers.php" class="nav-link"> <i class="fas fa-truck"></i> Fournisseurs</a></li>
+
 					<li><a href="notifications.php" class="nav-link active"><i class="fas fa-bell"></i> Notifications
 						</a></li>
 

@@ -194,7 +194,6 @@ function getProjectsData(PDO $pdo): array
 {
     return $pdo->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
 }
-
 function createProject()
 {
     try {
@@ -224,12 +223,9 @@ function createProject()
         $execution_budget_ht    = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
         $collected_amount_ht    = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
 
-        // Nouveaux champs – Engagement des fournisseurs
-        $amount_to_pay_to_suppliers = isset($_POST['amount_to_pay_to_suppliers']) && $_POST['amount_to_pay_to_suppliers'] !== ''
-            ? (float)$_POST['amount_to_pay_to_suppliers']
-            : null;
-        $amount_paid_to_suppliers = isset($_POST['amount_paid_to_suppliers']) && $_POST['amount_paid_to_suppliers'] !== ''
-            ? (float)$_POST['amount_paid_to_suppliers']
+        // Taux d'exécution physique
+        $execution_rate = isset($_POST['execution_rate']) && $_POST['execution_rate'] !== ''
+            ? (float)$_POST['execution_rate']
             : null;
 
         $pdo->beginTransaction();
@@ -275,8 +271,8 @@ function createProject()
             INSERT INTO projects
             (name, description, department, location, documents, project_status, date_of_creation,
              contract_number, contract_amount_ht, execution_budget_ht, collected_amount_ht,
-             amount_to_pay_to_suppliers, amount_paid_to_suppliers)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             execution_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         if (!$stmt->execute([
@@ -291,8 +287,7 @@ function createProject()
             $contract_amount_ht,
             $execution_budget_ht,
             $collected_amount_ht,
-            $amount_to_pay_to_suppliers,
-            $amount_paid_to_suppliers
+            $execution_rate
         ])) {
             throw new Exception("Erreur insertion projet : " . implode(' | ', $stmt->errorInfo()));
         }
@@ -439,16 +434,13 @@ function updateProject()
         $execution_budget_ht = $_POST['execution_budget_ht'] !== '' ? (float)$_POST['execution_budget_ht'] : null;
         $collected_amount_ht = $_POST['collected_amount_ht'] !== '' ? (float)$_POST['collected_amount_ht'] : null;
 
-        // Nouveaux champs – Engagement des fournisseurs
-        $amount_to_pay_to_suppliers = isset($_POST['amount_to_pay_to_suppliers']) && $_POST['amount_to_pay_to_suppliers'] !== ''
-            ? (float)$_POST['amount_to_pay_to_suppliers']
-            : null;
-        $amount_paid_to_suppliers = isset($_POST['amount_paid_to_suppliers']) && $_POST['amount_paid_to_suppliers'] !== ''
-            ? (float)$_POST['amount_paid_to_suppliers']
+        // Taux d'exécution physique
+        $execution_rate = isset($_POST['execution_rate']) && $_POST['execution_rate'] !== ''
+            ? (float)$_POST['execution_rate']
             : null;
 
-        $linesRaw    = $_POST['lines'] ?? '[]';
-        $lines       = json_decode($linesRaw, true);
+        $linesRaw     = $_POST['lines'] ?? '[]';
+        $lines        = json_decode($linesRaw, true);
         $updatedLines = json_decode($_POST['updated_lines'] ?? '[]', true);
         $deletedLines = json_decode($_POST['deleted_lines'] ?? '[]', true);
         $keptDocuments = json_decode($_POST['existing_documents'] ?? '[]', true);
@@ -535,18 +527,17 @@ function updateProject()
         */
 
         $fieldsToCheck = [
-            'name'                       => $name,
-            'description'                => $description,
-            'department'                 => $department,
-            'location'                   => $location,
-            'date_of_creation'           => $date_of_creation,
-            'observation'                => $observation,
-            'contract_number'            => $contract_number,
-            'contract_amount_ht'         => $contract_amount_ht,
-            'execution_budget_ht'        => $execution_budget_ht,
-            'collected_amount_ht'        => $collected_amount_ht,
-            'amount_to_pay_to_suppliers' => $amount_to_pay_to_suppliers,
-            'amount_paid_to_suppliers'   => $amount_paid_to_suppliers,
+            'name'                => $name,
+            'description'         => $description,
+            'department'          => $department,
+            'location'            => $location,
+            'date_of_creation'    => $date_of_creation,
+            'observation'         => $observation,
+            'contract_number'     => $contract_number,
+            'contract_amount_ht'  => $contract_amount_ht,
+            'execution_budget_ht' => $execution_budget_ht,
+            'collected_amount_ht' => $collected_amount_ht,
+            'execution_rate'      => $execution_rate,
         ];
 
         foreach ($fieldsToCheck as $field => $newValue) {
@@ -565,19 +556,18 @@ function updateProject()
 
         $stmtUpdateProject = $pdo->prepare("
             UPDATE projects SET
-                name                       = ?,
-                description                = ?,
-                department                 = ?,
-                location                   = ?,
-                documents                  = ?,
-                date_of_creation           = ?,
-                observation                = ?,
-                contract_number            = ?,
-                contract_amount_ht         = ?,
-                execution_budget_ht        = ?,
-                collected_amount_ht        = ?,
-                amount_to_pay_to_suppliers = ?,
-                amount_paid_to_suppliers   = ?
+                name                 = ?,
+                description          = ?,
+                department           = ?,
+                location             = ?,
+                documents            = ?,
+                date_of_creation     = ?,
+                observation          = ?,
+                contract_number      = ?,
+                contract_amount_ht   = ?,
+                execution_budget_ht  = ?,
+                collected_amount_ht  = ?,
+                execution_rate       = ?
             WHERE id = ?
         ");
 
@@ -593,8 +583,7 @@ function updateProject()
             $contract_amount_ht,
             $execution_budget_ht,
             $collected_amount_ht,
-            $amount_to_pay_to_suppliers,
-            $amount_paid_to_suppliers,
+            $execution_rate,
             $id
         ]);
 
@@ -722,6 +711,7 @@ function updateProject()
         jsonError('Erreur mise à jour projet : ' . $e->getMessage());
     }
 }
+
 function createExpense()
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -730,21 +720,41 @@ function createExpense()
 
     $pdo = getPDO();
 
-    $currentUserId = $_SESSION['user_id'] ?? null;
+    $currentUserId   = $_SESSION['user_id']   ?? null;
     $currentUserName = $_SESSION['user_name'] ?? null;
 
     if (!$currentUserId || !$currentUserName) {
         jsonError('Utilisateur non authentifié', 401);
     }
 
-    $projectId = $_POST['project_id'] ?? null;
+    $projectId           = $_POST['project_id']            ?? null;
     $projectBudgetLineId = $_POST['project_budget_line_id'] ?? null;
-    $amount = $_POST['amount'] ?? null;
-    $expenseDate = $_POST['expense_date'] ?? null;
-    $description = $_POST['description'] ?? null;
+    $amount              = $_POST['amount']                 ?? null;
+    $expenseDate         = $_POST['expense_date']           ?? null;
+    $description         = $_POST['description']            ?? null;
+
+    // Montant payé (optionnel)
+    $paidAmount = isset($_POST['paid_amount']) && $_POST['paid_amount'] !== ''
+        ? (float) $_POST['paid_amount']
+        : null;
+
+    // ── Fournisseur (optionnel) ──────────────────────────────────────────────
+    $supplierId = isset($_POST['supplier_id']) && $_POST['supplier_id'] !== '' && (int)$_POST['supplier_id'] > 0
+        ? (int) $_POST['supplier_id']
+        : null;
 
     if (!$projectId || !$projectBudgetLineId || !$amount || !$expenseDate) {
         jsonError('Paramètres manquants', 400);
+    }
+
+    // ── Date au format West Africa / Bénin (UTC+1) ──────────────────────────
+    try {
+        $tz          = new DateTimeZone('Africa/Porto-Novo'); // UTC+1 – Bénin
+        $dtInput     = new DateTime($expenseDate);
+        $dtInput->setTimezone($tz);
+        $expenseDate = $dtInput->format('Y-m-d');
+    } catch (Exception $e) {
+        jsonError('Format de date invalide', 400);
     }
 
     try {
@@ -782,6 +792,15 @@ function createExpense()
         }
 
         $budgetName = $budget['name'];
+
+        // 🔹 Nom du fournisseur (pour la notification)
+        $supplierName = null;
+        if ($supplierId) {
+            $stmtSupplier = $pdo->prepare("SELECT name FROM suppliers WHERE id = ?");
+            $stmtSupplier->execute([$supplierId]);
+            $supplier = $stmtSupplier->fetch(PDO::FETCH_ASSOC);
+            $supplierName = $supplier['name'] ?? null;
+        }
 
         // 🔹 Gestion multi-documents (max 15)
         $uploadedFiles = [];
@@ -822,29 +841,32 @@ function createExpense()
             }
         }
 
-        // 🔹 Insertion (user_id = utilisateur qui a inséré la dépense)
+        // 🔹 Insertion avec supplier_id + user_id
         $insertSqlWithUserId = "
             INSERT INTO expenses (
-                project_id, project_budget_line_id, amount, description,
-                expense_date, documents, user_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                project_id, project_budget_line_id, amount, paid_amount, description,
+                expense_date, documents, supplier_id, user_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ";
         $insertSqlWithoutUserId = "
             INSERT INTO expenses (
-                project_id, project_budget_line_id, amount, description,
-                expense_date, documents, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                project_id, project_budget_line_id, amount, paid_amount, description,
+                expense_date, documents, supplier_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ";
+
         try {
             $insertExpense = $pdo->prepare($insertSqlWithUserId);
             $insertExpense->execute([
                 $projectId,
                 $projectBudgetLineId,
                 $amount,
+                $paidAmount,
                 $description,
                 $expenseDate,
                 json_encode($uploadedFiles),
-                $currentUserId
+                $supplierId,
+                $currentUserId,
             ]);
         } catch (PDOException $e) {
             if (strpos($e->getMessage(), 'user_id') !== false || strpos($e->getMessage(), 'created_by') !== false) {
@@ -853,9 +875,11 @@ function createExpense()
                     $projectId,
                     $projectBudgetLineId,
                     $amount,
+                    $paidAmount,
                     $description,
                     $expenseDate,
-                    json_encode($uploadedFiles)
+                    json_encode($uploadedFiles),
+                    $supplierId,
                 ]);
             } else {
                 throw $e;
@@ -868,10 +892,12 @@ function createExpense()
         $notificationText = "Nouvelle dépense enregistrée par {$currentUserName} pour le projet \"{$projectName}\":\n"
             . "Ligne budgétaire: {$budgetName}\n"
             . "Montant: {$amount} FCFA\n"
-            . ($description ? "Description: {$description}\n" : '')
+            . ($paidAmount  !== null  ? "Montant payé: {$paidAmount} FCFA\n"  : '')
+            . ($supplierName !== null  ? "Fournisseur: {$supplierName}\n"       : '')
+            . ($description           ? "Description: {$description}\n"         : '')
             . (!empty($uploadedFiles) ? "Documents joints: " . count($uploadedFiles) : '');
 
-        createNotification($notificationText, $currentUserId, $currentUserName);
+        createNotification($notificationText, 1, 'admin');
 
         $pdo->commit();
 
@@ -882,7 +908,7 @@ function createExpense()
             $pdo->rollBack();
         }
 
-        jsonError('Erreur interne du serveur', 500);
+        jsonError('Erreur interne du serveur : ' . $e->getMessage(), 500);
     }
 }
 
@@ -1033,6 +1059,107 @@ function updateExpenseDocuments()
     }
 }
 
+function getSuppliers()
+{
+    try {
+        $pdo = getPDO();
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $stmt = $pdo->prepare("SELECT id, name FROM suppliers ORDER BY name ASC");
+        $stmt->execute();
+
+        $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        jsonSuccess($suppliers, 'Fournisseurs récupérés avec succès');
+    } catch (Throwable $e) {
+        jsonError('Erreur récupération fournisseurs : ' . $e->getMessage(), 500);
+    }
+}
+
+function createSupplier()
+{
+    try {
+        $pdo = getPDO();
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $name = trim($_POST['name'] ?? '');
+
+        if ($name === '') {
+            jsonError('Le nom du fournisseur est obligatoire', 400);
+        }
+
+        // Vérifier si un fournisseur avec ce nom existe déjà
+        $stmtCheck = $pdo->prepare("SELECT id FROM suppliers WHERE name = ?");
+        $stmtCheck->execute([$name]);
+
+        if ($stmtCheck->fetch()) {
+            jsonError('Un fournisseur avec ce nom existe déjà', 409);
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO suppliers (name) VALUES (?)");
+        $stmt->execute([$name]);
+
+        $newId = $pdo->lastInsertId();
+
+        jsonSuccess(
+            ['id' => $newId, 'name' => $name],
+            'Fournisseur créé avec succès'
+        );
+    } catch (Throwable $e) {
+        jsonError('Erreur création fournisseur : ' . $e->getMessage(), 500);
+    }
+}
+
+
+function updateSupplier()
+{
+    try {
+        $pdo = getPDO();
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Accepte l'id depuis GET ou POST
+        $id = isset($_GET['id'])  ? (int) $_GET['id']
+            : (isset($_POST['id']) ? (int) $_POST['id'] : 0);
+
+        $name = trim($_POST['name'] ?? '');
+
+        if (!$id) {
+            jsonError('ID fournisseur manquant', 400);
+        }
+
+        if ($name === '') {
+            jsonError('Le nom du fournisseur est obligatoire', 400);
+        }
+
+        // Vérifier que le fournisseur existe
+        $stmtCheck = $pdo->prepare("SELECT id, name FROM suppliers WHERE id = ?");
+        $stmtCheck->execute([$id]);
+        $supplier = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if (!$supplier) {
+            jsonError('Fournisseur introuvable', 404);
+        }
+
+        // Vérifier qu'aucun autre fournisseur n'a déjà ce nom
+        $stmtDup = $pdo->prepare("SELECT id FROM suppliers WHERE name = ? AND id != ?");
+        $stmtDup->execute([$name, $id]);
+
+        if ($stmtDup->fetch()) {
+            jsonError('Un autre fournisseur avec ce nom existe déjà', 409);
+        }
+
+        $stmt = $pdo->prepare("UPDATE suppliers SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $id]);
+
+        jsonSuccess(
+            ['id' => $id, 'name' => $name],
+            "Fournisseur mis à jour avec succès"
+        );
+    } catch (Throwable $e) {
+        jsonError('Erreur mise à jour fournisseur : ' . $e->getMessage(), 500);
+    }
+}
+
 
 function newExpenseValidation()
 {
@@ -1049,11 +1176,21 @@ function newExpenseValidation()
         jsonError('Utilisateur non authentifié', 401);
     }
 
-    $projectId           = $_POST['project_id'] ?? null;
+    $projectId           = $_POST['project_id']            ?? null;
     $projectBudgetLineId = $_POST['project_budget_line_id'] ?? null;
-    $amount              = $_POST['amount'] ?? null;
-    $expenseDate         = $_POST['expense_date'] ?? null;
-    $description         = $_POST['description'] ?? null;
+    $amount              = $_POST['amount']                 ?? null;
+    $expenseDate         = $_POST['expense_date']           ?? null;
+    $description         = $_POST['description']            ?? null;
+
+    // Montant payé (optionnel)
+    $paidAmount = isset($_POST['paid_amount']) && $_POST['paid_amount'] !== ''
+        ? (float) $_POST['paid_amount']
+        : null;
+
+    // Fournisseur (optionnel)
+    $supplierId = isset($_POST['supplier_id']) && $_POST['supplier_id'] !== '' && (int)$_POST['supplier_id'] > 0
+        ? (int) $_POST['supplier_id']
+        : null;
 
     if (!$projectId || !$projectBudgetLineId || !$amount || !$expenseDate) {
         jsonError('Paramètres manquants', 400);
@@ -1067,13 +1204,13 @@ function newExpenseValidation()
             ==========================
             1️⃣ Vérification projet
             ==========================
-            */
+        */
 
         $stmtProject = $pdo->prepare("
-                SELECT id, name
-                FROM projects
-                WHERE id = ?
-            ");
+            SELECT id, name
+            FROM projects
+            WHERE id = ?
+        ");
         $stmtProject->execute([$projectId]);
         $project = $stmtProject->fetch(PDO::FETCH_ASSOC);
 
@@ -1085,17 +1222,17 @@ function newExpenseValidation()
             ==========================
             2️⃣ Vérification ligne budgétaire + jointure correcte
             ==========================
-            */
+        */
 
         $stmtPBL = $pdo->prepare("
-                SELECT 
-                    pbl.id,
-                    pbl.allocated_amount,
-                    bl.name AS budget_name
-                FROM project_budget_lines pbl
-                JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-                WHERE pbl.id = ? AND pbl.project_id = ?
-            ");
+            SELECT 
+                pbl.id,
+                pbl.allocated_amount,
+                bl.name AS budget_name
+            FROM project_budget_lines pbl
+            JOIN budget_lines bl ON bl.id = pbl.budget_line_id
+            WHERE pbl.id = ? AND pbl.project_id = ?
+        ");
         $stmtPBL->execute([$projectBudgetLineId, $projectId]);
         $budgetLine = $stmtPBL->fetch(PDO::FETCH_ASSOC);
 
@@ -1105,9 +1242,23 @@ function newExpenseValidation()
 
         /*
             ==========================
-            3️⃣ Upload fichiers
+            3️⃣ Nom du fournisseur (pour notification)
             ==========================
-            */
+        */
+
+        $supplierName = null;
+        if ($supplierId) {
+            $stmtSupplier = $pdo->prepare("SELECT name FROM suppliers WHERE id = ?");
+            $stmtSupplier->execute([$supplierId]);
+            $supplierRow  = $stmtSupplier->fetch(PDO::FETCH_ASSOC);
+            $supplierName = $supplierRow['name'] ?? null;
+        }
+
+        /*
+            ==========================
+            4️⃣ Upload fichiers
+            ==========================
+        */
 
         $uploadedFiles = [];
         $uploadDir = __DIR__ . '/../images/';
@@ -1145,47 +1296,51 @@ function newExpenseValidation()
 
         /*
             ==========================
-            4️⃣ Insertion validation
+            5️⃣ Insertion validation
             ==========================
-            */
+        */
 
         $stmtInsert = $pdo->prepare("
-                INSERT INTO expenses_validations (
-                    project_id,
-                    project_budget_line_id,
-                    amount,
-                    description,
-                    expense_date,
-                    documents,
-                    status,
-                    created_at,
-                    user_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-            ");
+            INSERT INTO expenses_validations (
+                project_id,
+                project_budget_line_id,
+                amount,
+                paid_amount,
+                description,
+                expense_date,
+                documents,
+                supplier_id,
+                status,
+                created_at,
+                user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+        ");
 
         $stmtInsert->execute([
             $projectId,
             $projectBudgetLineId,
             $amount,
+            $paidAmount,
             $description,
             $expenseDate,
             $documentsJson,
+            $supplierId,
             'en attente',
-            $currentUserId
+            $currentUserId,
         ]);
 
         /*
             ==========================
-            5️⃣ Calcul dépassement
+            6️⃣ Calcul dépassement
             ==========================
-            */
+        */
 
         $stmtTotal = $pdo->prepare("
-                SELECT COALESCE(SUM(amount),0)
-                FROM expenses_validations
-                WHERE project_budget_line_id = ?
-                AND status = 'validée'
-            ");
+            SELECT COALESCE(SUM(amount), 0)
+            FROM expenses_validations
+            WHERE project_budget_line_id = ?
+            AND status = 'validée'
+        ");
         $stmtTotal->execute([$projectBudgetLineId]);
         $totalSpent = $stmtTotal->fetchColumn();
 
@@ -1193,21 +1348,25 @@ function newExpenseValidation()
         $newTotal   = $totalSpent + $amount;
         $overAmount = max(0, $newTotal - $allocated);
 
+        $fmt = fn($v) => number_format((float)$v, 0, ',', ' ') . ' FCFA';
+
         /*
             ==========================
-            6️⃣ Notifications
+            7️⃣ Notifications
             ==========================
-            */
+        */
 
         $adminNotification = "Nouvelle demande de validation\n\n"
             . "Utilisateur : {$currentUserName}\n"
             . "Projet : {$project['name']}\n"
             . "Ligne budgétaire : {$budgetLine['budget_name']}\n"
-            . "Montant : {$amount} FCFA\n"
+            . "Montant : " . $fmt($amount) . "\n"
+            . ($paidAmount  !== null  ? "Montant payé : " . $fmt($paidAmount) . "\n" : '')
+            . ($supplierName !== null  ? "Fournisseur : {$supplierName}\n"             : '')
             . "Date : {$expenseDate}\n"
-            . ($description ? "Description : {$description}\n" : '')
-            . (!empty($uploadedFiles) ? "Documents : " . implode(', ', $uploadedFiles) . "\n" : '')
-            . ($overAmount > 0 ? "⚠ Dépassement : {$overAmount} FCFA\n" : '')
+            . ($description           ? "Description : {$description}\n"               : '')
+            . (!empty($uploadedFiles) ? "Documents : " . count($uploadedFiles) . " fichier(s) joint(s)\n" : '')
+            . ($overAmount > 0        ? "⚠ Dépassement : " . $fmt($overAmount) . "\n"  : '')
             . "\nAction requise : Confirmer ou refuser.";
 
         createNotification($adminNotification, $currentUserId, $currentUserName);
@@ -1215,16 +1374,18 @@ function newExpenseValidation()
         $userNotification = "Votre demande de validation a été enregistrée.\n\n"
             . "Projet : {$project['name']}\n"
             . "Ligne budgétaire : {$budgetLine['budget_name']}\n"
-            . "Montant : {$amount} FCFA\n"
+            . "Montant : " . $fmt($amount) . "\n"
+            . ($paidAmount  !== null  ? "Montant payé : " . $fmt($paidAmount) . "\n" : '')
+            . ($supplierName !== null  ? "Fournisseur : {$supplierName}\n"             : '')
             . "Statut : en attente\n\n"
             . "Vous serez notifié après décision.";
 
         createNotification($userNotification, $currentUserId, $currentUserName);
 
         /*
-        ==========================
-        7️⃣ Commit final
-        ==========================
+            ==========================
+            8️⃣ Commit final
+            ==========================
         */
 
         $pdo->commit();
@@ -1258,20 +1419,22 @@ function acceptExpenseValidation()
 
         /*
         |--------------------------------------------------------------------------
-        | 1️⃣ Récupération validation + projet + ligne budget + utilisateur
+        | 1️⃣ Récupération validation + projet + ligne budget + utilisateur + fournisseur
         |--------------------------------------------------------------------------
         */
         $stmt = $pdo->prepare("
             SELECT 
                 ev.*,
-                p.name AS project_name,
+                p.name  AS project_name,
                 bl.name AS budget_name,
-                u.name AS user_name
+                u.name  AS user_name,
+                s.name  AS supplier_name
             FROM expenses_validations ev
-            INNER JOIN projects p ON p.id = ev.project_id
+            INNER JOIN projects p             ON p.id  = ev.project_id
             INNER JOIN project_budget_lines pbl ON pbl.id = ev.project_budget_line_id
-            INNER JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-            INNER JOIN users u ON u.id = ev.user_id
+            INNER JOIN budget_lines bl        ON bl.id = pbl.budget_line_id
+            INNER JOIN users u                ON u.id  = ev.user_id
+            LEFT  JOIN suppliers s            ON s.id  = ev.supplier_id
             WHERE ev.id = :id
               AND ev.status = 'en attente'
             LIMIT 1
@@ -1286,7 +1449,7 @@ function acceptExpenseValidation()
 
         /*
         |--------------------------------------------------------------------------
-        | 2️⃣ Création de la dépense
+        | 2️⃣ Création de la dépense (avec supplier_id et paid_amount)
         |--------------------------------------------------------------------------
         */
         $insert = $pdo->prepare("
@@ -1294,18 +1457,22 @@ function acceptExpenseValidation()
                 project_id,
                 project_budget_line_id,
                 amount,
+                paid_amount,
                 description,
                 expense_date,
                 documents,
+                supplier_id,
                 user_id,
-                created_at
+                 created_at
             ) VALUES (
                 :project_id,
                 :budget_line_id,
                 :amount,
+                :paid_amount,
                 :description,
                 :expense_date,
                 :documents,
+                :supplier_id,
                 :user_id,
                 NOW()
             )
@@ -1315,18 +1482,20 @@ function acceptExpenseValidation()
             'project_id'     => $validation['project_id'],
             'budget_line_id' => $validation['project_budget_line_id'],
             'amount'         => $validation['amount'],
+            'paid_amount'    => $validation['paid_amount'] ?? null,
             'description'    => $validation['description'],
             'expense_date'   => $validation['expense_date'],
             'documents'      => $validation['documents'],
-            'user_id'        => $validation['user_id']
+            'supplier_id'    => $validation['supplier_id'] ?? null,
+            'user_id'        => $validation['user_id'],
         ]);
 
-        $user_id = $validation['user_id'];
-        $stmtUser = $pdo->prepare("SELECT name FROM users WHERE id = ?");
-        $stmtUser->execute([$user_id]);
-        $user_name = $stmtUser->fetch(PDO::FETCH_COLUMN);
+        $expenseId = $pdo->lastInsertId();
 
-        $expense = $pdo->lastInsertId();
+        $userId = $validation['user_id'];
+        $stmtUser = $pdo->prepare("SELECT name FROM users WHERE id = ?");
+        $stmtUser->execute([$userId]);
+        $userName = $stmtUser->fetch(PDO::FETCH_COLUMN);
 
         /*
         |--------------------------------------------------------------------------
@@ -1342,14 +1511,25 @@ function acceptExpenseValidation()
 
         /*
         |--------------------------------------------------------------------------
-        | 4️⃣ Notification avec nom utilisateur
+        | 4️⃣ Notification avec tous les détails
         |--------------------------------------------------------------------------
         */
+        $fmt = fn($v) => number_format((float)$v, 0, ',', ' ') . ' FCFA';
+
         $message  = "Bonjour {$validation['user_name']},\n\n";
         $message .= "Votre demande de validation a été acceptée.\n\n";
         $message .= "Projet : {$validation['project_name']}\n";
         $message .= "Ligne budgétaire : {$validation['budget_name']}\n";
-        $message .= "Montant : " . number_format($validation['amount'], 0, ',', ' ') . " FCFA\n";
+        $message .= "Montant : " . $fmt($validation['amount']) . "\n";
+
+        if (!empty($validation['paid_amount'])) {
+            $message .= "Montant payé : " . $fmt($validation['paid_amount']) . "\n";
+        }
+
+        if (!empty($validation['supplier_name'])) {
+            $message .= "Fournisseur : {$validation['supplier_name']}\n";
+        }
+
         $message .= "Date : {$validation['expense_date']}\n";
 
         if (!empty($validation['description'])) {
@@ -1358,15 +1538,11 @@ function acceptExpenseValidation()
 
         $message .= "\nLa dépense a été enregistrée dans le système.";
 
-        createNotification(
-            $message,
-            $user_id,
-            $user_name,
-        );
+        createNotification($message, $userId, $userName);
 
         $pdo->commit();
 
-        jsonSuccess(['expense_id' => $expense], 'Dépense enregistrée avec succès');
+        jsonSuccess(['expense_id' => $expenseId], 'Dépense enregistrée avec succès');
     } catch (Throwable $e) {
 
         if ($pdo->inTransaction()) {
@@ -1513,8 +1689,7 @@ function rejectExpenseValidation()
 
 function getAllExpensesValidations()
 {
-    $pdo = getPDO(); // connexion PDO
-
+    $pdo = getPDO();
     try {
         $stmt = $pdo->prepare("
             SELECT 
@@ -1524,33 +1699,33 @@ function getAllExpensesValidations()
                 ev.project_budget_line_id,
                 bl.name AS budget_line_name,
                 ev.amount AS requested_amount,
+                ev.paid_amount,
                 ev.description,
                 ev.expense_date,
                 ev.documents,
                 ev.status,
                 ev.user_id,
                 u.name AS user_name,
+                ev.supplier_id,
+                s.name AS supplier_name,
                 ev.created_at
             FROM expenses_validations ev
-            LEFT JOIN projects p ON ev.project_id = p.id
-            LEFT JOIN project_budget_lines pbl ON ev.project_budget_line_id = pbl.id
-            LEFT JOIN budget_lines bl ON pbl.budget_line_id = bl.id
-            LEFT JOIN users u ON ev.user_id = u.id
+            LEFT JOIN projects p          ON p.id  = ev.project_id
+            LEFT JOIN project_budget_lines pbl ON pbl.id = ev.project_budget_line_id
+            LEFT JOIN budget_lines bl     ON bl.id = pbl.budget_line_id
+            LEFT JOIN users u             ON u.id  = ev.user_id
+            LEFT JOIN suppliers s         ON s.id  = ev.supplier_id
             ORDER BY ev.created_at DESC
         ");
-
         $stmt->execute();
         $validations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         jsonSuccess($validations);
-
         exit;
     } catch (Exception $e) {
         echo "Erreur : " . $e->getMessage();
         exit;
     }
 }
-
 
 
 
@@ -1577,8 +1752,28 @@ function updateExpense()
     $expenseDate         = $_POST['expense_date'] ?? null;
     $description         = $_POST['description'] ?? null;
 
+    // Montant payé (optionnel)
+    $paidAmount = isset($_POST['paid_amount']) && $_POST['paid_amount'] !== ''
+        ? (float) $_POST['paid_amount']
+        : null;
+
+    // ── Fournisseur (optionnel) ──────────────────────────────────────────────
+    $supplierId = isset($_POST['supplier_id']) && $_POST['supplier_id'] !== '' && (int)$_POST['supplier_id'] > 0
+        ? (int) $_POST['supplier_id']
+        : null;
+
     if (!$id || !$projectId || !$projectBudgetLineId || $amount === null || !$expenseDate) {
         jsonError('Paramètres manquants', 400);
+    }
+
+    // ── Date au format West Africa / Bénin (UTC+1) ──────────────────────────
+    try {
+        $tz          = new DateTimeZone('Africa/Porto-Novo');
+        $dtInput     = new DateTime($expenseDate);
+        $dtInput->setTimezone($tz);
+        $expenseDate = $dtInput->format('Y-m-d');
+    } catch (Exception $e) {
+        jsonError('Format de date invalide', 400);
     }
 
     // Helper : récupère le libellé d'une project_budget_line via jointure budget_lines
@@ -1668,15 +1863,17 @@ function updateExpense()
         $previousUserId = $oldExpense['user_id'] ?? null;
         $newUserId      = (empty($previousUserId)) ? $currentUserId : $previousUserId;
 
-        // Update
+        // ── Update avec supplier_id ──────────────────────────────────────────
         $stmtUpdate = $pdo->prepare("
             UPDATE expenses SET
                 project_id             = ?,
                 project_budget_line_id = ?,
                 amount                 = ?,
+                paid_amount            = ?,
                 description            = ?,
                 expense_date           = ?,
                 documents              = ?,
+                supplier_id            = ?,
                 user_id                = ?,
                 updated_at             = NOW()
             WHERE id = ?
@@ -1686,9 +1883,11 @@ function updateExpense()
             $projectId,
             $projectBudgetLineId,
             $amount,
+            $paidAmount,
             $description,
             $expenseDate,
             json_encode($uploadedFiles),
+            $supplierId,
             $newUserId,
             $id,
         ]);
@@ -1701,15 +1900,33 @@ function updateExpense()
         $projectName = $project['name'] ?? ($project['project_name'] ?? 'Projet inconnu');
         $contractNum = $project['contract_number'] ?? '-';
 
-        // Libellés des lignes budgétaires (via jointure budget_lines)
+        // Libellés des lignes budgétaires
         $budgetLineLabel = $getBudgetLineLabel($projectBudgetLineId);
 
-        // Détection des changements
+        // Nom du fournisseur actuel (pour la notification)
+        $supplierName = null;
+        if ($supplierId) {
+            $stmtSupplier = $pdo->prepare("SELECT name FROM suppliers WHERE id = ?");
+            $stmtSupplier->execute([$supplierId]);
+            $supplierRow  = $stmtSupplier->fetch(PDO::FETCH_ASSOC);
+            $supplierName = $supplierRow['name'] ?? null;
+        }
+
+        // ── Détection des changements ────────────────────────────────────────
         $changes = [];
         $fmt     = fn($v) => number_format((float)$v, 0, ',', ' ') . ' FCFA';
 
         if ((float)$oldExpense['amount'] !== (float)$amount) {
             $changes[] = "• Montant      : " . $fmt($oldExpense['amount']) . " → " . $fmt($amount);
+        }
+
+        $oldPaid = isset($oldExpense['paid_amount']) && $oldExpense['paid_amount'] !== '' && $oldExpense['paid_amount'] !== null
+            ? (float)$oldExpense['paid_amount']
+            : null;
+        if ($oldPaid !== $paidAmount) {
+            $oldPaidStr = $oldPaid !== null ? $fmt($oldPaid) : '(non renseigné)';
+            $newPaidStr = $paidAmount !== null ? $fmt($paidAmount) : '(non renseigné)';
+            $changes[] = "• Montant payé : {$oldPaidStr} → {$newPaidStr}";
         }
 
         if ((int)$oldExpense['project_id'] !== $projectId) {
@@ -1731,6 +1948,22 @@ function updateExpense()
             $changes[] = "• Date         : {$oldExpense['expense_date']} → {$expenseDate}";
         }
 
+        // Changement de fournisseur
+        $oldSupplierId = isset($oldExpense['supplier_id']) && (int)$oldExpense['supplier_id'] > 0
+            ? (int)$oldExpense['supplier_id']
+            : null;
+        if ($oldSupplierId !== $supplierId) {
+            $oldSupplierName = '(aucun)';
+            if ($oldSupplierId) {
+                $stmtOldS = $pdo->prepare("SELECT name FROM suppliers WHERE id = ?");
+                $stmtOldS->execute([$oldSupplierId]);
+                $oldSupplierRow  = $stmtOldS->fetch(PDO::FETCH_ASSOC);
+                $oldSupplierName = $oldSupplierRow['name'] ?? "(#$oldSupplierId)";
+            }
+            $newSupplierName = $supplierName ?? '(aucun)';
+            $changes[] = "• Fournisseur  : {$oldSupplierName} → {$newSupplierName}";
+        }
+
         if (json_encode($existingDocuments) !== json_encode($uploadedFiles)) {
             $added     = count($uploadedFiles) - count($existingDocuments);
             $changes[] = "• Documents    : +{$added} fichier(s) ajouté(s) — total " . count($uploadedFiles);
@@ -1741,7 +1974,7 @@ function updateExpense()
         }
 
         if (!empty($changes)) {
-            $date    = date('d/m/Y à H:i');
+            $date    = (new DateTime('now', new DateTimeZone('Africa/Porto-Novo')))->format('d/m/Y à H:i');
             $message = "════════════════════════════════\n"
                 . "  MODIFICATION DE DÉPENSE\n"
                 . "════════════════════════════════\n"
@@ -1749,6 +1982,8 @@ function updateExpense()
                 . "Contrat      : {$contractNum}\n"
                 . "Dépense      : #{$id}\n"
                 . "Montant actuel : " . $fmt($amount) . "\n"
+                . ($paidAmount    !== null ? "Montant payé : " . $fmt($paidAmount) . "\n" : '')
+                . ($supplierName  !== null ? "Fournisseur  : {$supplierName}\n"            : '')
                 . "Date dépense : {$expenseDate}\n"
                 . "Ligne budg.  : {$budgetLineLabel}\n"
                 . "Modifié par  : {$currentUserName} (user #{$currentUserId})\n"
@@ -1784,7 +2019,6 @@ function updateExpense()
         jsonError("Erreur serveur : {$detail} | Trace : {$traceStr}", 500);
     }
 }
-
 
 
 function createNotification($description, $user_id, $user_name)
@@ -2243,72 +2477,84 @@ function getExpenses()
 {
     $pdo = getPDO();
 
-    // Requête principale : LEFT JOIN users pour récupérer le nom via user_id
-    $sqlWithUserId = "
-        SELECT 
-            e.id,
-            e.project_id,
-            p.name AS project_name,
-            e.project_budget_line_id,
-            bl.name AS budget_line_name,
-            pbl.allocated_amount,
-            (SELECT IFNULL(SUM(e2.amount), 0) 
-             FROM expenses e2 
-             WHERE e2.project_budget_line_id = e.project_budget_line_id) AS spent,
-            e.amount,
-            e.expense_date,
-            e.description,
-            e.documents,
-            e.user_id,
-            u.name AS user_name,
-            e.created_at,
-            e.updated_at
-        FROM expenses e
-        JOIN projects p ON p.id = e.project_id
-        JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
-        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-        LEFT JOIN users u ON u.id = e.user_id
-        ORDER BY e.created_at DESC
-    ";
-
-    // Fallback si la colonne user_id n'existe pas encore dans la table expenses
-    $sqlWithoutUserId = "
-        SELECT 
-            e.id,
-            e.project_id,
-            p.name AS project_name,
-            e.project_budget_line_id,
-            bl.name AS budget_line_name,
-            pbl.allocated_amount,
-            (SELECT IFNULL(SUM(e2.amount), 0) 
-             FROM expenses e2 
-             WHERE e2.project_budget_line_id = e.project_budget_line_id) AS spent,
-            e.amount,
-            e.expense_date,
-            e.description,
-            e.documents,
-            e.created_at,
-            e.updated_at
-        FROM expenses e
-        JOIN projects p ON p.id = e.project_id
-        JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
-        JOIN budget_lines bl ON bl.id = pbl.budget_line_id
-        ORDER BY e.created_at DESC
-    ";
+    $sql = "
+         SELECT 
+             e.id,
+             e.project_id,
+             p.name AS project_name,
+             e.project_budget_line_id,
+             bl.name AS budget_line_name,
+             pbl.allocated_amount,
+             (
+                 SELECT IFNULL(SUM(e2.amount), 0) 
+                 FROM expenses e2 
+                 WHERE e2.project_budget_line_id = e.project_budget_line_id
+             ) AS spent,
+             e.amount,
+             e.paid_amount,
+             e.expense_date,
+             e.description,
+             e.documents,
+             e.user_id,
+             u.name    AS user_name,
+             e.supplier_id,
+             s.name    AS supplier_name,
+             e.created_at,
+             e.updated_at
+         FROM expenses e
+         JOIN projects p             ON p.id  = e.project_id
+         JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
+         JOIN budget_lines bl        ON bl.id = pbl.budget_line_id
+         LEFT JOIN users u           ON u.id  = e.user_id
+         LEFT JOIN suppliers s       ON s.id  = e.supplier_id
+         ORDER BY e.created_at DESC
+     ";
 
     try {
-        $stmt     = $pdo->query($sqlWithUserId);
+        $stmt     = $pdo->query($sql);
         $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         if (
-            strpos($e->getMessage(), 'user_id')    !== false ||
-            strpos($e->getMessage(), 'created_by') !== false
+            strpos($e->getMessage(), 'user_id')     !== false ||
+            strpos($e->getMessage(), 'supplier_id') !== false ||
+            strpos($e->getMessage(), 'paid_amount') !== false ||
+            strpos($e->getMessage(), 'created_by')  !== false
         ) {
-            $stmt     = $pdo->query($sqlWithoutUserId);
+            // Fallback sans les colonnes potentiellement absentes
+            $sqlFallback = "
+                 SELECT 
+                     e.id,
+                     e.project_id,
+                     p.name AS project_name,
+                     e.project_budget_line_id,
+                     bl.name AS budget_line_name,
+                     pbl.allocated_amount,
+                     (
+                         SELECT IFNULL(SUM(e2.amount), 0) 
+                         FROM expenses e2 
+                         WHERE e2.project_budget_line_id = e.project_budget_line_id
+                     ) AS spent,
+                     e.amount,
+                     e.expense_date,
+                     e.description,
+                     e.documents,
+                     e.created_at,
+                     e.updated_at
+                 FROM expenses e
+                 JOIN projects p               ON p.id  = e.project_id
+                 JOIN project_budget_lines pbl ON pbl.id = e.project_budget_line_id
+                 JOIN budget_lines bl          ON bl.id = pbl.budget_line_id
+                 ORDER BY e.created_at DESC
+             ";
+            $stmt     = $pdo->query($sqlFallback);
             $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
             foreach ($expenses as &$row) {
-                $row['user_id']   = null;
-                $row['user_name'] = null;
+                $row['user_id']       = null;
+                $row['user_name']     = null;
+                $row['supplier_id']   = null;
+                $row['supplier_name'] = null;
+                $row['paid_amount']   = null;
             }
             unset($row);
         } else {

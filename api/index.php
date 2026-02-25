@@ -93,6 +93,18 @@ switch ($action) {
         markNotificationsAsReaden();
         break;
 
+    case 'getSuppliers':
+        getSuppliers();
+        break;
+
+    case 'createSupplier':
+        createSupplier();
+        break;
+
+    case 'updateSupplier':
+        updateSupplier();
+        break;
+
     case 'removeExpenseDocument':
         removeExpenseDocument();
         break;
