@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+session_start();
+
 
 require_once __DIR__ . '/functions.php';
 
@@ -44,6 +46,10 @@ switch ($action) {
     case 'getProjects':
         getProjects();
         break;
+
+        case 'getUnreadCount':
+            getUnreadCount();
+            break;
 
     case 'createProject':
         createProject();

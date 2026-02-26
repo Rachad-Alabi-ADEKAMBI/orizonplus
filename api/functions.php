@@ -2,7 +2,7 @@
 
 use PhpOffice\PhpSpreadsheet\Worksheet\Validations;
 
-session_start();
+
 
 /**
  * Connexion à la base de données
@@ -1369,7 +1369,7 @@ function newExpenseValidation()
             . ($overAmount > 0        ? "⚠ Dépassement : " . $fmt($overAmount) . "\n"  : '')
             . "\nAction requise : Confirmer ou refuser.";
 
-        createNotification($adminNotification, $currentUserId, $currentUserName);
+        createNotification($adminNotification, 1, 'admin');
 
         $userNotification = "Votre demande de validation a été enregistrée.\n\n"
             . "Projet : {$project['name']}\n"
@@ -1988,10 +1988,10 @@ function updateExpense()
                 . "Ligne budg.  : {$budgetLineLabel}\n"
                 . "Modifié par  : {$currentUserName} (user #{$currentUserId})\n"
                 . "Le           : {$date}\n"
-                . "────────────────────────────────\n"
-                . "Modifications :\n"
+                . "───\n"
+                . "Liste des modifications :\n"
                 . implode("\n", $changes) . "\n"
-                . "════════════════════════════════";
+                . "═══";
 
             createNotification($message, 1, 'admin');
         }
@@ -2031,16 +2031,19 @@ function createNotification($description, $user_id, $user_name)
 
     try {
 
+    $is_read = 0;
+
         $stmt = $pdo->prepare("
             INSERT INTO notifications 
-            (user_id, user_name, description, created_at)
-            VALUES (?, ?, ?, NOW())
+            (user_id, user_name, description, is_read, created_at)
+            VALUES (?, ?, ?, ?, NOW())
         ");
 
         $stmt->execute([
             (int)$user_id,
             trim($user_name),
-            trim($description)
+            trim($description),
+            $is_read
         ]);
 
         return $pdo->lastInsertId();
@@ -2049,24 +2052,43 @@ function createNotification($description, $user_id, $user_name)
     }
 }
 
-function markNotificationsAsReaden($user_id = null)
+function markNotificationsAsReaden()
 {
     $pdo = getPDO();
 
     try {
-        if ($user_id) {
-            // Utilisateur : marquer uniquement ses notifications
+        $role    = $_SESSION['user_role'] ?? null;
+        $user_id = $_SESSION['user_id']   ?? null;
+        $user_name = $_SESSION['user_name'] ?? null;
+
+        if ($role === 'utilisateur') {
             $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
             $stmt->execute([(int)$user_id]);
-        } else {
-            // Admin : marquer toutes les notifications admin
-            $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_name = 'admin' AND is_read = 0");
+            $affected = $stmt->rowCount();
+
+            jsonSuccess([
+                'role'             => $role,
+                'user_name'        => $user_name,
+                'notifications_updated' => $affected
+            ], "Notifications de {$user_name} marquées comme lues ({$affected})");
+
+        } elseif ($role === 'admin') {
+            $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE is_read = 0");
             $stmt->execute();
+            $affected = $stmt->rowCount();
+
+            jsonSuccess([
+                'role'                  => $role,
+                'user_name'             => $user_name,
+                'notifications_updated' => $affected
+            ], "Admin {$user_name} : toutes les notifications marquées comme lues ({$affected})");
+
+        } else {
+            jsonError("Rôle non autorisé : {$role}", 403);
         }
 
-        return true;
     } catch (Exception $e) {
-        return false;
+        jsonError('Erreur : ' . $e->getMessage(), 500);
     }
 }
 
@@ -2567,9 +2589,7 @@ function getExpenses()
 
 function getNotifications()
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+  
     $currentUserId = $_SESSION['user_id'] ?? null;
     if (!$currentUserId) {
         jsonError('Utilisateur non connecté', 401);
@@ -2598,6 +2618,52 @@ function getNotifications()
     } catch (PDOException $e) {
         jsonError('Erreur lors de la récupération des notifications : ' . $e->getMessage(), 500);
     }
+}
+
+function getUnreadCount()
+{
+    $pdo = getPDO();
+    try {
+        $role      = $_SESSION['user_role'] ?? null;
+        $user_id   = $_SESSION['user_id']   ?? null;
+        if (!$role || !$user_id) {
+            jsonError('Utilisateur non connecté', 401);
+            return;
+        }
+
+        if ($role === 'utilisateur') {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as count 
+                FROM notifications 
+                WHERE user_id = ? AND is_read = 0
+            ");
+            $stmt->execute([(int)$user_id]);
+
+        } elseif ($role === 'admin') {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as count 
+                FROM notifications 
+                WHERE user_name = ? AND is_read = 0
+            ");
+            $stmt->execute(['admin']);
+
+        } else {
+            jsonError('Rôle non autorisé : ' . $role, 403);
+            return;
+        }
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        jsonSuccess([
+            'count'     => (int)$result['count'],
+            'role'      => $role,
+            'user_id'   => (int)$user_id
+        ]);
+
+    } catch (PDOException $e) {
+        jsonError('Erreur base de données : ' . $e->getMessage(), 500);
+    }
+
 }
 
 

@@ -898,19 +898,40 @@ $user_name = $_SESSION['user_name'] ?? null;
 				}
 			},
 			methods: {
-				async markNotificationsAsReaden() {
-					try {
-						const params = new URLSearchParams({
-							action: 'markNotificationsAsReaden'
-						});
-						if (this.user_role !== 'admin') {
-							params.append('user_id', '<?php echo $_SESSION["user_id"]; ?>');
-						}
-						await fetch(`${API_BASE_URL}?${params.toString()}`);
-					} catch (err) {
-						console.error('Erreur markNotificationsAsReaden:', err);
-					}
-				},
+			async markNotificationsAsReaden() {
+    try {
+        const params = new URLSearchParams({
+            action: 'markNotificationsAsReaden'
+        });
+        if (this.user_role !== 'admin') {
+            params.append('user_id', '<?php echo $_SESSION["user_id"]; ?>');
+        }
+
+        const url = `${API_BASE_URL}?${params.toString()}`;
+
+        console.group('📬 markNotificationsAsReaden');
+        console.log('🔗 URL      :', url);
+        console.log('📦 Params   :', Object.fromEntries(params));
+
+        const response = await fetch(url);
+        const raw = await response.text(); // text() d'abord pour éviter crash si pas du JSON
+
+        console.log('📡 Status   :', response.status, response.statusText);
+
+        let parsed = null;
+        try {
+            parsed = JSON.parse(raw);
+            console.log('✅ Réponse  :', parsed);
+        } catch {
+            console.warn('⚠️ Réponse non-JSON :', raw);
+        }
+
+        console.groupEnd();
+
+    } catch (err) {
+        console.error('❌ Erreur markNotificationsAsReaden:', err);
+    }
+},
 
 				async fetchNotifications() {
 					this.loading = true;
