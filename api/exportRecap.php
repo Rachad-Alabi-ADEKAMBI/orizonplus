@@ -1481,29 +1481,22 @@ function exportPDF(): void
 // ============================================================
 function fetchExpensesByProject(PDO $pdo): array
 {
-    try {
-        // montant_total  = somme de toutes les dépenses engagées (amount)
-        // montant_paye   = somme des montants réellement payés (paid_amount)
-        // reste_a_payer  = montant_total - montant_paye
-        $rows = $pdo->query("
-            SELECT
-                e.project_id,
-                IFNULL(SUM(e.amount),      0) AS montant_total,
-                IFNULL(SUM(e.paid_amount), 0) AS montant_paye
-            FROM expenses e
-            GROUP BY e.project_id
-        ")->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $ex) {
-        // Fallback si paid_amount absent de la table
-        $rows = $pdo->query("
-            SELECT
-                e.project_id,
-                IFNULL(SUM(e.amount), 0) AS montant_total,
-                0                        AS montant_paye
-            FROM expenses e
-            GROUP BY e.project_id
-        ")->fetchAll(PDO::FETCH_ASSOC);
-    }
+    // Une dépense est comptabilisée dans l'engagement fournisseur UNIQUEMENT si :
+    //   - supplier_id est renseigné (fournisseur identifié)
+    //   - paid_amount est renseigné et > 0 (montant réellement payé connu)
+    // Sans ces deux conditions, les colonnes P/Q/R seraient basées sur des données incomplètes.
+    $rows = $pdo->query("
+        SELECT
+            e.project_id,
+            IFNULL(SUM(e.amount),      0) AS montant_total,
+            IFNULL(SUM(e.paid_amount), 0) AS montant_paye
+        FROM expenses e
+        WHERE e.supplier_id  IS NOT NULL
+          AND e.supplier_id  <> 0
+          AND e.paid_amount  IS NOT NULL
+          AND e.paid_amount  > 0
+        GROUP BY e.project_id
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
     $byProject = [];
     foreach ($rows as $row) {

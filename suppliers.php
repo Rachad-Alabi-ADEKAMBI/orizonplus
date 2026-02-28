@@ -333,6 +333,10 @@ $canEdit   = in_array($user_role, ['admin', 'utilisateur']);
         .footer-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
         .footer-info { font-size: 0.75rem; color: var(--text-secondary); }
 
+        /* ── Print button ── */
+        .btn-print { background: rgba(0,112,243,0.12); color: var(--accent-blue); border: 1px solid rgba(0,112,243,0.3); }
+        .btn-print:hover { background: rgba(0,112,243,0.25); }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             .hamburger-btn { display: block; }
@@ -378,7 +382,7 @@ $canEdit   = in_array($user_role, ['admin', 'utilisateur']);
         <div class="header-content">
             <div class="logo"><i class="fas fa-chart-line"></i><span>OrizonPlus</span></div>
             <ul class="nav-menu" :class="{ active: menuOpen }">
-                <li><a href="index.php"     class="nav-link"><i class="fas fa-home"></i> Accueil</a></li>
+                <li><a href="index.php"     class="nav-link"><i class="fas fa-folder-open"></i> Projets</a></li>
                 <li><a href="expenses.php"  class="nav-link"><i class="fas fa-wallet"></i> Dépenses</a></li>
                 <li><a href="suppliers.php" class="nav-link active"><i class="fas fa-truck"></i> Fournisseurs</a></li>
                 <li v-if="user_role === 'admin'">
@@ -460,9 +464,14 @@ $canEdit   = in_array($user_role, ['admin', 'utilisateur']);
                 <h2 class="section-title">
                     <i class="fas fa-truck" style="color:var(--accent-cyan);"></i> Fournisseurs
                 </h2>
-                <button class="btn btn-secondary btn-sm" @click="fetchAll">
-                    <i class="fas fa-sync-alt"></i> Actualiser
-                </button>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-print btn-sm" @click="printAllSuppliers" title="Imprimer tous les fournisseurs">
+                        <i class="fas fa-print"></i> Imprimer
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @click="fetchAll">
+                        <i class="fas fa-sync-alt"></i> Actualiser
+                    </button>
+                </div>
             </div>
 
             <div class="filters">
@@ -541,6 +550,9 @@ $canEdit   = in_array($user_role, ['admin', 'utilisateur']);
                                 <div class="action-buttons">
                                     <button class="btn btn-secondary btn-icon" @click="openDetail(s)" title="Voir les dépenses">
                                         <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-print btn-icon" @click="printSupplierHistory(s)" title="Imprimer l'historique">
+                                        <i class="fas fa-print"></i>
                                     </button>
                                     <button v-if="canEdit" class="btn btn-warning btn-icon" @click="openEdit(s)" title="Modifier">
                                         <i class="fas fa-edit"></i>
@@ -760,11 +772,17 @@ createApp({
         totalPages() {
             return Math.max(1, Math.ceil(this.filteredSuppliers.length / this.perPage));
         },
+        supplierIds() {
+            return new Set(this.suppliers.map(s => String(s.id)));
+        },
+        supplierExpensesOnly() {
+            return this.expenses.filter(e => e.supplier_id && this.supplierIds.has(String(e.supplier_id)));
+        },
         globalTotalAmount() {
-            return this.expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+            return this.supplierExpensesOnly.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
         },
         globalTotalPaid() {
-            return this.expenses.reduce((s, e) => s + parseFloat(e.paid_amount || 0), 0);
+            return this.supplierExpensesOnly.reduce((s, e) => s + parseFloat(e.paid_amount || 0), 0);
         },
         paginatedDetailExpenses() {
             if (!this.detailSupplier) return [];
@@ -884,6 +902,177 @@ createApp({
             const n = parseInt(this.goToPage);
             if (!isNaN(n) && n >= 1 && n <= this.totalPages) this.currentPage = n;
             this.goToPage = '';
+        },
+
+        /* ── Print ── */
+        _buildPrintHeader(title, subtitle) {
+            return `
+            <div style="
+                display:flex; align-items:center; justify-content:space-between;
+                background:#2d3b8e; color:#fff;
+                padding:22px 32px; margin-bottom:28px;
+                border-radius:12px;
+                font-family:Arial,sans-serif;
+                min-height:90px;
+            ">
+                <!-- Gauche : titre + sous-titre -->
+                <div style="flex:1;">
+                    <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.2;letter-spacing:0.2px;">${title}</div>
+                    <div style="font-size:13px;color:rgba(255,255,255,0.80);margin-top:6px;font-weight:400;">${subtitle}</div>
+                </div>
+                <!-- Centre-droite : logo sur fond blanc arrondi -->
+                <div style="
+                    background:#fff; border-radius:10px;
+                    padding:8px 14px; margin: 0 28px;
+                    display:flex; align-items:center; justify-content:center;
+                ">
+                    <img src="images/logo_kamus.png" alt="KAM US"
+                         style="height:52px;width:auto;object-fit:contain;display:block;">
+                </div>
+                <!-- Droite : nom société -->
+                <div style="
+                    font-size:12px;font-weight:700;color:rgba(255,255,255,0.90);
+                    letter-spacing:0.5px; text-align:right; white-space:nowrap;
+                ">KAM UNITED SOCIETY</div>
+            </div>`;
+        },
+
+        _openPrintWindow(htmlBody) {
+            const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            const footer = `
+                <div style="
+                    border-top:1px solid #e5e7eb; margin-top:40px; padding-top:18px;
+                    display:flex; justify-content:space-between; align-items:flex-start;
+                    font-family:Arial,sans-serif;
+                ">
+                    <div>
+                        <div style="font-size:12px;font-weight:700;color:#111;">KAM UNITED SOCIETY</div>
+                        <div style="font-size:11px;color:#555;margin-top:3px;">Document généré le ${now}</div>
+                        <div style="font-size:11px;color:#555;font-style:italic;margin-top:2px;">Ce document est confidentiel.</div>
+                    </div>
+                    <img src="images/logo_kamus.png" alt="KAM US" style="height:44px;width:auto;object-fit:contain;">
+                </div>`;
+
+            const win = window.open('', '_blank', 'width=1100,height=800');
+            win.document.write(`<!DOCTYPE html><html lang="fr"><head>
+                <meta charset="UTF-8">
+                <title>Impression — OrizonPlus</title>
+                <style>
+                    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-sizing:border-box; margin:0; padding:0; }
+                    body { font-family:Arial,sans-serif; background:#fff; color:#111; padding:28px 32px; }
+                    table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:8px; }
+                    th { background:#2d3b8e !important; color:#fff !important; padding:8px 10px; text-align:left; font-weight:700; border:1px solid #1e2d7a; font-size:11px; text-transform:uppercase; letter-spacing:0.3px; }
+                    td { padding:7px 10px; border:1px solid #e5e7eb; vertical-align:middle; }
+                    tr:nth-child(even) td { background:#f5f7ff; }
+                    .summary { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+                    .sum-card { background:#f0f4ff; border-left:4px solid #2d3b8e; border-radius:0 8px 8px 0; padding:10px 16px; flex:1; min-width:130px; }
+                    .sum-label { font-size:9.5px; text-transform:uppercase; color:#666; letter-spacing:0.5px; margin-bottom:4px; }
+                    .sum-val { font-size:15px; font-weight:800; color:#1e2d7a; }
+                    .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; }
+                    .b-green  { background:#d1fae5; color:#065f46; }
+                    .b-yellow { background:#fef3c7; color:#92400e; }
+                    .b-red    { background:#fee2e2; color:#991b1b; }
+                    h2 { font-size:13px; font-weight:700; text-transform:uppercase; color:#2d3b8e;
+                         letter-spacing:0.5px; margin:22px 0 10px; border-bottom:2px solid #2d3b8e; padding-bottom:5px; }
+                    .print-btn {
+                        display:block; margin:28px auto 0; background:#2d3b8e; color:#fff;
+                        border:none; padding:11px 32px; border-radius:8px;
+                        font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px;
+                    }
+                    .print-btn:hover { background:#1e2d7a; }
+                    @media print { .print-btn { display:none !important; } }
+                </style>
+            </head><body>
+                ${htmlBody}
+                ${footer}
+                <button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
+            </body></html>`);
+            win.document.close();
+        },
+
+        printAllSuppliers() {
+            const header = this._buildPrintHeader('Rapport global', 'État de tous les fournisseurs');
+
+            let rows = this.filteredSuppliers.map(s => {
+                const bal = this.supplierBalance(s.id);
+                const rate = this.supplierPaymentRate(s.id);
+                const badgeClass = bal <= 0 ? 'b-green' : 'b-yellow';
+                const badgeLabel = bal <= 0 ? 'Soldé' : 'En cours';
+                return `<tr>
+                    <td>${s.name}</td>
+                    <td style="text-align:center;">${this.supplierExpenseCount(s.id)}</td>
+                    <td style="text-align:right;color:#b45309;font-weight:700;">${this.formatCurrency(this.supplierTotalAmount(s.id))}</td>
+                    <td style="text-align:right;color:#065f46;font-weight:700;">${this.formatCurrency(this.supplierTotalPaid(s.id))}</td>
+                    <td style="text-align:right;color:${bal > 0 ? '#991b1b' : '#065f46'};font-weight:700;">${this.formatCurrency(bal)}</td>
+                    <td style="text-align:center;">${rate}%</td>
+                    <td style="text-align:center;"><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+                </tr>`;
+            }).join('');
+
+            if (!rows) rows = '<tr><td colspan="7" style="text-align:center;color:#888;">Aucun fournisseur</td></tr>';
+
+            const html = `
+                ${header}
+                <div class="summary">
+                    <div class="sum-card"><div class="sum-label">Fournisseurs</div><div class="sum-val">${this.suppliers.length}</div></div>
+                    <div class="sum-card"><div class="sum-label">Total commandé</div><div class="sum-val">${this.formatCurrency(this.globalTotalAmount)}</div></div>
+                    <div class="sum-card"><div class="sum-label">Total payé</div><div class="sum-val">${this.formatCurrency(this.globalTotalPaid)}</div></div>
+                    <div class="sum-card"><div class="sum-label">Reste à payer</div><div class="sum-val">${this.formatCurrency(this.globalTotalAmount - this.globalTotalPaid)}</div></div>
+                </div>
+                <h2>Liste des fournisseurs</h2>
+                <table>
+                    <thead><tr>
+                        <th>Fournisseur</th><th>Dépenses</th><th>Total commandé</th>
+                        <th>Total payé</th><th>Reste à payer</th><th>Règlement</th><th>Statut</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+            this._openPrintWindow(html);
+        },
+
+        printSupplierHistory(s) {
+            const header = this._buildPrintHeader('Rapport du fournisseur ' + s.name, 'Historique des dépenses');
+            const exps = this.supplierExpenses(s.id);
+            const totalCmd  = this.supplierTotalAmount(s.id);
+            const totalPaid = this.supplierTotalPaid(s.id);
+            const balance   = this.supplierBalance(s.id);
+            const rate      = this.supplierPaymentRate(s.id);
+
+            let rows = exps.map(exp => {
+                const rem = this.getRemainingAmount(exp);
+                const status = rem <= 0 ? 'Soldé' : (exp.paid_amount && parseFloat(exp.paid_amount) > 0 ? 'Partiel' : 'Non payé');
+                const bc = rem <= 0 ? 'b-green' : (parseFloat(exp.paid_amount||0) > 0 ? 'b-yellow' : 'b-red');
+                return `<tr>
+                    <td>${exp.project_name || '—'}</td>
+                    <td>${exp.budget_line_name || '—'}</td>
+                    <td>${this.formatDate(exp.expense_date)}</td>
+                    <td>${exp.description || '—'}</td>
+                    <td style="text-align:right;color:#b45309;font-weight:700;">${this.formatCurrency(exp.amount)}</td>
+                    <td style="text-align:right;color:#065f46;font-weight:700;">${exp.paid_amount ? this.formatCurrency(exp.paid_amount) : '—'}</td>
+                    <td style="text-align:right;color:${rem > 0 ? '#991b1b' : '#065f46'};font-weight:700;">${this.formatCurrency(rem)}</td>
+                    <td style="text-align:center;"><span class="badge ${bc}">${status}</span></td>
+                </tr>`;
+            }).join('');
+
+            if (!rows) rows = '<tr><td colspan="8" style="text-align:center;color:#888;">Aucune dépense enregistrée</td></tr>';
+
+            const html = `
+                ${header}
+                <div class="summary">
+                    <div class="sum-card"><div class="sum-label">Total commandé</div><div class="sum-val">${this.formatCurrency(totalCmd)}</div></div>
+                    <div class="sum-card"><div class="sum-label">Total payé</div><div class="sum-val">${this.formatCurrency(totalPaid)}</div></div>
+                    <div class="sum-card"><div class="sum-label">Reste à payer</div><div class="sum-val">${this.formatCurrency(balance)}</div></div>
+                    <div class="sum-card"><div class="sum-label">Taux de règlement</div><div class="sum-val">${rate}%</div></div>
+                </div>
+                <h2>Dépenses associées (${exps.length})</h2>
+                <table>
+                    <thead><tr>
+                        <th>Projet</th><th>Ligne budgétaire</th><th>Date</th><th>Description</th>
+                        <th>Montant</th><th>Payé</th><th>Reste</th><th>Statut</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+            this._openPrintWindow(html);
         },
 
         /* ── Formatters ── */

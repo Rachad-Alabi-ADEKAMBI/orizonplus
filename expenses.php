@@ -75,66 +75,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
         }
 
 
-        @media print {
-            body {
-                background: white;
-                color: black;
-            }
-
-            body * {
-                visibility: hidden;
-            }
-
-            .print-area,
-            .print-area * {
-                visibility: visible;
-            }
-
-            .print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                background: white;
-                color: black;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            .print-footer {
-                display: block !important;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                text-align: center;
-                padding: 10px;
-                font-size: 12px;
-                border-top: 1px solid #ccc;
-                background: white;
-            }
-
-            table {
-                border: 1px solid #000;
-                margin-bottom: 20px;
-                page-break-inside: avoid;
-            }
-
-            th,
-            td {
-                border: 1px solid #ccc;
-                color: black !important;
-                padding: 8px;
-            }
-
-            h2,
-            h3 {
-                color: black !important;
-                page-break-after: avoid;
-            }
-        }
+        /* ── Print button ── */
+        .btn-print { background: rgba(0,112,243,0.12); color: var(--accent-blue); border: 1px solid rgba(0,112,243,0.3); }
+        .btn-print:hover { background: rgba(0,112,243,0.25); }
 
         .header {
             background: var(--bg-secondary);
@@ -836,10 +779,60 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             opacity: 0.5;
         }
 
+        /* ── Pagination ── */
+        .pagination-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .pg-count-info {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .pg-count-info strong {
+            color: var(--text-primary);
+        }
+
+        .pg-perpage {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .pg-perpage select {
+            height: 32px;
+            padding: 0 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .pg-perpage select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
         .pagination {
             display: flex;
-            gap: 0.35rem;
-            margin-top: 1.5rem;
+            gap: 0.3rem;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
@@ -869,6 +862,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
             background: var(--accent-blue);
             color: white;
             border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0,112,243,0.2);
         }
 
         .pagination button:disabled {
@@ -1496,6 +1490,9 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         <button v-if="canEdit" @click="toggleValidationsSection" class="btn btn-warning">
                             <i class="fas fa-exclamation-triangle"></i> Dépassements de Budget
                         </button>
+                        <button @click="printExpenses" class="btn btn-print no-print">
+                            <i class="fas fa-print"></i> Imprimer
+                        </button>
                         <button v-if="canEdit" @click="openExpenseModal" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nouvelle Dépense
                         </button>
@@ -1624,31 +1621,44 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </div>
                     </div>
 
-                    <div class="pagination" v-if="totalPages > 1">
-                        <!-- Précédent -->
-                        <button @click="prevPage" :disabled="currentPage === 1">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <!-- Pages visibles -->
-                        <template v-for="p in getVisiblePages(currentPage, totalPages)" :key="p">
-                            <span v-if="p === '...'" class="pg-ellipsis">…</span>
-                            <button v-else @click="currentPage = p" :class="{ active: currentPage === p }">{{ p }}</button>
-                        </template>
-                        <!-- Suivant -->
-                        <button @click="nextPage" :disabled="currentPage === totalPages">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        <!-- Info + aller à -->
-                        <span class="pg-info">{{ currentPage }} / {{ totalPages }}</span>
-                        <span class="pg-goto">
-                            Aller à
-                            <input type="number" v-model="goToPageExpenses" :min="1" :max="totalPages"
-                                @keydown.enter="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })"
-                                placeholder="n°" />
-                            <button @click="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })">
-                                <i class="fas fa-arrow-right"></i>
+                    <!-- Pagination dépenses -->
+                    <div class="pagination-wrapper" v-if="filteredExpenses.length > 0">
+                        <div class="pagination-topbar">
+                            <span class="pg-count-info">
+                                Affichage <strong>{{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredExpenses.length) }}–{{ Math.min(currentPage * itemsPerPage, filteredExpenses.length) }}</strong> sur <strong>{{ filteredExpenses.length }}</strong> dépense{{ filteredExpenses.length > 1 ? 's' : '' }}
+                            </span>
+                            <div class="pg-perpage">
+                                <span>Lignes par page :</span>
+                                <select v-model.number="itemsPerPage" @change="currentPage = 1">
+                                    <option :value="10">10</option>
+                                    <option :value="25">25</option>
+                                    <option :value="50">50</option>
+                                    <option :value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pagination" v-if="totalPages > 1">
+                            <button @click="prevPage" :disabled="currentPage === 1" title="Page précédente">
+                                <i class="fas fa-chevron-left"></i>
                             </button>
-                        </span>
+                            <template v-for="p in getVisiblePages(currentPage, totalPages)" :key="p">
+                                <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                                <button v-else @click="currentPage = p" :class="{ active: currentPage === p }">{{ p }}</button>
+                            </template>
+                            <button @click="nextPage" :disabled="currentPage === totalPages" title="Page suivante">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <span class="pg-info">{{ currentPage }} / {{ totalPages }}</span>
+                            <span class="pg-goto">
+                                Aller à
+                                <input type="number" v-model="goToPageExpenses" :min="1" :max="totalPages"
+                                    @keydown.enter="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })"
+                                    placeholder="n°" />
+                                <button @click="handleGoToPage(goToPageExpenses, totalPages, p => { currentPage = p; goToPageExpenses = ''; })">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1659,31 +1669,73 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     <h2 class="section-title">
                         <i class="fas fa-exclamation-triangle"></i>
                         Dépassements de Budget
+                        <span style="font-size:0.8rem;font-weight:400;margin-left:0.5rem;color:var(--text-secondary);">
+                            — {{ user_role === 'admin' ? filteredAdminValidations.length : filteredUserValidations.length }} résultat(s)
+                        </span>
                     </h2>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button @click="toggleValidationsSection" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Retour
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button @click="user_role === 'admin' ? printValidationsAdmin() : printValidationsUser()" class="btn btn-print no-print">
+                            <i class="fas fa-print"></i> Imprimer
                         </button>
                         <button @click="fetchExpensesValidations" class="btn btn-secondary">
                             <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                        <button @click="toggleValidationsSection" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Retour
                         </button>
                     </div>
                 </div>
 
                 <div class="section-content">
                     <div v-if="user_role == 'admin'">
-                        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                            Toutes les demandes de dépassement de budget ({{ adminValidations.length }} au total)
-                        </p>
+                        <!-- Résumé rapide -->
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+                            <div @click="overflowStatusFilter=''; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:110px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="overflowStatusFilter==='' ? 'border-color:var(--accent-blue);background:rgba(0,112,243,0.08);' : ''">
+                                <div style="font-size:1.4rem;font-weight:700;color:var(--accent-blue);">{{ adminValidations.length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;">Total</div>
+                            </div>
+                            <div @click="overflowStatusFilter='en attente'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:110px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="overflowStatusFilter==='en attente' ? 'border-color:var(--accent-yellow);' : ''">
+                                <div style="font-size:1.4rem;font-weight:700;color:var(--accent-yellow);">{{ adminValidations.filter(v=>v.status==='en attente').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;">En attente</div>
+                            </div>
+                            <div @click="overflowStatusFilter='acceptée'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:110px;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="overflowStatusFilter==='acceptée' ? 'border-color:var(--accent-green);' : ''">
+                                <div style="font-size:1.4rem;font-weight:700;color:var(--accent-green);">{{ adminValidations.filter(v=>v.status==='acceptée').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;">Acceptées</div>
+                            </div>
+                            <div @click="overflowStatusFilter='refusée'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:110px;background:rgba(255,59,59,0.08);border:1px solid rgba(255,59,59,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="overflowStatusFilter==='refusée' ? 'border-color:var(--accent-red);' : ''">
+                                <div style="font-size:1.4rem;font-weight:700;color:var(--accent-red);">{{ adminValidations.filter(v=>v.status==='refusée').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;">Refusées</div>
+                            </div>
+                        </div>
 
-                        <!-- Filtres pour dépassements -->
-                        <div class="filters">
+                        <!-- Filtres avancés -->
+                        <div class="filters" style="flex-wrap:wrap;">
                             <div class="search-box">
                                 <i class="fas fa-search"></i>
                                 <input type="text" class="search-input" v-model="overflowSearchQuery"
                                     @input="filterOverflowExpenses" style="max-width: 250px;"
                                     placeholder="Rechercher...">
                             </div>
+                            <select class="filter-select" v-model="overflowStatusFilter" @change="filterOverflowExpenses" style="max-width:180px;">
+                                <option value="">Tous les statuts</option>
+                                <option value="en attente">⏳ En attente</option>
+                                <option value="acceptée">✅ Acceptées</option>
+                                <option value="refusée">❌ Refusées</option>
+                            </select>
+                            <select class="filter-select" v-model="overflowProjectFilter" @change="filterOverflowExpenses" style="max-width:200px;">
+                                <option value="">Tous les projets</option>
+                                <option v-for="p in projects" :key="p.id" :value="p.id">{{ reduceWord(p.name) }}</option>
+                            </select>
+                            <select class="filter-select" v-model="overflowDepartmentFilter" @change="filterOverflowExpenses" style="max-width:180px;">
+                                <option value="">Tous les départements</option>
+                                <option v-for="d in uniqueDepartments" :key="d" :value="d">{{ d }}</option>
+                            </select>
+                            <input type="date" class="filter-input" v-model="overflowDateFrom" @change="filterOverflowExpenses" style="max-width:170px;" title="Date début">
+                            <input type="date" class="filter-input" v-model="overflowDateTo" @change="filterOverflowExpenses" style="max-width:170px;" title="Date fin">
+                            <button v-if="overflowSearchQuery||overflowStatusFilter||overflowProjectFilter||overflowDepartmentFilter||overflowDateFrom||overflowDateTo"
+                                @click="resetOverflowFilters" class="btn btn-secondary btn-sm" title="Réinitialiser les filtres">
+                                <i class="fas fa-times"></i> Réinitialiser
+                            </button>
                         </div>
 
                         <div class="table-container">
@@ -1697,6 +1749,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         <th>Montant Demandé</th>
                                         <th>Description</th>
                                         <th>Statut</th>
+                                        <th>Note admin</th>
                                         <th>Documents</th>
                                         <th class="no-print">Actions</th>
                                     </tr>
@@ -1722,6 +1775,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                             <span class="badge badge-danger" v-else>
                                                 <i class="fas fa-times"></i> Refusée
                                             </span>
+                                        </td>
+                                        <td data-label="Note admin" style="max-width:180px;">
+                                            <span v-if="validation.note"  :title="validation.note">
+                                                {{ validation.note.length > 40 ? validation.note.substring(0,40)+'…' : validation.note }}
+                                            </span>
+                                            <span v-else style="color:var(--text-secondary);">-</span>
                                         </td>
                                         <td data-label="Documents">
                                             <button v-if="getValidationDocuments(validation).length > 0"
@@ -1758,27 +1817,43 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </div>
 
                         <!-- Pagination Admin -->
-                        <div class="pagination" v-if="totalAdminValidationsPages > 1">
-                            <button @click="adminValidationsCurrentPage--" :disabled="adminValidationsCurrentPage === 1">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <template v-for="p in getVisiblePages(adminValidationsCurrentPage, totalAdminValidationsPages)" :key="p">
-                                <span v-if="p === '...'" class="pg-ellipsis">…</span>
-                                <button v-else @click="adminValidationsCurrentPage = p" :class="{ active: adminValidationsCurrentPage === p }">{{ p }}</button>
-                            </template>
-                            <button @click="adminValidationsCurrentPage++" :disabled="adminValidationsCurrentPage === totalAdminValidationsPages">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                            <span class="pg-info">{{ adminValidationsCurrentPage }} / {{ totalAdminValidationsPages }}</span>
-                            <span class="pg-goto">
-                                Aller à
-                                <input type="number" v-model="goToPageAdmin" :min="1" :max="totalAdminValidationsPages"
-                                    @keydown.enter="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })"
-                                    placeholder="n°" />
-                                <button @click="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })">
-                                    <i class="fas fa-arrow-right"></i>
+                        <div class="pagination-wrapper" v-if="filteredAdminValidations.length > 0">
+                            <div class="pagination-topbar">
+                                <span class="pg-count-info">
+                                    Affichage <strong>{{ Math.min((adminValidationsCurrentPage - 1) * validationsItemsPerPage + 1, filteredAdminValidations.length) }}–{{ Math.min(adminValidationsCurrentPage * validationsItemsPerPage, filteredAdminValidations.length) }}</strong> sur <strong>{{ filteredAdminValidations.length }}</strong> demande{{ filteredAdminValidations.length > 1 ? 's' : '' }}
+                                </span>
+                                <div class="pg-perpage">
+                                    <span>Lignes par page :</span>
+                                    <select v-model.number="validationsItemsPerPage" @change="adminValidationsCurrentPage = 1">
+                                        <option :value="10">10</option>
+                                        <option :value="25">25</option>
+                                        <option :value="50">50</option>
+                                        <option :value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pagination" v-if="totalAdminValidationsPages > 1">
+                                <button @click="adminValidationsCurrentPage--" :disabled="adminValidationsCurrentPage === 1" title="Page précédente">
+                                    <i class="fas fa-chevron-left"></i>
                                 </button>
-                            </span>
+                                <template v-for="p in getVisiblePages(adminValidationsCurrentPage, totalAdminValidationsPages)" :key="p">
+                                    <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                                    <button v-else @click="adminValidationsCurrentPage = p" :class="{ active: adminValidationsCurrentPage === p }">{{ p }}</button>
+                                </template>
+                                <button @click="adminValidationsCurrentPage++" :disabled="adminValidationsCurrentPage === totalAdminValidationsPages" title="Page suivante">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <span class="pg-info">{{ adminValidationsCurrentPage }} / {{ totalAdminValidationsPages }}</span>
+                                <span class="pg-goto">
+                                    Aller à
+                                    <input type="number" v-model="goToPageAdmin" :min="1" :max="totalAdminValidationsPages"
+                                        @keydown.enter="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })"
+                                        placeholder="n°" />
+                                    <button @click="handleGoToPage(goToPageAdmin, totalAdminValidationsPages, p => { adminValidationsCurrentPage = p; goToPageAdmin = ''; })">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -1787,14 +1862,46 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             Vos demandes de dépassement de budget ({{ userValidations.length }} au total) - <strong style="color: var(--accent-yellow);">{{ stats.myPendingValidations }} en attente</strong>
                         </p>
 
-                        <!-- Filtre de recherche utilisateur -->
+                        <!-- Résumé rapide utilisateur -->
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+                            <div @click="userOverflowStatusFilter=''; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:100px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="userOverflowStatusFilter==='' ? 'border-color:var(--accent-blue);' : ''">
+                                <div style="font-size:1.3rem;font-weight:700;color:var(--accent-blue);">{{ userValidations.length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;">Total</div>
+                            </div>
+                            <div @click="userOverflowStatusFilter='en attente'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:100px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="userOverflowStatusFilter==='en attente' ? 'border-color:var(--accent-yellow);' : ''">
+                                <div style="font-size:1.3rem;font-weight:700;color:var(--accent-yellow);">{{ userValidations.filter(v=>v.status==='en attente').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;">En attente</div>
+                            </div>
+                            <div @click="userOverflowStatusFilter='acceptée'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:100px;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="userOverflowStatusFilter==='acceptée' ? 'border-color:var(--accent-green);' : ''">
+                                <div style="font-size:1.3rem;font-weight:700;color:var(--accent-green);">{{ userValidations.filter(v=>v.status==='acceptée').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;">Acceptées</div>
+                            </div>
+                            <div @click="userOverflowStatusFilter='refusée'; filterOverflowExpenses()" style="cursor:pointer;flex:1;min-width:100px;background:rgba(255,59,59,0.08);border:1px solid rgba(255,59,59,0.3);border-radius:var(--radius);padding:0.65rem 1rem;text-align:center;" :style="userOverflowStatusFilter==='refusée' ? 'border-color:var(--accent-red);' : ''">
+                                <div style="font-size:1.3rem;font-weight:700;color:var(--accent-red);">{{ userValidations.filter(v=>v.status==='refusée').length }}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;">Refusées</div>
+                            </div>
+                        </div>
+
+                        <!-- Filtres utilisateur -->
                         <div class="filters">
                             <div class="search-box">
                                 <i class="fas fa-search"></i>
                                 <input type="text" class="search-input" v-model="userOverflowSearchQuery"
-                                    @input="filterOverflowExpenses" style="max-width: 300px;"
+                                    @input="filterOverflowExpenses" style="max-width: 250px;"
                                     placeholder="Rechercher par projet, ligne budgétaire...">
                             </div>
+                            <select class="filter-select" v-model="userOverflowStatusFilter" @change="filterOverflowExpenses" style="max-width:180px;">
+                                <option value="">Tous les statuts</option>
+                                <option value="en attente">⏳ En attente</option>
+                                <option value="acceptée">✅ Acceptées</option>
+                                <option value="refusée">❌ Refusées</option>
+                            </select>
+                            <input type="date" class="filter-input" v-model="userOverflowDateFrom" @change="filterOverflowExpenses" style="max-width:160px;" title="Date début">
+                            <input type="date" class="filter-input" v-model="userOverflowDateTo" @change="filterOverflowExpenses" style="max-width:160px;" title="Date fin">
+                            <button v-if="userOverflowSearchQuery||userOverflowStatusFilter||userOverflowDateFrom||userOverflowDateTo"
+                                @click="resetUserOverflowFilters" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times"></i> Réinitialiser
+                            </button>
                         </div>
 
                         <div class="table-container">
@@ -1807,6 +1914,7 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                         <th>Montant Demandé</th>
                                         <th>Description</th>
                                         <th>Statut</th>
+                                        <th>Note admin</th>
                                         <th>Documents</th>
                                         <th class="no-print">Détail</th>
                                     </tr>
@@ -1832,6 +1940,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                                                 <i class="fas fa-times"></i> Refusée
                                             </span>
                                         </td>
+                                        <td data-label="Note admin" style="max-width:180px;">
+                                            <span v-if="validation.note" style="font-size:0.82rem;color:var(--text-secondary);font-style:italic;" :title="validation.note">
+                                                <i class="fas fa-comment-alt" style="margin-right:0.3rem;color:var(--accent-cyan);"></i>{{ validation.note.length > 40 ? validation.note.substring(0,40)+'…' : validation.note }}
+                                            </span>
+                                            <span v-else style="color:var(--text-secondary);">-</span>
+                                        </td>
                                         <td data-label="Documents">
                                             <button v-if="getValidationDocuments(validation).length > 0"
                                                 @click="viewValidationDocuments(validation)"
@@ -1855,27 +1969,43 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         </div>
 
                         <!-- Pagination User Validations -->
-                        <div class="pagination" v-if="totalUserValidationsPages > 1">
-                            <button @click="userValidationsCurrentPage--" :disabled="userValidationsCurrentPage === 1">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <template v-for="p in getVisiblePages(userValidationsCurrentPage, totalUserValidationsPages)" :key="p">
-                                <span v-if="p === '...'" class="pg-ellipsis">…</span>
-                                <button v-else @click="userValidationsCurrentPage = p" :class="{ active: userValidationsCurrentPage === p }">{{ p }}</button>
-                            </template>
-                            <button @click="userValidationsCurrentPage++" :disabled="userValidationsCurrentPage === totalUserValidationsPages">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                            <span class="pg-info">{{ userValidationsCurrentPage }} / {{ totalUserValidationsPages }}</span>
-                            <span class="pg-goto">
-                                Aller à
-                                <input type="number" v-model="goToPageUser" :min="1" :max="totalUserValidationsPages"
-                                    @keydown.enter="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })"
-                                    placeholder="n°" />
-                                <button @click="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })">
-                                    <i class="fas fa-arrow-right"></i>
+                        <div class="pagination-wrapper" v-if="filteredUserValidations.length > 0">
+                            <div class="pagination-topbar">
+                                <span class="pg-count-info">
+                                    Affichage <strong>{{ Math.min((userValidationsCurrentPage - 1) * validationsItemsPerPage + 1, filteredUserValidations.length) }}–{{ Math.min(userValidationsCurrentPage * validationsItemsPerPage, filteredUserValidations.length) }}</strong> sur <strong>{{ filteredUserValidations.length }}</strong> demande{{ filteredUserValidations.length > 1 ? 's' : '' }}
+                                </span>
+                                <div class="pg-perpage">
+                                    <span>Lignes par page :</span>
+                                    <select v-model.number="validationsItemsPerPage" @change="userValidationsCurrentPage = 1">
+                                        <option :value="10">10</option>
+                                        <option :value="25">25</option>
+                                        <option :value="50">50</option>
+                                        <option :value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pagination" v-if="totalUserValidationsPages > 1">
+                                <button @click="userValidationsCurrentPage--" :disabled="userValidationsCurrentPage === 1" title="Page précédente">
+                                    <i class="fas fa-chevron-left"></i>
                                 </button>
-                            </span>
+                                <template v-for="p in getVisiblePages(userValidationsCurrentPage, totalUserValidationsPages)" :key="p">
+                                    <span v-if="p === '...'" class="pg-ellipsis">…</span>
+                                    <button v-else @click="userValidationsCurrentPage = p" :class="{ active: userValidationsCurrentPage === p }">{{ p }}</button>
+                                </template>
+                                <button @click="userValidationsCurrentPage++" :disabled="userValidationsCurrentPage === totalUserValidationsPages" title="Page suivante">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <span class="pg-info">{{ userValidationsCurrentPage }} / {{ totalUserValidationsPages }}</span>
+                                <span class="pg-goto">
+                                    Aller à
+                                    <input type="number" v-model="goToPageUser" :min="1" :max="totalUserValidationsPages"
+                                        @keydown.enter="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })"
+                                        placeholder="n°" />
+                                    <button @click="handleGoToPage(goToPageUser, totalUserValidationsPages, p => { userValidationsCurrentPage = p; goToPageUser = ''; })">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2396,6 +2526,10 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                             <div class="form-label">Description</div>
                             <div style="color:var(--text-secondary);">{{ detailValidation.description || '-' }}</div>
                         </div>
+                        <div v-if="detailValidation.note" style="grid-column:1/-1;">
+                            <div class="form-label"><i class="fas fa-comment-alt" style="margin-right:0.35rem;color:var(--accent-cyan);"></i>Note de l'administrateur</div>
+                            <div style="background:var(--bg-tertiary);border:1px solid var(--border-color);border-left:3px solid var(--accent-cyan);border-radius:var(--radius);padding:0.75rem 1rem;color:var(--text-primary);font-style:italic;">{{ detailValidation.note }}</div>
+                        </div>
                         <div v-if="getValidationDocuments(detailValidation).length > 0" style="grid-column:1/-1;">
                             <div class="form-label">Documents</div>
                             <button @click="viewValidationDocuments(detailValidation); closeValidationDetail();" class="btn btn-sm btn-secondary">
@@ -2414,6 +2548,48 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                 </div>
                 <div class="modal-footer">
                     <button @click="closeValidationDetail" class="btn btn-secondary">Fermer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════
+             ZONES D'IMPRESSION (invisibles à l'écran)
+        ═══════════════════════════════════════════════════════ -->
+
+        <!-- ── Modal Note Admin (Accepter / Refuser un dépassement) ── -->
+        <div class="modal-overlay" :class="{ active: modals.adminNote }" @click.self="closeAdminNoteModal">
+            <div class="modal" style="max-width:480px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <i :class="adminNoteAction === 'accept' ? 'fas fa-check-circle' : 'fas fa-times-circle'"
+                           :style="{color: adminNoteAction === 'accept' ? 'var(--accent-green)' : 'var(--accent-red)', marginRight:'0.5rem'}"></i>
+                        {{ adminNoteAction === 'accept' ? 'Accepter la demande' : 'Refuser la demande' }}
+                    </h3>
+                    <button class="modal-close" @click="closeAdminNoteModal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div v-if="adminNoteValidation" style="background:var(--bg-tertiary);border-radius:var(--radius);padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.88rem;color:var(--text-secondary);">
+                        <strong style="color:var(--text-primary);">{{ adminNoteValidation.user_name }}</strong> —
+                        {{ adminNoteValidation.project_name }} /
+                        {{ adminNoteValidation.budget_line_name }} —
+                        <strong style="color:var(--accent-yellow);">{{ formatCurrencyExact(adminNoteValidation.requested_amount) }}</strong>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">
+                            <i class="fas fa-comment-alt" style="margin-right:0.35rem;color:var(--accent-cyan);"></i>
+                            Note explicative <span style="color:var(--text-secondary);font-weight:400;">(optionnelle)</span>
+                        </label>
+                        <textarea class="form-textarea" v-model="adminNoteText" rows="4"
+                            placeholder="Précisez la raison de votre décision (justification, conditions, remarques…)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeAdminNoteModal" class="btn btn-secondary">Annuler</button>
+                    <button @click="confirmAdminDecision"
+                        :class="adminNoteAction === 'accept' ? 'btn btn-success' : 'btn btn-danger'">
+                        <i :class="adminNoteAction === 'accept' ? 'fas fa-check' : 'fas fa-times'"></i>
+                        {{ adminNoteAction === 'accept' ? "Confirmer l'acceptation" : 'Confirmer le refus' }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -2477,6 +2653,13 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     userOverflowSearchQuery: '',
                     overflowDepartmentFilter: '',
                     overflowLocationFilter: '',
+                    overflowStatusFilter: '',
+                    overflowProjectFilter: '',
+                    overflowDateFrom: '',
+                    overflowDateTo: '',
+                    userOverflowStatusFilter: '',
+                    userOverflowDateFrom: '',
+                    userOverflowDateTo: '',
                     filteredAdminValidations: [],
                     filteredUserValidations: [],
                     currentPage: 1,
@@ -2496,8 +2679,12 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         validationDocuments: false,
                         expenseDocuments: false,
                         expenseDetail: false,
-                        validationDetail: false
+                        validationDetail: false,
+                        adminNote: false
                     },
+                    adminNoteText: '',
+                    adminNoteAction: '',
+                    adminNoteValidation: null,
                     detailExpense: null,
                     detailValidation: null,
                     viewingDocument: null,
@@ -2728,56 +2915,44 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     window.location.href = '#budget-overruns';
                 },
                 async acceptValidation(validation) {
-                    if (!confirm('Êtes-vous sûr d\'accepter cette demande de dépassement ?')) return;
-
-                    try {
-                        const route = `${API_BASE_URL}?action=acceptExpenseValidation&validation_id=${validation.validation_id}`;
-                        console.log('[v0] Route:', route);
-                        console.log('[v0] Payload: {}');
-
-                        const response = await fetch(route, {
-                            method: 'POST'
-                        });
-                        const data = await response.json();
-
-                        console.log('[v0] Server Response:', data);
-
-                        if (data.success) {
-                            alert('Demande acceptée avec succès');
-                            this.fetchExpensesValidations();
-                            this.fetchExpenses();
-                        } else {
-                            alert(data.message || 'Erreur lors de l\'acceptation');
-                        }
-                    } catch (error) {
-                        console.error('[v0] Error accepting validation:', error);
-                        alert('Erreur lors de l\'acceptation de la demande');
-                    }
+                    this.adminNoteValidation = validation;
+                    this.adminNoteAction = 'accept';
+                    this.adminNoteText = '';
+                    this.modals.adminNote = true;
                 },
                 async rejectValidation(validation) {
-                    if (!confirm('Êtes-vous sûr de refuser cette demande de dépassement ?')) return;
-
+                    this.adminNoteValidation = validation;
+                    this.adminNoteAction = 'reject';
+                    this.adminNoteText = '';
+                    this.modals.adminNote = true;
+                },
+                closeAdminNoteModal() {
+                    this.modals.adminNote = false;
+                    this.adminNoteValidation = null;
+                    this.adminNoteAction = '';
+                    this.adminNoteText = '';
+                },
+                async confirmAdminDecision() {
+                    if (!this.adminNoteValidation) return;
+                    const isAccept = this.adminNoteAction === 'accept';
+                    const action = isAccept ? 'acceptExpenseValidation' : 'rejectExpenseValidation';
                     try {
-                        const route = `${API_BASE_URL}?action=rejectExpenseValidation&validation_id=${validation.validation_id}`;
-                        console.log('[v0] Route:', route);
-                        console.log('[v0] Payload: {}');
-
-                        const response = await fetch(route, {
-                            method: 'POST'
-                        });
+                        const formData = new FormData();
+                        formData.append('note', this.adminNoteText.trim());
+                        const route = `${API_BASE_URL}?action=${action}&validation_id=${this.adminNoteValidation.validation_id}`;
+                        const response = await fetch(route, { method: 'POST', body: formData });
                         const data = await response.json();
-
-                        console.log('[v0] Server Response:', data);
-
                         if (data.success) {
-                            alert('Demande refusée');
+                            alert(isAccept ? 'Demande acceptée avec succès' : 'Demande refusée');
+                            this.closeAdminNoteModal();
                             this.fetchExpensesValidations();
+                            if (isAccept) this.fetchExpenses();
                         } else {
-                            alert(data.message || 'Erreur lors du refus');
+                            alert(data.message || 'Erreur lors du traitement');
                         }
                     } catch (error) {
-                        console.error('[v0] Error rejecting validation:', error);
-                        alert('Erreur lors du refus de la demande');
+                        console.error('[v0] Error processing decision:', error);
+                        alert('Erreur lors du traitement de la demande');
                     }
                 },
                 viewValidationDocuments(validation) {
@@ -3422,48 +3597,95 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                     this.currentPage = 1;
                 },
                 filterOverflowExpenses() {
-                    // Filtrage admin
+                    // ── Filtrage admin ──────────────────────────────────
                     let filtered = this.adminValidations;
 
                     if (this.overflowSearchQuery) {
+                        const q = this.overflowSearchQuery.toLowerCase();
                         filtered = filtered.filter(v =>
-                            (v.user_name && v.user_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
-                            (v.project_name && v.project_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
-                            (v.budget_line_name && v.budget_line_name.toLowerCase().includes(this.overflowSearchQuery.toLowerCase())) ||
-                            (v.description && v.description.toLowerCase().includes(this.overflowSearchQuery.toLowerCase()))
+                            (v.user_name && v.user_name.toLowerCase().includes(q)) ||
+                            (v.project_name && v.project_name.toLowerCase().includes(q)) ||
+                            (v.budget_line_name && v.budget_line_name.toLowerCase().includes(q)) ||
+                            (v.description && v.description.toLowerCase().includes(q))
                         );
                     }
 
+                    if (this.overflowStatusFilter) {
+                        filtered = filtered.filter(v => v.status === this.overflowStatusFilter);
+                    }
+
+                    if (this.overflowProjectFilter) {
+                        filtered = filtered.filter(v => String(v.project_id) === String(this.overflowProjectFilter));
+                    }
+
                     if (this.overflowDepartmentFilter) {
-                        const projectIdsInDept = this.projects
-                            .filter(p => p.department === this.overflowDepartmentFilter)
-                            .map(p => p.id);
-                        filtered = filtered.filter(v => projectIdsInDept.includes(v.project_id));
+                        const ids = this.projects.filter(p => p.department === this.overflowDepartmentFilter).map(p => p.id);
+                        filtered = filtered.filter(v => ids.includes(v.project_id));
                     }
 
                     if (this.overflowLocationFilter) {
-                        const projectIdsInLoc = this.projects
-                            .filter(p => p.location === this.overflowLocationFilter)
-                            .map(p => p.id);
-                        filtered = filtered.filter(v => projectIdsInLoc.includes(v.project_id));
+                        const ids = this.projects.filter(p => p.location === this.overflowLocationFilter).map(p => p.id);
+                        filtered = filtered.filter(v => ids.includes(v.project_id));
+                    }
+
+                    if (this.overflowDateFrom) {
+                        filtered = filtered.filter(v => new Date(v.created_at) >= new Date(this.overflowDateFrom));
+                    }
+
+                    if (this.overflowDateTo) {
+                        const to = new Date(this.overflowDateTo);
+                        to.setHours(23, 59, 59);
+                        filtered = filtered.filter(v => new Date(v.created_at) <= to);
                     }
 
                     this.filteredAdminValidations = filtered;
                     this.adminValidationsCurrentPage = 1;
 
-                    // Filtrage utilisateur
+                    // ── Filtrage utilisateur ────────────────────────────
                     let userFiltered = this.userValidations;
 
                     if (this.userOverflowSearchQuery) {
+                        const q = this.userOverflowSearchQuery.toLowerCase();
                         userFiltered = userFiltered.filter(v =>
-                            (v.project_name && v.project_name.toLowerCase().includes(this.userOverflowSearchQuery.toLowerCase())) ||
-                            (v.budget_line_name && v.budget_line_name.toLowerCase().includes(this.userOverflowSearchQuery.toLowerCase())) ||
-                            (v.description && v.description.toLowerCase().includes(this.userOverflowSearchQuery.toLowerCase()))
+                            (v.project_name && v.project_name.toLowerCase().includes(q)) ||
+                            (v.budget_line_name && v.budget_line_name.toLowerCase().includes(q)) ||
+                            (v.description && v.description.toLowerCase().includes(q))
                         );
+                    }
+
+                    if (this.userOverflowStatusFilter) {
+                        userFiltered = userFiltered.filter(v => v.status === this.userOverflowStatusFilter);
+                    }
+
+                    if (this.userOverflowDateFrom) {
+                        userFiltered = userFiltered.filter(v => new Date(v.created_at) >= new Date(this.userOverflowDateFrom));
+                    }
+
+                    if (this.userOverflowDateTo) {
+                        const to = new Date(this.userOverflowDateTo);
+                        to.setHours(23, 59, 59);
+                        userFiltered = userFiltered.filter(v => new Date(v.created_at) <= to);
                     }
 
                     this.filteredUserValidations = userFiltered;
                     this.userValidationsCurrentPage = 1;
+                },
+                resetOverflowFilters() {
+                    this.overflowSearchQuery = '';
+                    this.overflowStatusFilter = '';
+                    this.overflowProjectFilter = '';
+                    this.overflowDepartmentFilter = '';
+                    this.overflowLocationFilter = '';
+                    this.overflowDateFrom = '';
+                    this.overflowDateTo = '';
+                    this.filterOverflowExpenses();
+                },
+                resetUserOverflowFilters() {
+                    this.userOverflowSearchQuery = '';
+                    this.userOverflowStatusFilter = '';
+                    this.userOverflowDateFrom = '';
+                    this.userOverflowDateTo = '';
+                    this.filterOverflowExpenses();
                 },
                 calculateStats() {
                     this.stats.totalExpenses = this.expenses.length;
@@ -3681,6 +3903,212 @@ $canEdit = in_array($user_role, ['admin', 'utilisateur']);
                         console.error('[v0] createAndPickSupplier:', e);
                         alert('Erreur lors de la création du fournisseur');
                     }
+                },
+                // ────────────────────────────────────────────────────
+                // Impression
+                // ────────────────────────────────────────────────────
+                _buildPrintHeader(title, subtitle) {
+                    return `
+                    <div style="
+                        display:flex; align-items:center; justify-content:space-between;
+                        background:#2d3b8e; color:#fff;
+                        padding:22px 32px; margin-bottom:28px;
+                        border-radius:12px; font-family:Arial,sans-serif; min-height:90px;
+                    ">
+                        <div style="flex:1;">
+                            <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.2;letter-spacing:0.2px;">${title}</div>
+                            <div style="font-size:13px;color:rgba(255,255,255,0.80);margin-top:6px;font-weight:400;">${subtitle}</div>
+                        </div>
+                        <div style="background:#fff;border-radius:10px;padding:8px 14px;margin:0 28px;display:flex;align-items:center;justify-content:center;">
+                            <img src="images/logo_kamus.png" alt="KAM US" style="height:52px;width:auto;object-fit:contain;display:block;">
+                        </div>
+                        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.90);letter-spacing:0.5px;text-align:right;white-space:nowrap;">KAM UNITED SOCIETY</div>
+                    </div>`;
+                },
+
+                _openPrintWindow(htmlBody) {
+                    const now = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                    const footer = `
+                        <div style="border-top:1px solid #e5e7eb;margin-top:40px;padding-top:18px;display:flex;justify-content:space-between;align-items:flex-start;font-family:Arial,sans-serif;">
+                            <div>
+                                <div style="font-size:12px;font-weight:700;color:#111;">KAM UNITED SOCIETY</div>
+                                <div style="font-size:11px;color:#555;margin-top:3px;">Document généré le ${now}</div>
+                                <div style="font-size:11px;color:#555;font-style:italic;margin-top:2px;">Ce document est confidentiel.</div>
+                            </div>
+                            <img src="images/logo_kamus.png" alt="KAM US" style="height:44px;width:auto;object-fit:contain;">
+                        </div>`;
+
+                    const win = window.open('', '_blank', 'width=1100,height=800');
+                    win.document.write(`<!DOCTYPE html><html lang="fr"><head>
+                        <meta charset="UTF-8">
+                        <title>Impression — OrizonPlus</title>
+                        <style>
+                            * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-sizing:border-box; margin:0; padding:0; }
+                            body { font-family:Arial,sans-serif; background:#fff; color:#111; padding:28px 32px; }
+                            table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:8px; }
+                            th { background:#2d3b8e !important; color:#fff !important; padding:8px 10px; text-align:left; font-weight:700; border:1px solid #1e2d7a; font-size:11px; text-transform:uppercase; letter-spacing:0.3px; }
+                            td { padding:7px 10px; border:1px solid #e5e7eb; vertical-align:middle; }
+                            tr:nth-child(even) td { background:#f5f7ff; }
+                            .summary { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+                            .sum-card { background:#f0f4ff; border-left:4px solid #2d3b8e; border-radius:0 8px 8px 0; padding:10px 16px; flex:1; min-width:120px; }
+                            .sum-label { font-size:9.5px; text-transform:uppercase; color:#666; letter-spacing:0.5px; margin-bottom:4px; }
+                            .sum-val { font-size:15px; font-weight:800; color:#1e2d7a; }
+                            .meta-bar { display:flex; gap:20px; flex-wrap:wrap; background:#f8f9ff; border:1px solid #e0e7ff; border-radius:8px; padding:8px 14px; margin-bottom:18px; font-size:11px; color:#444; }
+                            .meta-bar strong { color:#1e2d7a; }
+                            .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; }
+                            .b-pending  { background:#fef3c7; color:#92400e; }
+                            .b-accepted { background:#d1fae5; color:#065f46; }
+                            .b-rejected { background:#fee2e2; color:#991b1b; }
+                            h2 { font-size:13px; font-weight:700; text-transform:uppercase; color:#2d3b8e; letter-spacing:0.5px; margin:22px 0 10px; border-bottom:2px solid #2d3b8e; padding-bottom:5px; }
+                            .print-btn { display:block; margin:28px auto 0; background:#2d3b8e; color:#fff; border:none; padding:11px 32px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px; }
+                            .print-btn:hover { background:#1e2d7a; }
+                            @media print { .print-btn { display:none !important; } }
+                        </style>
+                    </head><body>
+                        ${htmlBody}
+                        ${footer}
+                        <button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
+                    </body></html>`);
+                    win.document.close();
+                },
+
+                printExpenses() {
+                    const header = this._buildPrintHeader('Rapport des Dépenses', 'OrizonPlus — Gestion des dépenses');
+                    const exps = this.filteredExpenses;
+                    const total = exps.reduce((s,e) => s + parseFloat(e.amount||0), 0);
+                    const totalPaid = exps.reduce((s,e) => s + parseFloat(e.paid_amount||0), 0);
+
+                    let metaParts = [`<span>Total : <strong>${exps.length} dépense(s)</strong></span>`];
+                    if (this.projectFilter) {
+                        const p = this.projects.find(p => p.id == this.projectFilter);
+                        if (p) metaParts.push(`<span>Projet : <strong>${p.name}</strong></span>`);
+                    }
+                    if (this.dateFrom) metaParts.push(`<span>Du : <strong>${this.dateFrom}</strong></span>`);
+                    if (this.dateTo)   metaParts.push(`<span>Au : <strong>${this.dateTo}</strong></span>`);
+
+                    let rows = exps.map(e => `<tr>
+                        <td>${this.formatDate(e.expense_date)}</td>
+                        <td><strong>${e.project_name || '—'}</strong></td>
+                        <td>${e.budget_line_name || '—'}</td>
+                        <td>${e.description || '—'}</td>
+                        <td style="text-align:right;color:#b45309;font-weight:700;">${this.formatCurrencyExact(e.amount)}</td>
+                        <td style="text-align:right;color:#065f46;font-weight:700;">${e.paid_amount ? this.formatCurrencyExact(e.paid_amount) : '—'}</td>
+                        <td style="text-align:center;">${this.getUsagePercentage(e)}%</td>
+                        <td>${e.user_name || '—'}</td>
+                    </tr>`).join('');
+                    if (!rows) rows = '<tr><td colspan="8" style="text-align:center;color:#888;">Aucune dépense</td></tr>';
+
+                    const html = `
+                        ${header}
+                        <div class="summary">
+                            <div class="sum-card"><div class="sum-label">Nb dépenses</div><div class="sum-val">${exps.length}</div></div>
+                            <div class="sum-card"><div class="sum-label">Montant total</div><div class="sum-val">${this.formatCurrency(total)}</div></div>
+                            <div class="sum-card"><div class="sum-label">Total payé</div><div class="sum-val">${this.formatCurrency(totalPaid)}</div></div>
+                            <div class="sum-card"><div class="sum-label">Reste à payer</div><div class="sum-val">${this.formatCurrency(total - totalPaid)}</div></div>
+                        </div>
+                        <div class="meta-bar">${metaParts.join('')}</div>
+                        <h2>Liste des dépenses</h2>
+                        <table>
+                            <thead><tr>
+                                <th>Date</th><th>Projet</th><th>Ligne budgétaire</th><th>Description</th>
+                                <th>Montant</th><th>Payé</th><th>%</th><th>Enregistré par</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                    this._openPrintWindow(html);
+                },
+
+                printValidationsAdmin() {
+                    const header = this._buildPrintHeader('Dépassements de Budget', 'OrizonPlus — Vue administrateur');
+                    const vals = this.filteredAdminValidations;
+                    const nbAttente   = vals.filter(v => v.status === 'en attente').length;
+                    const nbAcceptees = vals.filter(v => v.status === 'acceptée').length;
+                    const nbRefusees  = vals.filter(v => v.status === 'refusée').length;
+                    const montantTotal = vals.reduce((s,v) => s + parseFloat(v.requested_amount||0), 0);
+
+                    let metaParts = [];
+                    if (this.overflowStatusFilter)  metaParts.push(`<span>Statut : <strong>${this.overflowStatusFilter}</strong></span>`);
+                    if (this.overflowProjectFilter) {
+                        const p = this.projects.find(p => p.id == this.overflowProjectFilter);
+                        if (p) metaParts.push(`<span>Projet : <strong>${p.name}</strong></span>`);
+                    }
+                    if (this.overflowDateFrom) metaParts.push(`<span>Du : <strong>${this.overflowDateFrom}</strong></span>`);
+                    if (this.overflowDateTo)   metaParts.push(`<span>Au : <strong>${this.overflowDateTo}</strong></span>`);
+
+                    let rows = vals.map(v => {
+                        const bc = v.status === 'en attente' ? 'b-pending' : v.status === 'acceptée' ? 'b-accepted' : 'b-rejected';
+                        return `<tr>
+                            <td>${this.formatDate(v.created_at)}</td>
+                            <td><strong>${v.user_name || '—'}</strong></td>
+                            <td>${v.project_name || '—'}</td>
+                            <td>${v.budget_line_name || '—'}</td>
+                            <td style="text-align:right;color:#b45309;font-weight:700;">${this.formatCurrencyExact(v.requested_amount)}</td>
+                            <td>${v.description || '—'}</td>
+                            <td style="text-align:center;"><span class="badge ${bc}">${v.status}</span></td>
+                            <td style="font-style:italic;color:#555;">${v.note || '—'}</td>
+                        </tr>`;
+                    }).join('');
+                    if (!rows) rows = '<tr><td colspan="8" style="text-align:center;color:#888;">Aucun dépassement</td></tr>';
+
+                    const html = `
+                        ${header}
+                        <div class="summary">
+                            <div class="sum-card"><div class="sum-label">Total</div><div class="sum-val">${vals.length}</div></div>
+                            <div class="sum-card"><div class="sum-label">En attente</div><div class="sum-val" style="color:#92400e;">${nbAttente}</div></div>
+                            <div class="sum-card"><div class="sum-label">Acceptées</div><div class="sum-val" style="color:#065f46;">${nbAcceptees}</div></div>
+                            <div class="sum-card"><div class="sum-label">Refusées</div><div class="sum-val" style="color:#991b1b;">${nbRefusees}</div></div>
+                            <div class="sum-card"><div class="sum-label">Montant total</div><div class="sum-val">${this.formatCurrency(montantTotal)}</div></div>
+                        </div>
+                        ${metaParts.length ? `<div class="meta-bar">${metaParts.join('')}</div>` : ''}
+                        <h2>Liste des dépassements</h2>
+                        <table>
+                            <thead><tr>
+                                <th>Date</th><th>Demandeur</th><th>Projet</th><th>Ligne budgétaire</th>
+                                <th>Montant demandé</th><th>Description</th><th>Statut</th><th>Note admin</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                    this._openPrintWindow(html);
+                },
+
+                printValidationsUser() {
+                    const header = this._buildPrintHeader('Mes Demandes de Dépassement', `OrizonPlus — ${this.user_name}`);
+                    const vals = this.filteredUserValidations;
+                    const nbAttente   = vals.filter(v => v.status === 'en attente').length;
+                    const nbAcceptees = vals.filter(v => v.status === 'acceptée').length;
+                    const nbRefusees  = vals.filter(v => v.status === 'refusée').length;
+
+                    let rows = vals.map(v => {
+                        const bc = v.status === 'en attente' ? 'b-pending' : v.status === 'acceptée' ? 'b-accepted' : 'b-rejected';
+                        return `<tr>
+                            <td>${this.formatDate(v.created_at)}</td>
+                            <td>${v.project_name || '—'}</td>
+                            <td>${v.budget_line_name || '—'}</td>
+                            <td style="text-align:right;color:#b45309;font-weight:700;">${this.formatCurrencyExact(v.requested_amount)}</td>
+                            <td>${v.description || '—'}</td>
+                            <td style="text-align:center;"><span class="badge ${bc}">${v.status}</span></td>
+                            <td style="font-style:italic;color:#555;">${v.note || '—'}</td>
+                        </tr>`;
+                    }).join('');
+                    if (!rows) rows = '<tr><td colspan="7" style="text-align:center;color:#888;">Aucune demande</td></tr>';
+
+                    const html = `
+                        ${header}
+                        <div class="summary">
+                            <div class="sum-card"><div class="sum-label">Total</div><div class="sum-val">${vals.length}</div></div>
+                            <div class="sum-card"><div class="sum-label">En attente</div><div class="sum-val" style="color:#92400e;">${nbAttente}</div></div>
+                            <div class="sum-card"><div class="sum-label">Acceptées</div><div class="sum-val" style="color:#065f46;">${nbAcceptees}</div></div>
+                            <div class="sum-card"><div class="sum-label">Refusées</div><div class="sum-val" style="color:#991b1b;">${nbRefusees}</div></div>
+                        </div>
+                        <h2>Mes demandes de dépassement</h2>
+                        <table>
+                            <thead><tr>
+                                <th>Date</th><th>Projet</th><th>Ligne budgétaire</th>
+                                <th>Montant demandé</th><th>Description</th><th>Statut</th><th>Note admin</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                    this._openPrintWindow(html);
                 },
                 // ────────────────────────────────────────────────────
                 renderCharts() {

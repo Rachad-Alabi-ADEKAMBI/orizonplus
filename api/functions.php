@@ -1406,6 +1406,7 @@ function acceptExpenseValidation()
     $pdo = getPDO();
 
     $validationId = $_POST['validation_id'] ?? $_GET['validation_id'] ?? null;
+    $note         = trim($_POST['note'] ?? '');
 
     if (!$validationId || !ctype_digit($validationId)) {
         return [
@@ -1430,11 +1431,11 @@ function acceptExpenseValidation()
                 u.name  AS user_name,
                 s.name  AS supplier_name
             FROM expenses_validations ev
-            INNER JOIN projects p             ON p.id  = ev.project_id
+            INNER JOIN projects p               ON p.id  = ev.project_id
             INNER JOIN project_budget_lines pbl ON pbl.id = ev.project_budget_line_id
-            INNER JOIN budget_lines bl        ON bl.id = pbl.budget_line_id
-            INNER JOIN users u                ON u.id  = ev.user_id
-            LEFT  JOIN suppliers s            ON s.id  = ev.supplier_id
+            INNER JOIN budget_lines bl          ON bl.id = pbl.budget_line_id
+            INNER JOIN users u                  ON u.id  = ev.user_id
+            LEFT  JOIN suppliers s              ON s.id  = ev.supplier_id
             WHERE ev.id = :id
               AND ev.status = 'en attente'
             LIMIT 1
@@ -1463,7 +1464,7 @@ function acceptExpenseValidation()
                 documents,
                 supplier_id,
                 user_id,
-                 created_at
+                created_at
             ) VALUES (
                 :project_id,
                 :budget_line_id,
@@ -1499,19 +1500,23 @@ function acceptExpenseValidation()
 
         /*
         |--------------------------------------------------------------------------
-        | 3️⃣ Mise à jour statut validation
+        | 3️⃣ Mise à jour statut + note de la validation
         |--------------------------------------------------------------------------
         */
         $update = $pdo->prepare("
             UPDATE expenses_validations
-            SET status = 'acceptée'
+            SET status = 'acceptée',
+                note   = :note
             WHERE id = :id
         ");
-        $update->execute(['id' => $validationId]);
+        $update->execute([
+            'note' => $note !== '' ? $note : null,
+            'id'   => $validationId,
+        ]);
 
         /*
         |--------------------------------------------------------------------------
-        | 4️⃣ Notification avec tous les détails
+        | 4️⃣ Notification avec tous les détails (+ note si renseignée)
         |--------------------------------------------------------------------------
         */
         $fmt = fn($v) => number_format((float)$v, 0, ',', ' ') . ' FCFA';
@@ -1536,19 +1541,22 @@ function acceptExpenseValidation()
             $message .= "Description : {$validation['description']}\n";
         }
 
-        $message .= "\nLa dépense a été enregistrée dans le système.";
+        if ($note !== '') {
+            $message .= "\nNote de l'administrateur : {$note}";
+        }
+
+        $message .= "\n\nLa dépense a été enregistrée dans le système.";
 
         createNotification($message, $userId, $userName);
 
         $pdo->commit();
 
         jsonSuccess(['expense_id' => $expenseId], 'Dépense enregistrée avec succès');
-    } catch (Throwable $e) {
 
+    } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-
         jsonError($e->getMessage());
     }
 }
@@ -1624,11 +1632,13 @@ function updatePassword()
     }
 }
 
+
 function rejectExpenseValidation()
 {
     $pdo = getPDO();
 
     $validationId = $_POST['validation_id'] ?? $_GET['validation_id'] ?? null;
+    $note         = trim($_POST['note'] ?? '');
 
     if (!$validationId || !ctype_digit($validationId)) {
         jsonError('ID de validation invalide.');
@@ -1638,7 +1648,11 @@ function rejectExpenseValidation()
     try {
         $pdo->beginTransaction();
 
-        // 1️⃣ Récupérer la validation + utilisateur uniquement si en attente
+        /*
+        |--------------------------------------------------------------------------
+        | 1️⃣ Récupérer la validation + utilisateur uniquement si en attente
+        |--------------------------------------------------------------------------
+        */
         $stmt = $pdo->prepare("
             SELECT ev.*, u.name AS user_name
             FROM expenses_validations ev
@@ -1653,22 +1667,40 @@ function rejectExpenseValidation()
             throw new Exception("Validation introuvable ou déjà traitée.");
         }
 
-        // 2️⃣ Mettre à jour le statut en 'refusée'
+        /*
+        |--------------------------------------------------------------------------
+        | 2️⃣ Mettre à jour le statut en 'refusée' + note
+        |--------------------------------------------------------------------------
+        */
         $update = $pdo->prepare("
             UPDATE expenses_validations
-            SET status = 'refusée'
+            SET status = 'refusée',
+                note   = :note
             WHERE id = :id
         ");
-        $update->execute(['id' => $validationId]);
+        $update->execute([
+            'note' => $note !== '' ? $note : null,
+            'id'   => $validationId,
+        ]);
 
-        // 3️⃣ Notification utilisateur
+        /*
+        |--------------------------------------------------------------------------
+        | 3️⃣ Notification utilisateur (+ note si renseignée)
+        |--------------------------------------------------------------------------
+        */
         $message  = "Bonjour {$validation['user_name']},\n\n";
         $message .= "Votre demande de validation d'une dépense a été refusée.\n\n";
         $message .= "Montant : " . number_format($validation['amount'], 0, ',', ' ') . " FCFA\n";
+
         if (!empty($validation['description'])) {
             $message .= "Description : {$validation['description']}\n";
         }
-        $message .= "\nMerci de vérifier votre demande ou contacter l'administration.";
+
+        if ($note !== '') {
+            $message .= "\nNote de l'administrateur : {$note}";
+        }
+
+        $message .= "\n\nMerci de vérifier votre demande ou contacter l'administration.";
 
         createNotification(
             $message,
@@ -1679,6 +1711,7 @@ function rejectExpenseValidation()
         $pdo->commit();
 
         jsonSuccess([], 'Demande refusée et utilisateur notifié.');
+
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -1704,17 +1737,18 @@ function getAllExpensesValidations()
                 ev.expense_date,
                 ev.documents,
                 ev.status,
+                ev.note,
                 ev.user_id,
                 u.name AS user_name,
                 ev.supplier_id,
                 s.name AS supplier_name,
                 ev.created_at
             FROM expenses_validations ev
-            LEFT JOIN projects p          ON p.id  = ev.project_id
+            LEFT JOIN projects p               ON p.id  = ev.project_id
             LEFT JOIN project_budget_lines pbl ON pbl.id = ev.project_budget_line_id
-            LEFT JOIN budget_lines bl     ON bl.id = pbl.budget_line_id
-            LEFT JOIN users u             ON u.id  = ev.user_id
-            LEFT JOIN suppliers s         ON s.id  = ev.supplier_id
+            LEFT JOIN budget_lines bl          ON bl.id = pbl.budget_line_id
+            LEFT JOIN users u                  ON u.id  = ev.user_id
+            LEFT JOIN suppliers s              ON s.id  = ev.supplier_id
             ORDER BY ev.created_at DESC
         ");
         $stmt->execute();
