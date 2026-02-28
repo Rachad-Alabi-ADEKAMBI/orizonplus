@@ -923,7 +923,7 @@ function exportExcel(): void
 
         $spreadsheet = new Spreadsheet();
         $sheet       = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Etat des Chantiers');
+        $sheet->setTitle('SUIVI DES CHANTIERS EN COURS');
 
         $navyDark   = '1E2A5E';
         $navyHeader = '2E3A8C';
@@ -955,7 +955,7 @@ function exportExcel(): void
 
         // Ligne 2 – Titre principal (colonnes A→O) + bandeau jaune ENGAGEMENTS (P→R)
         $sheet->mergeCells('A2:O2');
-        $sheet->setCellValue('A2', 'ETAT DES CHANTIERS ENCOURS');
+        $sheet->setCellValue('A2', 'SUIVI DES CHANTIERS EN COURS');
         $sheet->getStyle('A2')->applyFromArray([
             'font'      => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FF' . $white]],
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF' . $navyDark]],
@@ -988,7 +988,7 @@ function exportExcel(): void
             'M' => 'PART DU MARCHE NON EXECUTEE',
             'N' => 'RESTE A ENCAISSER HT',
             'O' => 'OBSERVATION',
-            'P' => 'MONTANT TOTAL PAIEMENT EFFECTUE',
+            'P' => 'MONTANT TOTAL',
             'Q' => 'PAIEMENT EFFECTUE',
             'R' => 'RESTE A PAYER',
         ];
@@ -1131,7 +1131,7 @@ function exportExcel(): void
         }
         $sheet->freezePane('A4');
 
-        $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.xlsx';
+        $filename = 'SUIVI_DES_CHANTIERS_' . date('d_m_Y') . '.xlsx';
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
@@ -1399,7 +1399,7 @@ function exportPDF(): void
 <!-- Bandeaux de titre -->
 <table class="title-table" style="table-layout:fixed;width:100%;border-collapse:collapse;margin-bottom:0;">
     <tr>
-        <td class="title-main">ETAT DES CHANTIERS ENCOURS</td>
+        <td class="title-main">SUIVI DES CHANTIERS EN COURS</td>
     </tr>
 </table>
 
@@ -1415,7 +1415,7 @@ function exportPDF(): void
     </colgroup>
     <thead>
         <tr>
-            <th colspan="15" style="background:#1E2A5E;color:#fff;font-size:8pt;font-weight:bold;text-align:center;padding:4px;">ETAT DES CHANTIERS ENCOURS</th>
+            <th colspan="15" style="background:#1E2A5E;color:#fff;font-size:8pt;font-weight:bold;text-align:center;padding:4px;">SUIVI DES CHANTIERS EN COURS</th>
             <th colspan="3" class="yellow-th" style="font-size:7pt;font-weight:bold;text-align:center;padding:4px;">ENGAGEMENTS AUPRES DES FOURNISSEURS / PRESTATAIRES</th>
         </tr>
         <tr>
@@ -1434,7 +1434,7 @@ function exportPDF(): void
             <th>PART DU<br/>MARCHE NON<br/>EXECUTEE</th>
             <th>RESTE A<br/>ENCAISSER HT</th>
             <th>OBSERVATION</th>
-            <th class="yellow-th">MONTANT<br/>TOTAL<br/>PAIEMENT</th>
+            <th class="yellow-th">MONTANT<br/>TOTAL</th>
             <th class="yellow-th">PAIEMENT<br/>EFFECTUE</th>
             <th class="yellow-th">RESTE A<br/>PAYER</th>
         </tr>
@@ -1460,7 +1460,7 @@ function exportPDF(): void
         $dompdf->setPaper('A3', 'landscape');
         $dompdf->render();
 
-        $filename = 'ETAT_DES_CHANTIERS_' . date('d_m_Y') . '.pdf';
+        $filename = 'SUIVI_DES_CHANTIERS_' . date('d_m_Y') . '.pdf';
         $dompdf->stream($filename, ['Attachment' => true]);
     } catch (\Throwable $e) {
         header('Content-Type: text/plain; charset=utf-8');

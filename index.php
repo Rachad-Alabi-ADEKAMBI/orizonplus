@@ -1165,93 +1165,108 @@ if (!isset($_SESSION['user_id'])) {
                 min-height: 300px;
             }
         }
-        /* ===== PAGE LOADER ===== */
-        #page-loader {
+
+        /* ===== LOADER ===== */
+        #app-loader {
             position: fixed;
             inset: 0;
-            z-index: 99999;
+            z-index: 9999;
             background: var(--bg-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2rem;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            gap: 1.5rem;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
         }
-
-        #page-loader.hidden {
+        #app-loader.hidden {
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
         }
-
-        .loader-logo {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #0070f3 0%, #00d4ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 1px;
-            animation: loader-pulse 1.5s ease-in-out infinite;
+        .loader-logo-wrap {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        .loader-spinner {
-            width: 52px;
-            height: 52px;
+        .loader-logo-wrap img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .loader-ring {
+            position: absolute;
+            inset: 0;
             border-radius: 50%;
-            border: 3px solid #2a2a2a;
-            border-top-color: #0070f3;
-            border-right-color: #00d4ff;
-            animation: loader-spin 0.9s linear infinite;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-blue);
+            border-right-color: var(--accent-cyan);
+            animation: loader-spin 1s linear infinite;
         }
-
-        .loader-bar-wrap {
-            width: 220px;
-            height: 4px;
-            background: #1a1a1a;
-            border-radius: 999px;
-            overflow: hidden;
+        .loader-ring-2 {
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-bottom-color: var(--accent-blue);
+            opacity: 0.5;
+            animation: loader-spin 1.5s linear infinite reverse;
         }
-
-        .loader-bar {
-            height: 100%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #0070f3, #00d4ff);
-            animation: loader-fill 2s ease forwards;
-        }
-
-        .loader-text {
-            font-size: 0.8rem;
-            color: #a0a0a0;
-            letter-spacing: 0.5px;
-        }
-
         @keyframes loader-spin {
             to { transform: rotate(360deg); }
         }
-
+        .loader-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+            animation: loader-pulse 1.5s ease-in-out infinite;
+        }
         @keyframes loader-pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        .loader-dots span {
+            display: inline-block;
+            animation: loader-bounce 1.2s infinite;
+            animation-fill-mode: both;
+        }
+        .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes loader-bounce {
+            0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-4px); }
         }
 
-        @keyframes loader-fill {
-            0%   { width: 0%; }
-            60%  { width: 75%; }
-            100% { width: 100%; }
+        /* ===== PRINT OPTIMISE ===== */
+        @media print {
+            /* Supprimer tous les espaces/marges entre éléments */
+            .section { margin-bottom: 0 !important; }
+            .section + .section { margin-top: 4px !important; }
+            .stats-row { margin-bottom: 8px !important; gap: 8px !important; }
+            .meta-row { margin-bottom: 8px !important; gap: 8px !important; }
+            .stat-box { padding: 8px 10px !important; }
+            table { margin-bottom: 0 !important; }
+            thead th { padding: 6px 8px !important; }
+            tbody td { padding: 5px 8px !important; }
+            h1, h2, h3, h4 { margin-bottom: 4px !important; }
+            p { margin-bottom: 2px !important; }
         }
     </style>
 </head>
 
 <body>
-    <!-- ===== PAGE LOADER ===== -->
-    <div id="page-loader">
-        <div class="loader-logo">OrizonPlus</div>
-        <div class="loader-spinner"></div>
-        <div class="loader-bar-wrap">
-            <div class="loader-bar"></div>
+    <!-- ===== LOADER ===== -->
+    <div id="app-loader">
+        <div class="loader-logo-wrap">
+            <div class="loader-ring"></div>
+            <div class="loader-ring-2"></div>
+            <img src="logo.png" alt="OrizonPlus">
         </div>
-        <div class="loader-text">Chargement en cours…</div>
+        <div class="loader-text">Chargement en cours<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span></div>
     </div>
 
     <div id="app">
@@ -2278,6 +2293,7 @@ if (!isset($_SESSION['user_id'])) {
                     // Documents dépenses
                     viewingExpenseDocs: [],
                     viewingExpenseDocIndex: 0,
+                    isLoading: true,
                 };
             },
             computed: {
@@ -2315,11 +2331,18 @@ if (!isset($_SESSION['user_id'])) {
 
                 // ==================== CHARGEMENT ====================
                 async loadData() {
-                    await this.fetchProjects();
-                    await this.fetchLines();
+                    await Promise.all([
+                        this.fetchProjects(),
+                        this.fetchLines(),
+                        this.getUnreadCount()
+                    ]);
                     await this.fetchAllProjectLines();
-                    await this.getUnreadCount();
-                    this.$nextTick(() => this.renderCharts());
+                    this.$nextTick(() => {
+                        this.renderCharts();
+                        const loader = document.getElementById('app-loader');
+                        if (loader) loader.classList.add('hidden');
+                        this.isLoading = false;
+                    });
                 },
                 async fetchProjects() {
                     try {
@@ -2921,25 +2944,25 @@ if (!isset($_SESSION['user_id'])) {
                     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title>
             <style>
                 * { margin:0; padding:0; box-sizing:border-box; }
-                body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; padding:30px; color:#1a1a1a; background:#fff; line-height:1.6; }
-                .print-header { background:linear-gradient(135deg,#1a237e,#283593); color:white; padding:20px 30px; border-radius:10px; margin-bottom:25px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+                body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; padding:12px 16px; color:#1a1a1a; background:#fff; line-height:1.4; }
+                .print-header { background:linear-gradient(135deg,#1a237e,#283593); color:white; padding:10px 16px; border-radius:8px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
                 .print-header-left { flex:1; }
                 .print-header h1 { font-size:22px; font-weight:700; margin-bottom:4px; }
                 .print-header .subtitle { font-size:13px; opacity:0.9; }
                 .print-header-logo { width:90px; height:auto; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3)); }
                 .print-company { text-align:right; font-size:11px; opacity:0.85; line-height:1.5; }
-                .meta-row { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px; }
-                .meta-box { background:#f0f4f8; padding:10px 16px; border-radius:8px; font-size:13px; display:flex; align-items:center; gap:8px; }
+                .meta-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+                .meta-box { background:#f0f4f8; padding:6px 10px; border-radius:6px; font-size:12px; display:flex; align-items:center; gap:6px; }
                 .meta-box strong { color:#0070f3; }
-                .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:25px; }
-                .stat-box { background:#f8f9fa; padding:15px; border-radius:8px; border-left:4px solid #0070f3; }
+                .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+                .stat-box { background:#f8f9fa; padding:7px 10px; border-radius:6px; border-left:4px solid #0070f3; }
                 .stat-box.success { border-left-color:#00e676; }
                 .stat-box.warning { border-left-color:#ffb800; }
                 .stat-box.danger { border-left-color:#ff3b3b; }
                 .stat-box .label { font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
                 .stat-box .val { font-size:18px; font-weight:700; color:#1a1a1a; }
-                .section { background:white; border:1px solid #e0e0e0; border-radius:8px; padding:20px; margin-bottom:20px; }
-                .section-title { font-size:16px; font-weight:600; color:#0070f3; margin-bottom:15px; padding-bottom:8px; border-bottom:2px solid #e8e8e8; }
+                .section { background:white; border:1px solid #e0e0e0; border-radius:8px; padding:10px; margin-bottom:4px; }
+                .section-title { font-size:14px; font-weight:600; color:#0070f3; margin-bottom:6px; padding-bottom:4px; border-bottom:2px solid #e8e8e8; }
                 table { width:100%; border-collapse:collapse; }
                 thead { background:#f0f4f8; }
                 th { padding:10px 12px; text-align:left; font-weight:600; font-size:12px; color:#333; border-bottom:2px solid #d0d0d0; }
@@ -2953,12 +2976,21 @@ if (!isset($_SESSION['user_id'])) {
                 .footer { margin-top:30px; padding-top:15px; border-top:2px solid #e0e0e0; text-align:center; font-size:11px; color:#888; }
                 .footer strong { color:#0070f3; }
                 @media print {
-                    body { padding:15px; color:#000 !important; background:#fff !important; }
+                    body { padding:4px 6px; color:#000 !important; background:#fff !important; }
                     body *, .stat-box .label, .stat-box .val, .meta-box, .meta-box strong, .footer, .footer strong, td, th, .badge, .section, .section * { color:#000 !important; }
                     .print-header, .print-header * { color:#fff !important; }
                     .section-title { color:#0070f3 !important; }
-                    .section { break-inside:avoid; }
-                    table { break-inside:avoid; }
+                    .section { break-inside:avoid; margin-bottom:2px !important; padding:8px !important; }
+                    .section + .section { margin-top:2px !important; }
+                    table { break-inside:avoid; margin-bottom:0 !important; }
+                    .stats-row { margin-bottom:4px !important; gap:4px !important; }
+                    .stat-box { padding:5px 8px !important; }
+                    .meta-row { margin-bottom:4px !important; gap:4px !important; }
+                    th { padding:4px 6px !important; }
+                    td { padding:3px 6px !important; }
+                    h1,h2,h3,h4,p { margin-bottom:1px !important; }
+                    .print-header { margin-bottom:4px !important; padding:8px 12px !important; }
+                    .stat-box .label { margin-bottom:1px !important; }
                 }
             </style></head><body>
             ${bodyContent}
@@ -3658,21 +3690,6 @@ if (!isset($_SESSION['user_id'])) {
 
         window.addEventListener('beforeprint', () => setChartColorForPrint(false));
         window.addEventListener('afterprint',  () => setChartColorForPrint(true));
-
-        // ===== PAGE LOADER =====
-        (function() {
-            const loader = document.getElementById('page-loader');
-            const hide = () => loader && loader.classList.add('hidden');
-            // Hide after 2s minimum, or when page is fully loaded — whichever is later
-            const start = Date.now();
-            window.addEventListener('load', () => {
-                const elapsed = Date.now() - start;
-                const delay = Math.max(0, 2000 - elapsed);
-                setTimeout(hide, delay);
-            });
-            // Safety fallback: always hide after 2s even if load event already fired
-            setTimeout(hide, 2000);
-        })();
     </script>
 </body>
 
